@@ -1,0 +1,267 @@
+<!DOCTYPE html>
+<html class="has-navbar-fixed-top">
+<head>
+    <meta charset="utf-8">
+<title>12C之PDB管理 - My Wiki</title>
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+
+<link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/outdated-browser/1.1.5/outdatedbrowser.min.css">
+
+
+<meta name="description" content="how to manage pdbs in oracle 12c">
+
+
+
+<meta name="keywords" content="12c pdb">
+
+
+
+
+
+
+
+<link rel="icon" href="/images/favicon.ico">
+
+
+<link rel="stylesheet" href="//fonts.googleapis.com/css?family=Ovo|Source+Code+Pro">
+<link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/bulma/0.6.2/css/bulma.min.css">
+
+
+
+<link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/highlight.js/9.12.0/styles/github.min.css">
+
+<link rel="stylesheet" href="/css/style.css">
+
+<script defer src="//use.fontawesome.com/releases/v5.0.8/js/all.js"></script>
+
+
+    
+    
+    
+    
+    
+    
+
+    
+
+
+</head>
+<body>
+    
+<nav class="navbar is-transparent is-fixed-top navbar-main" role="navigation" aria-label="main navigation">
+    <div class="container">
+        <div class="navbar-brand">
+            <a class="navbar-item navbar-logo" href="/">
+                
+                    
+                    My Wiki
+                    
+                
+            </a>
+            <div class="navbar-burger">
+                <span></span>
+                <span></span>
+                <span></span>
+            </div>
+        </div>
+        
+        <div class="navbar-menu navbar-start">
+            
+            <a class="navbar-item "
+               href="/">Home</a>
+            
+            <a class="navbar-item "
+               href="/archives">Archives</a>
+            
+            <a class="navbar-item "
+               href="/about">About</a>
+            
+        </div>
+        
+        <div class="navbar-menu navbar-end">
+            
+            <a class="navbar-item search" title="Search" href="javascript:;">
+                <i class="fas fa-search"></i>
+            </a>
+            
+            
+            
+        </div>
+    </div>
+</nav>
+
+    <section class="section">
+    <div class="container">
+    <article class="article content gallery" itemscope itemprop="blogPost">
+    <h1 class="article-title is-size-3 is-size-4-mobile" itemprop="name">
+        
+            12C之PDB管理
+        
+    </h1>
+    <div class="article-meta columns is-variable is-1 is-multiline is-mobile is-size-7-mobile">
+        <span class="column is-narrow">
+            <time datetime="2014-08-13T14:00:41.000Z" itemprop="datePublished">Aug 13 2014</time>
+        </span>
+        
+        <span class="column is-narrow article-category">
+            <i class="far fa-folder"></i>
+            <a class="article-category-link" href="/categories/oracle/">oracle</a>
+        </span>
+        
+        
+        <span class="column is-narrow">
+            
+            
+            12 minutes read (About 1853 words)
+        </span>
+        
+    </div>
+    <div class="article-entry is-size-6-mobile" itemprop="articleBody">
+    
+        <p>在上一篇文章<a href="/12c-silent-installation.html">12c Silent Installation</a>创建的一个空的CDB，本文介绍如何使用sqlplus工具对PDB进行维护(EM Express更简单，以下所有操作均可从EM生成对应的SQL)。<br><a id="more"></a></p>
+<h3 id="1-添加PDB"><a href="#1-添加PDB" class="headerlink" title="1. 添加PDB"></a>1. 添加PDB</h3><p>添加PDB前需要满足以下几个条件：</p>
+<p><li>数据库必须是CDB</li></p>
+<p><li>CDB处于READ/WRITE模式</li></p>
+<p><li>创建PDB的用户必须是common user</li></p>
+<p><li>创建PDB的用户要有CREATE PLUGGABLE DATABASE的系统权限</li></p>
+<p><li>每个PDB须有不同的名称</li><br>在12.1中，一个CDB最多支持253个PDB，其中包括一个PDB$SEED。新增pdb的方法有以下几种：<br><img src="/images/pdbcreate.png" alt="pdb create"></p>
+<h4 id="1-1-使用seed创建新的pdb"><a href="#1-1-使用seed创建新的pdb" class="headerlink" title="1.1 使用seed创建新的pdb"></a>1.1 使用seed创建新的pdb</h4><p><img src="/images/pdbseed.png" alt="Create a PDB Using the Seed Files"><br>这种方法复制seed中的文件到新的PDB。<br><figure class="highlight plain hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line">CREATE PLUGGABLE DATABASE salespdb ADMIN USER salesadm IDENTIFIED BY oracle roles=(DBA)</span><br><span class="line">  STORAGE (MAXSIZE 2G MAX_SHARED_TEMP_SIZE 100M)</span><br><span class="line">  DEFAULT TABLESPACE sales </span><br><span class="line">    DATAFILE &apos;/u02/oradata/ora12c/salespdb/sales01.dbf&apos; SIZE 250M AUTOEXTEND ON</span><br><span class="line">  PATH_PREFIX = &apos;/u02/oradata/ora12c/salespdb/&apos;</span><br><span class="line">  FILE_NAME_CONVERT = (&apos;/u02/oradata/ora12c/pdbseed/&apos;, &apos;/u02/oradata/ora12c/salespdb/&apos;);</span><br></pre></td></tr></table></figure></p>
+<p><li>Storage</li><br>MAXSIZE定义一个属于这个PDB的表空间总容量；MAX_SHARED_TEMP_SIZE定义一个属于这个PDB的临时表空间总容量。如果设定为<code>storage unlimited</code>，或者没有设定此参数，均表示此PDB的没有存储限制。存储限制可于创建完PDB后修改：<br><figure class="highlight plain hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">sqlplus sys/oracle@linora:1522/salespdb as sydsba</span><br><span class="line">SQL&gt; alter pluggable database salespdb storage(maxsize 20G);</span><br></pre></td></tr></table></figure></p>
+<p><li>File Location of the New PDB</li><br>在新的PDB中，有两个子句可以在创建PDB的时候指定文件路径：<code>FILE_NAME_CONVERT</code>和<code>CREATE_FILE_DEST</code>，后一个子句是用于OMF管理。而<code>PATH_PREFIX</code>所有跟此PDB相关的文件路径都会被存在在此参数指定的路径下。</p>
+<p><li>ROLES</li><br>给定管理者salsadm权限，这个用户是PDB local user，本例中预授的是PDB_DBA权限。<br>创建完后可以看到PDB的状态：<br><figure class="highlight plain hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line">SYS@ora12c&gt; select con_id, name,open_mode from v$containers;</span><br><span class="line">    CON_ID NAME       OPEN_MODE</span><br><span class="line">---------- ---------- --------------------</span><br><span class="line">         1 CDB$ROOT   READ WRITE</span><br><span class="line">         2 PDB$SEED   READ ONLY</span><br><span class="line">         3 SALESPDB   MOUNTED</span><br></pre></td></tr></table></figure></p>
+<p>开启PDB至OPEN状态：<br><figure class="highlight plain hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line">SYS@ora12c&gt; ALTER PLUGGABLE DATABASE salespdb open;</span><br><span class="line">Pluggable database altered.</span><br><span class="line">SYS@ora12c&gt; col name for a15</span><br><span class="line">SYS@ora12c&gt; select con_id, name,open_mode from v$containers;</span><br><span class="line">    CON_ID NAME            OPEN_MODE</span><br><span class="line">---------- --------------- --------------------</span><br><span class="line">         1 CDB$ROOT        READ WRITE</span><br><span class="line">         2 PDB$SEED        READ ONLY</span><br><span class="line">         3 SALESPDB        READ WRITE</span><br></pre></td></tr></table></figure></p>
+<h4 id="1-2-从本地PDB-Clone"><a href="#1-2-从本地PDB-Clone" class="headerlink" title="1.2 从本地PDB Clone"></a>1.2 从本地PDB Clone</h4><figure class="highlight plain hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br></pre></td><td class="code"><pre><span class="line">--clone时，source PDB必须处于read only状态</span><br><span class="line">SYS@ora12c&gt; alter pluggable database salespdb close;</span><br><span class="line">Pluggable database altered.</span><br><span class="line">SYS@ora12c&gt; alter pluggable database salespdb open read only;</span><br><span class="line">Pluggable database altered.</span><br><span class="line">SYS@ora12c&gt; CREATE PLUGGABLE DATABASE hrpdb FROM salespdb no data</span><br><span class="line">  2  FILE_NAME_CONVERT = (&apos;/u02/oradata/ora12c/salespdb/&apos;, &apos;/u02/oradata/ora12c/hrpdb/&apos;)</span><br><span class="line">  3  STORAGE unlimited;</span><br><span class="line">Pluggable database created.</span><br><span class="line">SYS@ora12c&gt; col name for a15</span><br><span class="line">SYS@ora12c&gt; select con_id, name,open_mode from v$containers;</span><br><span class="line">    CON_ID NAME            OPEN_MODE</span><br><span class="line">---------- --------------- --------------------</span><br><span class="line">         1 CDB$ROOT        READ WRITE</span><br><span class="line">         2 PDB$SEED        READ ONLY</span><br><span class="line">         3 SALESPDB        READ ONLY</span><br><span class="line">         4 HRPDB           MOUNTED</span><br></pre></td></tr></table></figure>
+<p><code>NO DATA</code>表示不从source PDB克隆数据，只Clone源数据。这个参数从12.1.0.2开始支持。</p>
+<h4 id="1-3-从远程PDB-Clone"><a href="#1-3-从远程PDB-Clone" class="headerlink" title="1.3 从远程PDB Clone"></a>1.3 从远程PDB Clone</h4><p>本例中，远程PDB名称为SALESPDB，通过DBLINK远程连接至SALESPDB进行Clone。<br><figure class="highlight plain hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line">#首先创建DBLINK</span><br><span class="line">create database link salespdb</span><br><span class="line">connect to system identified by oracle</span><br><span class="line">using &apos;linora:1522/salespdb&apos;;</span><br><span class="line">#将远程PDB处于read only状态</span><br><span class="line">SQL&gt; alter pluggable database salespdb close;</span><br><span class="line">SQL&gt; alter pluggable database salespdb open read only;</span><br><span class="line">#在目标端执行Clone动作</span><br><span class="line">CREATE PLUGGABLE DATABASE hrpdb FROM salespdb@salespdb no data</span><br><span class="line">FILE_NAME_CONVERT = (&apos;/u02/oradata/ora12c/salespdb/&apos;, &apos;/u02/oradata/ora12c/hrpdb/&apos;)</span><br><span class="line">STORAGE unlimited;</span><br></pre></td></tr></table></figure></p>
+<h4 id="1-4-从远程non-CDB-Clone"><a href="#1-4-从远程non-CDB-Clone" class="headerlink" title="1.4 从远程non-CDB Clone"></a>1.4 从远程non-CDB Clone</h4><p>Oracle有三种方法可以将non-CDB转换成PDB，包括data pump、OGG和DBMS_PDB包，这里简要说明下DBMS_PDB包的使用。这种方法只适合DB版本在12C以上。因为12C以下没有DBMS_PDB包。<br><figure class="highlight plain hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br></pre></td><td class="code"><pre><span class="line">#首先将non-CDB切换成read only状态</span><br><span class="line">SYS&gt; startup mount;</span><br><span class="line">SYS&gt; alter database open read only;</span><br><span class="line">#生成XML</span><br><span class="line">SQL&gt; BEGIN</span><br><span class="line">DBMS_PDB.DESCRIBE(pdb_descr_file =&gt; &apos;/home/oracle/ncdb.xml&apos;);</span><br><span class="line">END;</span><br><span class="line">/</span><br><span class="line">#检测生成的XML文件是否支持插拔</span><br><span class="line">SQL&gt; SET SERVEROUTPUT ON</span><br><span class="line">DECLARE</span><br><span class="line">hold_var boolean;</span><br><span class="line">begin</span><br><span class="line">hold_var := DBMS_PDB.CHECK_PLUG_COMPATIBILITY(pdb_descr_file=&gt;&apos;/home/oracle/ncdb.xml&apos;);</span><br><span class="line">if hold_var then</span><br><span class="line">dbms_output.put_line(&apos;YES&apos;);</span><br><span class="line">else</span><br><span class="line">dbms_output.put_line(&apos;NO&apos;);</span><br><span class="line">end if;</span><br><span class="line">end;</span><br><span class="line">/</span><br><span class="line">#在CDB中创建PDB</span><br><span class="line">SQL&gt; CREATE PLUGGABLE DATABASE dkpdb</span><br><span class="line">USING &apos;/home/oracle/ncdb.xml&apos;</span><br><span class="line">COPY</span><br><span class="line">FILE_NAME_CONVERT = (&apos;/u01/dbfile/dk/&apos;,</span><br><span class="line">&apos;/u01/dbfile/CDB/dkpdb/&apos;);</span><br><span class="line">#最后连接到新建的PDB，执行后续脚本</span><br><span class="line">$ sqlplus sys/oralce@&apos;linora:1522/dkpdb&apos; as sysdba</span><br><span class="line">SQL&gt; @?/rdbms/admin/noncdb_to_pdb.sql</span><br></pre></td></tr></table></figure></p>
+<h4 id="1-5-插入已拔除的PDB"><a href="#1-5-插入已拔除的PDB" class="headerlink" title="1.5 插入已拔除的PDB"></a>1.5 插入已拔除的PDB</h4><p>拔除指令：<br><figure class="highlight plain hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">SYS@ora12c&gt; ALTER PLUGGABLE DATABASE hrpdb CLOSE IMMEDIATE;</span><br><span class="line">Pluggable database altered.</span><br><span class="line">SYS@ora12c&gt; ALTER PLUGGABLE DATABASE hrpdb UNPLUG INTO &apos;/home/ora12c/hrpdb.xml&apos;;</span><br><span class="line">Pluggable database altered.</span><br></pre></td></tr></table></figure></p>
+<p>当某个PDB被拔除后，会保留在Mount状态，在原来的CDB中除了可以通过RMAN进行备份外，就只能drop，其他操作都会出现异常。如果要将拔除的PDB插回原CDB，需要将该PDB DROP，然后再插入。<br><figure class="highlight plain hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br></pre></td><td class="code"><pre><span class="line">#检测COMPATIBILITY</span><br><span class="line">SQL&gt; SET SERVEROUTPUT ON</span><br><span class="line">DECLARE</span><br><span class="line">hold_var boolean;</span><br><span class="line">begin</span><br><span class="line">hold_var := DBMS_PDB.CHECK_PLUG_COMPATIBILITY(pdb_descr_file=&gt;&apos;/home/ora12c/hrpdb.xml&apos;);</span><br><span class="line">if hold_var then</span><br><span class="line">dbms_output.put_line(&apos;YES&apos;);</span><br><span class="line">else</span><br><span class="line">dbms_output.put_line(&apos;NO&apos;);</span><br><span class="line">end if;</span><br><span class="line">end;</span><br><span class="line">/</span><br><span class="line">YES</span><br><span class="line">SYS@ora12c&gt; drop pluggable database hrpdb;</span><br><span class="line">Pluggable database dropped.</span><br><span class="line">#在新CDB中插入拔除的CDB</span><br><span class="line">CREATE PLUGGABLE DATABASE pdb2 using &apos;/home/ora12c/hrpdb.xml&apos;</span><br><span class="line">move|copy</span><br><span class="line">file_name_convert=(&apos;/u02/oradata/ora12c/hrpdb/&apos;,&apos;/u02/oradata/ora12c/pdb2/&apos;);</span><br><span class="line">--source_file_name_convert=(&apos;/u02/oradata/ora12c/hrpdb/&apos;,&apos;/u02/oradata/ora12c/pdb2/&apos;) nocopy;</span><br></pre></td></tr></table></figure></p>
+<p>其中，move表示数据文件从原有位置mv至新位置，COPY则表示复制，NOCOPY表示重新生成。对于plug-in PDB有如下限制：</p>
+<p><li>源端和目标端CDB endianness必须一样</li></p>
+<p><li>源端和目标端数据库选件必须一样</li></p>
+<p><li>目标端必须存在原来PDB的数据文件</li></p>
+<p><li>两端字符集和compatible 必须一样</li></p>
+<h3 id="2-连接PDB"><a href="#2-连接PDB" class="headerlink" title="2. 连接PDB"></a>2. 连接PDB</h3><p>PDB创建后会自动创建和PDB名称一致的Service，在TNSNAMES中添加此Service，即可通过tns方式连接：<br><figure class="highlight plain hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br></pre></td><td class="code"><pre><span class="line">[ora12c@linora:/u01/app/ora12c/product/12.1.0/db1/network/admin]$ cat listener.ora </span><br><span class="line">LISTENER =</span><br><span class="line">  (DESCRIPTION_LIST =</span><br><span class="line">    (DESCRIPTION =</span><br><span class="line">      (ADDRESS = (PROTOCOL = TCP)(HOST = linora)(PORT = 1522))</span><br><span class="line">      (ADDRESS = (PROTOCOL = IPC)(KEY = EXTPROC1522))</span><br><span class="line">    )</span><br><span class="line">  )</span><br><span class="line">ADR_BASE_LISTENER = /u01/app/ora12c</span><br><span class="line"></span><br><span class="line">SID_LIST_LISTENER =</span><br><span class="line">(SID_LIST = </span><br><span class="line">   (SID_DESC =</span><br><span class="line">     (GLOBAL_DBNAME = ora12c)</span><br><span class="line">     (ORACLE_HOME = /u01/app/ora12c/product/12.1.0/db1)</span><br><span class="line">     (SID_NAME = ora12c)</span><br><span class="line">     )</span><br><span class="line">   (SID_DESC =</span><br><span class="line">     (GLOBAL_DBNAME = pdb12c) #PDB service, the same as PDB database name</span><br><span class="line">     (ORACLE_HOME = /u01/app/ora12c/product/12.1.0/db1)</span><br><span class="line">     (SID_NAME = ora12c)   #CDB sid or the cdb database name</span><br><span class="line">     )</span><br><span class="line">)</span><br><span class="line"></span><br><span class="line">salespdb =</span><br><span class="line">  (DESCRIPTION =</span><br><span class="line">    (ADDRESS = (PROTOCOL = TCP)(HOST = 192.168.56.188)(PORT = 1522))</span><br><span class="line">    (CONNECT_DATA =</span><br><span class="line">      (SERVER = DEDICATED)</span><br><span class="line">      (SERVICE_NAME = salespdb)</span><br><span class="line">    )</span><br><span class="line">  )</span><br><span class="line">[ora12c@linora:/home/ora12c]$ sqlplus sys/oracle@salespdb as sysdba</span><br><span class="line"></span><br><span class="line">SYS@ora12c&gt; col name for a20</span><br><span class="line">SYS@ora12c&gt; col NETWORK_NAME for a10</span><br><span class="line">SYS@ora12c&gt; col pdb for a20</span><br><span class="line">SYS@ora12c&gt; select name,NETWORK_NAME,PDB from cdb_services;</span><br><span class="line">NAME                 NETWORK_NA PDB</span><br><span class="line">-------------------- ---------- --------------------</span><br><span class="line">SYS$BACKGROUND                  CDB$ROOT</span><br><span class="line">SYS$USERS                       CDB$ROOT</span><br><span class="line">ora12c               ora12c     CDB$ROOT</span><br><span class="line">hrpdb                hrpdb      HRPDB</span><br><span class="line">salespdb             salespdb   SALESPDB</span><br></pre></td></tr></table></figure></p>
+<p>或者使用简易连接方式，但是在sqlnet.ora需添加<code>ezconnect</code>：<br><figure class="highlight plain hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line">[ora12c@linora:/home/ora12c]$ sqlplus salesadm/oracle@linora:1522/salespdb</span><br><span class="line">SQL*Plus: Release 12.1.0.2.0 Production on Wed Aug 13 17:19:31 2014</span><br><span class="line">Copyright (c) 1982, 2014, Oracle.  All rights reserved.</span><br><span class="line">Last Successful login time: Wed Aug 13 2014 17:19:22 +08:00</span><br><span class="line">Connected to:</span><br><span class="line">Oracle Database 12c Enterprise Edition Release 12.1.0.2.0 - 64bit Production</span><br><span class="line">With the Partitioning, OLAP, Advanced Analytics and Real Application Testing options</span><br><span class="line">SALESADM@linora:1522/salespdb&gt;</span><br></pre></td></tr></table></figure></p>
+<p>或者使用以前的连接方式，通过alter session命令登入PDB：<br><figure class="highlight plain hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br></pre></td><td class="code"><pre><span class="line">SYS@ora12c&gt; alter session set container=salespdb;</span><br><span class="line">Session altered</span><br><span class="line">SYS@ora12c&gt; col CON_ID for a15</span><br><span class="line">SYS@ora12c&gt; col CUR_CONTAINER for a20</span><br><span class="line">SYS@ora12c&gt; col CUR_USER for a10</span><br><span class="line">SYS@ora12c&gt; SELECT SYS_CONTEXT(&apos;USERENV&apos;, &apos;CON_ID&apos;) AS con_id,</span><br><span class="line">  2  SYS_CONTEXT(&apos;USERENV&apos;, &apos;CON_NAME&apos;) AS cur_container,</span><br><span class="line">  3  SYS_CONTEXT(&apos;USERENV&apos;, &apos;SESSION_USER&apos;) AS cur_user</span><br><span class="line">  4  FROM DUAL;</span><br><span class="line">CON_ID          CUR_CONTAINER        CUR_USER</span><br><span class="line">--------------- -------------------- ----------</span><br><span class="line">3               SALESPDB             SYS</span><br></pre></td></tr></table></figure></p>
+<h3 id="3-Start-or-shutdown-PDB"><a href="#3-Start-or-shutdown-PDB" class="headerlink" title="3. Start or shutdown PDB"></a>3. Start or shutdown PDB</h3><figure class="highlight plain hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br></pre></td><td class="code"><pre><span class="line">#从root容器执行</span><br><span class="line">SYS@ora12c&gt; SELECT SYS_CONTEXT (&apos;USERENV&apos;, &apos;CON_NAME&apos;) FROM DUAL;</span><br><span class="line">SYS_CONTEX</span><br><span class="line">----------</span><br><span class="line">CDB$ROOT</span><br><span class="line">SQL&gt; alter pluggable database salespdb open;</span><br><span class="line">SQL&gt; startup pluggable database salespdb open read only;</span><br><span class="line">SQL&gt; alter pluggable database salespdb close immediate;</span><br><span class="line">SQL&gt; alter pluggable database all open;</span><br><span class="line">SQL&gt; alter pluggable database all close immediate;</span><br><span class="line">#从PDB执行</span><br><span class="line">SYS@ora12c&gt; alter session set container=salespdb;</span><br><span class="line">Session altered.</span><br><span class="line">SYS@ora12c&gt; SELECT SYS_CONTEXT (&apos;USERENV&apos;, &apos;CON_NAME&apos;) FROM DUAL;</span><br><span class="line">SYS_CONTEX</span><br><span class="line">----------</span><br><span class="line">SALESPDB</span><br><span class="line">SQL&gt; startup;</span><br><span class="line">SQL&gt; shutdown immediate;</span><br></pre></td></tr></table></figure>
+<p>Reference:<br><a href="http://docs.oracle.com/database/121/ADMIN/cdb_plug.htm#ADMIN13561" target="_blank" rel="noopener">Creating and Removing PDBs with SQL*Plus</a></p>
+
+    
+    </div>
+    
+    <div class="columns is-variable is-1 is-multiline is-mobile">
+    
+        <span class="column is-narrow"><a class="tag is-light article-tag" href="/tags/12c/">#12c</a></span>
+    
+    </div>
+    
+    
+    <div class="columns is-mobile is-multiline article-nav">
+        <span class="column is-12-mobile is-half-desktop  article-nav-prev">
+            
+            <a href="/oracle/table-join-type.html">Oracle表连接类型</a>
+            
+        </span>
+        <span class="column is-12-mobile is-half-desktop  article-nav-next">
+            
+            <a href="/oracle/12c-silent-installation.html">12C静默安装CDB</a>
+            
+        </span>
+    </div>
+    
+</article>
+
+
+
+
+    </div>
+</section>
+    <footer class="footer">
+    <div class="container">
+        <div class="columns content">
+            <div class="column is-narrow has-text-centered">
+                &copy; 2018 Kong&nbsp;
+                Powered by <a href="http://hexo.io/" target="_blank">Hexo</a> & <a
+                        href="http://github.com/ppoffice/hexo-theme-minos">Minos</a>
+            </div>
+            <div class="column is-hidden-mobile"></div>
+
+            
+            
+        </div>
+    </div>
+</footer>
+    <script src="//cdnjs.cloudflare.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
+<script src="//cdnjs.cloudflare.com/ajax/libs/moment.js/2.22.2/moment-with-locales.min.js"></script>
+
+<!-- test if the browser is outdated -->
+<div id="outdated">
+    <h6>Your browser is out-of-date!</h6>
+    <p>Update your browser to view this website correctly. <a id="btnUpdateBrowser" href="http://outdatedbrowser.com/">Update my browser now </a></p>
+    <p class="last"><a href="#" id="btnCloseUpdateBrowser" title="Close">&times;</a></p>
+</div>
+<script src="//cdnjs.cloudflare.com/ajax/libs/outdated-browser/1.1.5/outdatedbrowser.min.js"></script>
+<script>
+    $(document).ready(function () {
+        // plugin function, place inside DOM ready function
+        outdatedBrowser({
+            bgColor: '#f25648',
+            color: '#ffffff',
+            lowerThan: 'flex'
+        })
+    });
+</script>
+
+<script>
+    window.FontAwesomeConfig = {
+        searchPseudoElements: true
+    }
+    moment.locale("en-AU");
+</script>
+
+
+    
+    
+    
+    
+    
+    
+
+    
+
+
+<script src="/js/script.js"></script>
+
+    
+    <div class="searchbox ins-search">
+    <div class="searchbox-mask"></div>
+    <div class="searchbox-container ins-search-container">
+        <div class="searchbox-input-wrapper">
+            <input type="text" class="searchbox-input ins-search-input" placeholder="Type something..." />
+            <span class="searchbox-close ins-close ins-selectable"><i class="fa fa-times-circle"></i></span>
+        </div>
+        <div class="searchbox-result-wrapper ins-section-wrapper">
+            <div class="ins-section-container"></div>
+        </div>
+    </div>
+</div>
+<script>
+    (function (window) {
+        var INSIGHT_CONFIG = {
+            TRANSLATION: {
+                POSTS: 'Posts',
+                PAGES: 'Pages',
+                CATEGORIES: 'Categories',
+                TAGS: 'Tags',
+                UNTITLED: '(Untitled)',
+            },
+            CONTENT_URL: '/content.json',
+        };
+        window.INSIGHT_CONFIG = INSIGHT_CONFIG;
+    })(window);
+</script>
+<script src="/js/insight.js"></script>
+    
+</body>
+</html>

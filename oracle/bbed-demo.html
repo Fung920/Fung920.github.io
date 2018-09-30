@@ -1,0 +1,265 @@
+<!DOCTYPE html>
+<html class="has-navbar-fixed-top">
+<head>
+    <meta charset="utf-8">
+<title>BBED Demo - My Wiki</title>
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+
+<link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/outdated-browser/1.1.5/outdatedbrowser.min.css">
+
+
+<meta name="description" content="bbed模拟修改数据块">
+
+
+
+<meta name="keywords" content="bbed">
+
+
+
+
+
+
+
+<link rel="icon" href="/images/favicon.ico">
+
+
+<link rel="stylesheet" href="//fonts.googleapis.com/css?family=Ovo|Source+Code+Pro">
+<link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/bulma/0.6.2/css/bulma.min.css">
+
+
+
+<link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/highlight.js/9.12.0/styles/github.min.css">
+
+<link rel="stylesheet" href="/css/style.css">
+
+<script defer src="//use.fontawesome.com/releases/v5.0.8/js/all.js"></script>
+
+
+    
+    
+    
+    
+    
+    
+
+    
+
+
+</head>
+<body>
+    
+<nav class="navbar is-transparent is-fixed-top navbar-main" role="navigation" aria-label="main navigation">
+    <div class="container">
+        <div class="navbar-brand">
+            <a class="navbar-item navbar-logo" href="/">
+                
+                    
+                    My Wiki
+                    
+                
+            </a>
+            <div class="navbar-burger">
+                <span></span>
+                <span></span>
+                <span></span>
+            </div>
+        </div>
+        
+        <div class="navbar-menu navbar-start">
+            
+            <a class="navbar-item "
+               href="/">Home</a>
+            
+            <a class="navbar-item "
+               href="/archives">Archives</a>
+            
+            <a class="navbar-item "
+               href="/about">About</a>
+            
+        </div>
+        
+        <div class="navbar-menu navbar-end">
+            
+            <a class="navbar-item search" title="Search" href="javascript:;">
+                <i class="fas fa-search"></i>
+            </a>
+            
+            
+            
+        </div>
+    </div>
+</nav>
+
+    <section class="section">
+    <div class="container">
+    <article class="article content gallery" itemscope itemprop="blogPost">
+    <h1 class="article-title is-size-3 is-size-4-mobile" itemprop="name">
+        
+            BBED Demo
+        
+    </h1>
+    <div class="article-meta columns is-variable is-1 is-multiline is-mobile is-size-7-mobile">
+        <span class="column is-narrow">
+            <time datetime="2014-09-05T14:46:13.000Z" itemprop="datePublished">Sep 5 2014</time>
+        </span>
+        
+        <span class="column is-narrow article-category">
+            <i class="far fa-folder"></i>
+            <a class="article-category-link" href="/categories/oracle/">oracle</a>
+        </span>
+        
+        
+        <span class="column is-narrow">
+            
+            
+            16 minutes read (About 2327 words)
+        </span>
+        
+    </div>
+    <div class="article-entry is-size-6-mobile" itemprop="articleBody">
+    
+        <p>BBED功能有限，对很多类型的数据块都不支持。BBED虽然支持在open状态下修改数据块，但建议先干净的关闭数据库在进行BBED修改。正常关闭数据库能避开检查点进程覆盖掉bbed修改的块缓存。<br><a id="more"></a></p>
+<h3 id="1-修改数据"><a href="#1-修改数据" class="headerlink" title="1. 修改数据"></a>1. 修改数据</h3><figure class="highlight plain hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">FUNG@linora&gt; select * from test;</span><br><span class="line">ID         NAME</span><br><span class="line">---------- --------------------</span><br><span class="line">002        Kong</span><br><span class="line">001        Fung</span><br></pre></td></tr></table></figure>
+<p>假设修改id=002的name为kyun。首先确定id=2所在的dba：<br><figure class="highlight plain hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line">SYS@linora&gt; SELECT DBMS_ROWID.ROWID_RELATIVE_FNO(rowid) &quot;FILE&quot;,</span><br><span class="line">  2  DBMS_ROWID.ROWID_BLOCK_NUMBER(rowid) &quot;BLOCK&quot;,</span><br><span class="line">  3  DBMS_ROWID.ROWID_ROW_NUMBER(rowid) &quot;ROW&quot;,</span><br><span class="line">  4  id,name</span><br><span class="line">  5  FROM fung.test;</span><br><span class="line"></span><br><span class="line">      FILE      BLOCK        ROW ID         NAME</span><br><span class="line">---------- ---------- ---------- ---------- --------------------</span><br><span class="line">         5        212          0 002        Kyun</span><br><span class="line">         5        213          0 001        Fung</span><br></pre></td></tr></table></figure></p>
+<p>首先定位数据所在dba<br><figure class="highlight plain hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br></pre></td><td class="code"><pre><span class="line">BBED&gt; set dba 5,212</span><br><span class="line">        DBA             0x014000d4 (20971732 5,212)</span><br><span class="line">BBED&gt; find /c Kong</span><br><span class="line"> File: /oradata/datafile/linora/fung01.dbf (5)</span><br><span class="line"> Block: 212              Offsets: 8174 to 8191           Dba:0x014000d4</span><br><span class="line">------------------------------------------------------------------------</span><br><span class="line"> 4b6f6e67 2c000201 32044b6f 6e670106 7319 </span><br><span class="line"></span><br><span class="line"> &lt;32 bytes per line&gt;</span><br><span class="line">BBED&gt; d /v dba 5,212 offset 8174 count 64</span><br><span class="line"> File: /oradata/datafile/linora/fung01.dbf (5)</span><br><span class="line"> Block: 212     Offsets: 8174 to 8191  Dba:0x014000d4</span><br><span class="line">-------------------------------------------------------</span><br><span class="line"> 4b6f6e67 2c000201 32044b6f 6e670106 l Kong,...2.Kong..</span><br><span class="line"> 7319                                l s.</span><br><span class="line"></span><br><span class="line"> &lt;16 bytes per line&gt;</span><br></pre></td></tr></table></figure></p>
+<p>开始修改数据:<br><figure class="highlight plain hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br></pre></td><td class="code"><pre><span class="line">BBED&gt; m /c kyun dba 5,212 offset 8174</span><br><span class="line">Warning: contents of previous BIFILE will be lost. Proceed? (Y/N) y</span><br><span class="line"> File: /oradata/datafile/linora/fung01.dbf (5)</span><br><span class="line"> Block: 212              Offsets: 8173 to 8191           Dba:0x014000d4</span><br><span class="line">------------------------------------------------------------------------</span><br><span class="line"> 6b79756e 672c0002 0132044b 6f6e6701 067319 </span><br><span class="line"></span><br><span class="line"> &lt;32 bytes per line&gt;</span><br><span class="line">BBED&gt; d /v</span><br><span class="line"> File: /oradata/datafile/linora/fung01.dbf (5)</span><br><span class="line"> Block: 212     Offsets: 8174 to 8191  Dba:0x014000d4</span><br><span class="line">-------------------------------------------------------</span><br><span class="line"> 6b79756e 2c000201 32044b6f 6e670106 l kyun,...2.Kong..</span><br><span class="line"> 7119                                l q.</span><br><span class="line"></span><br><span class="line"> &lt;16 bytes per line&gt;</span><br></pre></td></tr></table></figure></p>
+<p>此时数据库级别是看不到的，需要sum验证一下，同时刷新库缓存：<br><figure class="highlight plain hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line">BBED&gt; sum apply</span><br><span class="line">Check value for File 5, Block 212:</span><br><span class="line">current = 0x04bb, required = 0x04bb</span><br><span class="line">SYS@linora&gt; alter system flush buffer_cache;</span><br><span class="line">System altered.</span><br><span class="line">SYS@linora&gt; select * from fung.test;</span><br><span class="line">ID         NAME</span><br><span class="line">---------- --------------------</span><br><span class="line">002        Kyun</span><br><span class="line">001        Fung</span><br></pre></td></tr></table></figure></p>
+<h3 id="2-找回删除的数据"><a href="#2-找回删除的数据" class="headerlink" title="2. 找回删除的数据"></a>2. 找回删除的数据</h3><p>在Oracle中，delete操作并不是真正删除了该行数据，而是将被删除的行标记为删除状态，<br><figure class="highlight plain hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line">SYS@linora&gt; alter system dump datafile 5 block 212;</span><br><span class="line">System altered.</span><br><span class="line">--dump trace内容</span><br><span class="line">block_row_dump:</span><br><span class="line">tab 0, row 0, @0x1f82</span><br><span class="line">tl: 12 fb: --H-FL-- lb: 0x0  cc: 2</span><br><span class="line">col  0: [ 3]  30 30 32</span><br><span class="line">col  1: [ 4]  4b 79 75 6e</span><br></pre></td></tr></table></figure></p>
+<p>删除表中数据：<br><figure class="highlight plain hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br></pre></td><td class="code"><pre><span class="line">SYS@linora&gt; delete from fung.test;</span><br><span class="line">2 rows deleted.</span><br><span class="line">SYS@linora&gt; commit;</span><br><span class="line">Commit complete.</span><br><span class="line">SYS@linora&gt; alter system flush buffer_cache;</span><br><span class="line">System altered.</span><br><span class="line">SYS@linora&gt; alter system dump datafile 5 block 212;</span><br><span class="line">System altered.</span><br><span class="line">--dump trace内容</span><br><span class="line">block_row_dump:</span><br><span class="line">tab 0, row 0, @0x1f82</span><br><span class="line">tl: 2 fb: --HDFL-- lb: 0x1</span><br></pre></td></tr></table></figure></p>
+<p>由两次的dump文件内容可以看到，被删除了的数据会在fb栏位添加一个D的标识符。如果一个row 没有被删除，那么它就具有上面的3个属性，即Flag 表示为：–H-FL–. 这里的字母分别代表属性的首字母。其对应的值：32 + 8 + 4 =44 or 0x2c。如果一个row 被delete了，那么row flag 就会更新，bitmask 里的deleted 被设置为16. 此时row flag 为： 32 + 16 + 8 + 4 = 60 or 0x3c。<br>如果需要将被删除的数据找回来，只需要修改3c为2c即可：<br><figure class="highlight plain hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br></pre></td><td class="code"><pre><span class="line">BBED&gt; set dba 5,212</span><br><span class="line">        DBA             0x014000d4 (20971732 5,212)</span><br><span class="line">--查看此块包含几行记录</span><br><span class="line">BBED&gt; map</span><br><span class="line"> File: /oradata/datafile/linora/fung01.dbf (5)</span><br><span class="line"> Block: 212                                   Dba:0x014000d4</span><br><span class="line">------------------------------------------------------------</span><br><span class="line"> KTB Data Block (Table/Cluster)</span><br><span class="line"> struct kcbh, 20 bytes                      @0       </span><br><span class="line"> struct ktbbh, 72 bytes                     @20      </span><br><span class="line"> struct kdbh, 14 bytes                      @100     </span><br><span class="line"> struct kdbt[1], 4 bytes                    @114     </span><br><span class="line">--只有一行数据</span><br><span class="line"> sb2 kdbr[1]                                @118     </span><br><span class="line"> ub1 freespace[8046]                        @120     </span><br><span class="line"> ub1 rowdata[22]                            @8166    </span><br><span class="line"> ub4 tailchk                                @8188    </span><br><span class="line">BBED&gt; p *kdbr[0]</span><br><span class="line">rowdata[0]</span><br><span class="line">----------</span><br><span class="line">ub1 rowdata[0]                              @8166     0x3c</span><br></pre></td></tr></table></figure></p>
+<p>修改offset 8166中的3c为2c，然后验证被删除的数据是否有被找回：<br><figure class="highlight plain hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br></pre></td><td class="code"><pre><span class="line">BBED&gt; m /x 2c dba 5,212 offset 8166</span><br><span class="line">Warning: contents of previous BIFILE will be lost. Proceed? (Y/N) y</span><br><span class="line"> File: /oradata/datafile/linora/fung01.dbf (5)</span><br><span class="line"> Block: 212              Offsets: 8166 to 8191           Dba:0x014000d4</span><br><span class="line">------------------------------------------------------------------------</span><br><span class="line"> 2c010203 30303204 4b79756e 2c000201 32044b6f 6e670106 ade7 </span><br><span class="line"> &lt;32 bytes per line&gt;</span><br><span class="line">BBED&gt; sum apply</span><br><span class="line">Check value for File 5, Block 212:</span><br><span class="line">current = 0x5f63, required = 0x5f63</span><br><span class="line">SYS@linora&gt; alter system flush buffer_cache;</span><br><span class="line">System altered.</span><br><span class="line">SYS@linora&gt; select * from fung.test;</span><br><span class="line">ID         NAME</span><br><span class="line">---------- --------------------</span><br><span class="line">002        Kyun</span><br></pre></td></tr></table></figure></p>
+<h3 id="3-归档缺失的情况下增进文件头SCN"><a href="#3-归档缺失的情况下增进文件头SCN" class="headerlink" title="3. 归档缺失的情况下增进文件头SCN"></a>3. 归档缺失的情况下增进文件头SCN</h3><p>在数据文件恢复的时候，如果缺失部分归档日志，此时数据文件因为SCN值跟控制文件记录的SCN不一致，而导致无法Online，我们可以通过BBED修改文件头的SCN值去人为的控制，但会丢失部分数据。下面模拟删除一个数据文件，同时删除所有归档，然后recovery，但由于缺少归档，recovery肯定会失败，此时可以使用BBED修改文件头SCN进行人为的同步。<br><figure class="highlight plain hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br></pre></td><td class="code"><pre><span class="line">[oracle@linora:/oradata/arch]$ rm -rf /oradata/datafile/linora/test01.dbf</span><br><span class="line">SYS@linora&gt; startup force</span><br><span class="line">RMAN&gt; restore datafile &apos;/oradata/datafile/linora/test01.dbf&apos;;  </span><br><span class="line">RMAN&gt; recover datafile &apos;/oradata/datafile/linora/test01.dbf&apos;;</span><br><span class="line">Starting recover at 2014-09-10 17:01:54</span><br><span class="line">using channel ORA_DISK_1</span><br><span class="line">starting media recovery</span><br><span class="line">RMAN-00571: ===========================================================</span><br><span class="line">RMAN-00569: =============== ERROR MESSAGE STACK FOLLOWS ===============</span><br><span class="line">RMAN-00571: ===========================================================</span><br><span class="line">RMAN-03002: failure of recover command at 09/10/2014 17:01:54</span><br><span class="line">RMAN-06053: unable to perform media recovery because of missing log</span><br><span class="line">RMAN-06025: no backup of archived log for thread 1 with sequence 194 and starting SCN of 3631541 found to restore</span><br><span class="line">RMAN-06025: no backup of archived log for thread 1 with sequence 193 and starting SCN of 3631538 found to restore</span><br><span class="line">RMAN-06025: no backup of archived log for thread 1 with sequence 192 and starting SCN of 3631535 found to restore</span><br><span class="line">RMAN-06025: no backup of archived log for thread 1 with sequence 191 and starting SCN of 3631234 found to restore</span><br><span class="line">RMAN-06025: no backup of archived log for thread 1 with sequence 190 and starting SCN of 3606559 found to restore</span><br></pre></td></tr></table></figure></p>
+<p>分别查看控制文件和数据文件头SCN：<br><figure class="highlight plain hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br></pre></td><td class="code"><pre><span class="line">--控制文件SCN</span><br><span class="line">SYS@linora&gt; select file#,checkpoint_change# from v$datafile;</span><br><span class="line">     FILE# CHECKPOINT_CHANGE#</span><br><span class="line">---------- ------------------</span><br><span class="line">         1            3653096</span><br><span class="line">         2            3653096</span><br><span class="line">         3            3653096</span><br><span class="line">         4            3653096</span><br><span class="line">         5            3653096</span><br><span class="line">         6            3653096</span><br><span class="line">         7            3653096</span><br><span class="line">         8            3653096</span><br><span class="line">         9            3653096</span><br><span class="line">        10            3653096</span><br><span class="line">        11            3653096</span><br><span class="line">11 rows selected.</span><br><span class="line">--数据文件头SCN</span><br><span class="line"></span><br><span class="line">SYS@linora&gt; select file#,checkpoint_change# from v$datafile_header;</span><br><span class="line">     FILE# CHECKPOINT_CHANGE#</span><br><span class="line">---------- ------------------</span><br><span class="line">         1            3653096</span><br><span class="line">         2            3653096</span><br><span class="line">         3            3653096</span><br><span class="line">         4            3653096</span><br><span class="line">         5            3653096</span><br><span class="line">         6            3653096</span><br><span class="line">         7            3653096</span><br><span class="line">         8            3653096</span><br><span class="line">         9            3653096</span><br><span class="line">        10            3653096</span><br><span class="line">        11            3606566</span><br><span class="line">11 rows selected.</span><br><span class="line">SYS@linora&gt; select change# from v$recover_file; </span><br><span class="line">   CHANGE#</span><br><span class="line">----------</span><br><span class="line">   3606566</span><br></pre></td></tr></table></figure></p>
+<p>可以确定，file 11的SCN不一致，但又缺少归档，因此，media recovery无法进行。文件头信息存储在数据文件的第一个块内，在前文<a href="/bbed-structure.html">BBED Structure</a>，块头仅有一个结构–kcvfh，数据文件是否与其他数据文件同步，Oracle会考虑到此结构中的四个属性：</p>
+<p><li>kscnbas(offset 484)–SCN of last change to the file</li></p>
+<p><li>kcvcptim(offset 492)–Time of last change to the file</li></p>
+<p><li>kcvfhcpc(offset 140)–Checkpoint count,v$datafile_header.CHECKPOINT_COUNT，数据文件发生Checkpoint的次数</li></p>
+<p><li>kcvfhccc(offset 148)–控制文件检查点次数</li><br>使用bbed分别对比1号文件和11号文件的上述四个属性值：  </p>
+<h5 id="1号文件"><a href="#1号文件" class="headerlink" title="1号文件"></a>1号文件</h5><figure class="highlight plain hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br></pre></td><td class="code"><pre><span class="line">BBED&gt; set dba 1,1</span><br><span class="line">        DBA             0x00400001 (4194305 1,1)</span><br><span class="line">BBED&gt; p kcvfhckp</span><br><span class="line">struct kcvfhckp, 36 bytes                   @484     </span><br><span class="line">   struct kcvcpscn, 8 bytes                 @484     </span><br><span class="line">      ub4 kscnbas                           @484      0x0037bde8--检查点SCN</span><br><span class="line">      ub2 kscnwrp                           @488      0x0000</span><br><span class="line">   ub4 kcvcptim                             @492      0x3322ed7b--检查点时间</span><br><span class="line">   ub2 kcvcpthr                             @496      0x0001</span><br><span class="line">   union u, 12 bytes                        @500     </span><br><span class="line">      struct kcvcprba, 12 bytes             @500     </span><br><span class="line">         ub4 kcrbaseq                       @500      0x000000c3</span><br><span class="line">         ub4 kcrbabno                       @504      0x00000561</span><br><span class="line">         ub2 kcrbabof                       @508      0x0010</span><br><span class="line">   ub1 kcvcpetb[0]                          @512      0x02</span><br><span class="line">   ub1 kcvcpetb[1]                          @513      0x00</span><br><span class="line">   ub1 kcvcpetb[2]                          @514      0x00</span><br><span class="line">   ub1 kcvcpetb[3]                          @515      0x00</span><br><span class="line">   ub1 kcvcpetb[4]                          @516      0x00</span><br><span class="line">   ub1 kcvcpetb[5]                          @517      0x00</span><br><span class="line">   ub1 kcvcpetb[6]                          @518      0x00</span><br><span class="line">   ub1 kcvcpetb[7]                          @519      0x00</span><br><span class="line">BBED&gt; p kcvfhcpc</span><br><span class="line">ub4 kcvfhcpc                                @140      0x00000287--数据文件ckpt次数</span><br><span class="line">BBED&gt; p kcvfhccc</span><br><span class="line">ub4 kcvfhccc                                @148      0x00000286--控制文件ckpt次数</span><br></pre></td></tr></table></figure>
+<h5 id="11号文件"><a href="#11号文件" class="headerlink" title="11号文件"></a>11号文件</h5><figure class="highlight plain hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br></pre></td><td class="code"><pre><span class="line">BBED&gt; set dba 11,1</span><br><span class="line">        DBA             0x02c00001 (46137345 11,1)</span><br><span class="line">BBED&gt; p kcvfhckp</span><br><span class="line">struct kcvfhckp, 36 bytes                   @484     </span><br><span class="line">   struct kcvcpscn, 8 bytes                 @484     </span><br><span class="line">      ub4 kscnbas                           @484      0x00370826</span><br><span class="line">      ub2 kscnwrp                           @488      0x0000</span><br><span class="line">   ub4 kcvcptim                             @492      0x3322df58</span><br><span class="line">   ub2 kcvcpthr                             @496      0x0001</span><br><span class="line">   union u, 12 bytes                        @500     </span><br><span class="line">      struct kcvcprba, 12 bytes             @500     </span><br><span class="line">         ub4 kcrbaseq                       @500      0x000000be</span><br><span class="line">         ub4 kcrbabno                       @504      0x00000002</span><br><span class="line">         ub2 kcrbabof                       @508      0x0010</span><br><span class="line">   ub1 kcvcpetb[0]                          @512      0x02</span><br><span class="line">   ub1 kcvcpetb[1]                          @513      0x00</span><br><span class="line">   ub1 kcvcpetb[2]                          @514      0x00</span><br><span class="line">   ub1 kcvcpetb[3]                          @515      0x00</span><br><span class="line">   ub1 kcvcpetb[4]                          @516      0x00</span><br><span class="line">   ub1 kcvcpetb[5]                          @517      0x00</span><br><span class="line">   ub1 kcvcpetb[6]                          @518      0x00</span><br><span class="line">   ub1 kcvcpetb[7]                          @519      0x00</span><br><span class="line">BBED&gt; p kcvfhcpc</span><br><span class="line">ub4 kcvfhcpc                                @140      0x00000044</span><br><span class="line">BBED&gt; p kcvfhccc</span><br><span class="line">ub4 kcvfhccc                                @148      0x00000043</span><br></pre></td></tr></table></figure>
+<p>从上述结果中可以看到，正常的数据文件中，SCN值为0x0037bde8，即为10进制的3653096，Checkpoint的时间为0x3322ed7b，而需要media recovery的11号文件SCN值为0x00370826，即10进制的3606566，四个属性跟正常文件都不相同。<br><figure class="highlight plain hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">SYS@linora&gt; select to_number(&apos;37bde8&apos;,&apos;xxxxxxxx&apos;) from dual; </span><br><span class="line">TO_NUMBER(&apos;37BDE8&apos;,&apos;XXXXXXXX&apos;)</span><br><span class="line">------------------------------</span><br><span class="line">                       3653096</span><br></pre></td></tr></table></figure></p>
+<p>再来dump一下各个offset的值(11号数据文件)：<br><figure class="highlight plain hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br></pre></td><td class="code"><pre><span class="line">--dump SCN值</span><br><span class="line">BBED&gt; set dba 11,1 offset 484 </span><br><span class="line">        DBA             0x02c00001 (46137345 11,1)</span><br><span class="line">        OFFSET          484</span><br><span class="line">BBED&gt; d /v count 16</span><br><span class="line"> File: /oradata/datafile/linora/test01.dbf (11)</span><br><span class="line"> Block: 1       Offsets:  484 to  499  Dba:0x02c00001</span><br><span class="line">-------------------------------------------------------</span><br><span class="line"> 26083700 00000000 58df2233 01000000 l &amp;.7.....X.&quot;3....</span><br><span class="line">--Checkpoint 时间</span><br><span class="line">BBED&gt; d /v dba 11,1 offset 492</span><br><span class="line"> File: /oradata/datafile/linora/test01.dbf (11)</span><br><span class="line"> Block: 1       Offsets:  492 to  507  Dba:0x02c00001</span><br><span class="line">-------------------------------------------------------</span><br><span class="line"> 58df2233 01000000 be000000 02000000 l X.&quot;3............</span><br><span class="line">--数据文件Checkpoint次数</span><br><span class="line">BBED&gt; d /v dba 11,1 offset 140</span><br><span class="line"> File: /oradata/datafile/linora/test01.dbf (11)</span><br><span class="line"> Block: 1       Offsets:  140 to  155  Dba:0x02c00001</span><br><span class="line">-------------------------------------------------------</span><br><span class="line"> 44000000 c0ed2233 43000000 00000000 l D.....&quot;3C.......</span><br><span class="line">--控制文件Checkpoint次数</span><br><span class="line">BBED&gt; d /v dba 11,1 offset 148</span><br><span class="line"> File: /oradata/datafile/linora/test01.dbf (11)</span><br><span class="line"> Block: 1       Offsets:  148 to  163  Dba:0x02c00001</span><br><span class="line">-------------------------------------------------------</span><br><span class="line"> 43000000 00000000 00000000 00000000 l C...............</span><br></pre></td></tr></table></figure></p>
+<p>因为此平台为Linux，属于little-endian，存储字节顺序是由左至右，因此，四个属性值和存储值对应有如下关系(0x代表16进制)：<br><figure class="highlight plain hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">00370826--&gt;26083700</span><br><span class="line">3322df58--&gt;58df2233</span><br><span class="line">00000044--&gt;44000000</span><br><span class="line">00000043--&gt;43000000</span><br></pre></td></tr></table></figure></p>
+<p>由此，我们可以得出，只需要将上述四个属性值修改为1号文件相同值即可<br><figure class="highlight plain hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br></pre></td><td class="code"><pre><span class="line">--修改文件Checkpoint scn</span><br><span class="line">BBED&gt; d /v dba 1,1 offset 484 count 16</span><br><span class="line"> File: /oradata/datafile/linora/system01.dbf (1)</span><br><span class="line"> Block: 1       Offsets:  484 to  499  Dba:0x00400001</span><br><span class="line">-------------------------------------------------------</span><br><span class="line"> e8bd3700 00000000 7bed2233 01000000 l ..7.....&#123;.&quot;3....</span><br><span class="line">BBED&gt; m /x e8bd37 dba 11,1 offset 484</span><br><span class="line">Warning: contents of previous BIFILE will be lost. Proceed? (Y/N) y</span><br><span class="line"> File: /oradata/datafile/linora/test01.dbf (11)</span><br><span class="line"> Block: 1                Offsets:  484 to  499           Dba:0x02c00001</span><br><span class="line">------------------------------------------------------------------------</span><br><span class="line"> e8bd3700 00000000 58df2233 01000000 </span><br><span class="line">--修改文件Checkpoint 时间</span><br><span class="line">BBED&gt; d /v dba 1,1 offset 492</span><br><span class="line"> File: /oradata/datafile/linora/system01.dbf (1)</span><br><span class="line"> Block: 1       Offsets:  492 to  507  Dba:0x00400001</span><br><span class="line">-------------------------------------------------------</span><br><span class="line"> 7bed2233 01000000 c3000000 61050000 l &#123;.&quot;3........a...</span><br><span class="line">BBED&gt; m /x 7bed2233 dba 11,1 offset 492</span><br><span class="line"> File: /oradata/datafile/linora/test01.dbf (11)</span><br><span class="line"> Block: 1                Offsets:  492 to  507           Dba:0x02c00001</span><br><span class="line">------------------------------------------------------------------------</span><br><span class="line"> 7bed2233 01000000 be000000 02000000 </span><br><span class="line">--修改文件Checkpoint次数</span><br><span class="line">BBED&gt; d /v dba 1,1 offset 140</span><br><span class="line"> File: /oradata/datafile/linora/system01.dbf (1)</span><br><span class="line"> Block: 1       Offsets:  140 to  155  Dba:0x00400001</span><br><span class="line">-------------------------------------------------------</span><br><span class="line"> 87020000 b3ec2233 86020000 00000000 l ......&quot;3........</span><br><span class="line">BBED&gt; m /x 8702 dba 11,1 offset 140</span><br><span class="line"> File: /oradata/datafile/linora/test01.dbf (11)</span><br><span class="line"> Block: 1                Offsets:  140 to  155           Dba:0x02c00001</span><br><span class="line">------------------------------------------------------------------------</span><br><span class="line"> 87020000 c0ed2233 43000000 00000000</span><br><span class="line">--修改控制文件Checkpoint次数</span><br><span class="line">BBED&gt; d /v dba 1,1 offset 148</span><br><span class="line"> File: /oradata/datafile/linora/system01.dbf (1)</span><br><span class="line"> Block: 1       Offsets:  148 to  163  Dba:0x00400001</span><br><span class="line">-------------------------------------------------------</span><br><span class="line"> 86020000 00000000 00000000 00000000 l ...............</span><br><span class="line">BBED&gt; m /x 8602 dba 11,1 offset 148</span><br><span class="line"> File: /oradata/datafile/linora/test01.dbf (11)</span><br><span class="line"> Block: 1                Offsets:  148 to  163           Dba:0x02c00001</span><br><span class="line">------------------------------------------------------------------------</span><br><span class="line"> 86020000 00000000 00000000 00000000 </span><br><span class="line">BBED&gt; sum apply </span><br><span class="line">Check value for File 11, Block 1:</span><br><span class="line">current = 0x90d7, required = 0x90d7</span><br></pre></td></tr></table></figure></p>
+<p>然而，当我修改完这四个属性值之后，启动数据库提示如下错误：<br><figure class="highlight plain hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line">SYS@linora&gt; alter database open;</span><br><span class="line">alter database open</span><br><span class="line">*</span><br><span class="line">ERROR at line 1:</span><br><span class="line">ORA-01122: database file 11 failed verification check</span><br><span class="line">ORA-01110: data file 11: &apos;/oradata/datafile/linora/test01.dbf&apos;</span><br><span class="line">ORA-01207: file is more recent than control file - old control file</span><br></pre></td></tr></table></figure></p>
+<p>个人觉得kcvfhcpc和kcvfhccc因数据文件而异，因为有些数据文件创建时间早，因此Checkpoint的次数就多，有些数据文件创建晚，Checkpoint的次数就少，因此，如果要修改这两个属性，必须重建控制文件。我的做法是：不修改这两个值，直接开启数据库，提示错误”ORA-01113: file 11 needs media recovery”，在rman下执行recovery，此时不会提示要apply归档日志，且数据库能正常打开了，但是，存在着数据丢失。<br><figure class="highlight plain hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line">RMAN&gt; recover datafile 11;</span><br><span class="line">Starting recover at 2014-09-11 10:15:11</span><br><span class="line">using target database control file instead of recovery catalog</span><br><span class="line">allocated channel: ORA_DISK_1</span><br><span class="line">channel ORA_DISK_1: SID=245 device type=DISK</span><br><span class="line">starting media recovery</span><br><span class="line">media recovery complete, elapsed time: 00:00:01</span><br><span class="line">Finished recover at 2014-09-11 10:15:13</span><br><span class="line">SYS@linora&gt; alter database open; </span><br><span class="line">Database altered.</span><br></pre></td></tr></table></figure></p>
+<p>Reference：<br><a href="http://www.orafaq.com/papers/dissassembling_the_data_block.pdf" target="_blank" rel="noopener">dissassembling_the_data_block</a></p>
+
+    
+    </div>
+    
+    <div class="columns is-variable is-1 is-multiline is-mobile">
+    
+        <span class="column is-narrow"><a class="tag is-light article-tag" href="/tags/bbed/">#bbed</a></span>
+    
+    </div>
+    
+    
+    <div class="columns is-mobile is-multiline article-nav">
+        <span class="column is-12-mobile is-half-desktop  article-nav-prev">
+            
+            <a href="/oracle/ora-19511.html">ORA-19511</a>
+            
+        </span>
+        <span class="column is-12-mobile is-half-desktop  article-nav-next">
+            
+            <a href="/oracle/bbed-structure.html">BBED Structure</a>
+            
+        </span>
+    </div>
+    
+</article>
+
+
+
+
+    </div>
+</section>
+    <footer class="footer">
+    <div class="container">
+        <div class="columns content">
+            <div class="column is-narrow has-text-centered">
+                &copy; 2018 Kong&nbsp;
+                Powered by <a href="http://hexo.io/" target="_blank">Hexo</a> & <a
+                        href="http://github.com/ppoffice/hexo-theme-minos">Minos</a>
+            </div>
+            <div class="column is-hidden-mobile"></div>
+
+            
+            
+        </div>
+    </div>
+</footer>
+    <script src="//cdnjs.cloudflare.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
+<script src="//cdnjs.cloudflare.com/ajax/libs/moment.js/2.22.2/moment-with-locales.min.js"></script>
+
+<!-- test if the browser is outdated -->
+<div id="outdated">
+    <h6>Your browser is out-of-date!</h6>
+    <p>Update your browser to view this website correctly. <a id="btnUpdateBrowser" href="http://outdatedbrowser.com/">Update my browser now </a></p>
+    <p class="last"><a href="#" id="btnCloseUpdateBrowser" title="Close">&times;</a></p>
+</div>
+<script src="//cdnjs.cloudflare.com/ajax/libs/outdated-browser/1.1.5/outdatedbrowser.min.js"></script>
+<script>
+    $(document).ready(function () {
+        // plugin function, place inside DOM ready function
+        outdatedBrowser({
+            bgColor: '#f25648',
+            color: '#ffffff',
+            lowerThan: 'flex'
+        })
+    });
+</script>
+
+<script>
+    window.FontAwesomeConfig = {
+        searchPseudoElements: true
+    }
+    moment.locale("en-AU");
+</script>
+
+
+    
+    
+    
+    
+    
+    
+
+    
+
+
+<script src="/js/script.js"></script>
+
+    
+    <div class="searchbox ins-search">
+    <div class="searchbox-mask"></div>
+    <div class="searchbox-container ins-search-container">
+        <div class="searchbox-input-wrapper">
+            <input type="text" class="searchbox-input ins-search-input" placeholder="Type something..." />
+            <span class="searchbox-close ins-close ins-selectable"><i class="fa fa-times-circle"></i></span>
+        </div>
+        <div class="searchbox-result-wrapper ins-section-wrapper">
+            <div class="ins-section-container"></div>
+        </div>
+    </div>
+</div>
+<script>
+    (function (window) {
+        var INSIGHT_CONFIG = {
+            TRANSLATION: {
+                POSTS: 'Posts',
+                PAGES: 'Pages',
+                CATEGORIES: 'Categories',
+                TAGS: 'Tags',
+                UNTITLED: '(Untitled)',
+            },
+            CONTENT_URL: '/content.json',
+        };
+        window.INSIGHT_CONFIG = INSIGHT_CONFIG;
+    })(window);
+</script>
+<script src="/js/insight.js"></script>
+    
+</body>
+</html>

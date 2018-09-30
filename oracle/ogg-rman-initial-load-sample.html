@@ -1,0 +1,428 @@
+<!DOCTYPE html>
+<html class="has-navbar-fixed-top">
+<head>
+    <meta charset="utf-8">
+<title>OGG RMAN Initial Load sample - My Wiki</title>
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+
+<link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/outdated-browser/1.1.5/outdatedbrowser.min.css">
+
+
+<meta name="description" content="Oracle GoldenGate Initial Load">
+
+
+
+<meta name="keywords" content="Oracle GoldenGate">
+
+
+
+
+
+
+
+<link rel="icon" href="/images/favicon.ico">
+
+
+<link rel="stylesheet" href="//fonts.googleapis.com/css?family=Ovo|Source+Code+Pro">
+<link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/bulma/0.6.2/css/bulma.min.css">
+
+
+
+<link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/highlight.js/9.12.0/styles/github.min.css">
+
+<link rel="stylesheet" href="/css/style.css">
+
+<script defer src="//use.fontawesome.com/releases/v5.0.8/js/all.js"></script>
+
+
+    
+    
+    
+    
+    
+    
+
+    
+
+
+</head>
+<body>
+    
+<nav class="navbar is-transparent is-fixed-top navbar-main" role="navigation" aria-label="main navigation">
+    <div class="container">
+        <div class="navbar-brand">
+            <a class="navbar-item navbar-logo" href="/">
+                
+                    
+                    My Wiki
+                    
+                
+            </a>
+            <div class="navbar-burger">
+                <span></span>
+                <span></span>
+                <span></span>
+            </div>
+        </div>
+        
+        <div class="navbar-menu navbar-start">
+            
+            <a class="navbar-item "
+               href="/">Home</a>
+            
+            <a class="navbar-item "
+               href="/archives">Archives</a>
+            
+            <a class="navbar-item "
+               href="/about">About</a>
+            
+        </div>
+        
+        <div class="navbar-menu navbar-end">
+            
+            <a class="navbar-item search" title="Search" href="javascript:;">
+                <i class="fas fa-search"></i>
+            </a>
+            
+            
+            
+        </div>
+    </div>
+</nav>
+
+    <section class="section">
+    <div class="container">
+    <article class="article content gallery" itemscope itemprop="blogPost">
+    <h1 class="article-title is-size-3 is-size-4-mobile" itemprop="name">
+        
+            OGG RMAN Initial Load sample
+        
+    </h1>
+    <div class="article-meta columns is-variable is-1 is-multiline is-mobile is-size-7-mobile">
+        <span class="column is-narrow">
+            <time datetime="2016-06-30T19:54:37.000Z" itemprop="datePublished">Jun 30 2016</time>
+        </span>
+        
+        <span class="column is-narrow article-category">
+            <i class="far fa-folder"></i>
+            <a class="article-category-link" href="/categories/oracle/">oracle</a>
+        </span>
+        
+        
+        <span class="column is-narrow">
+            
+            
+            21 minutes read (About 3141 words)
+        </span>
+        
+    </div>
+    <div class="article-entry is-size-6-mobile" itemprop="articleBody">
+    
+        <p>My first experience of deploying OGG was in 2010, we were synchronizing the data from prod server to a report server. Before using OGG, we were using MV table to achieve that. But I didn’t maintain OGG since 2013, so I almost forgot everything about the OGG. It’s necessary to write down some fundamental steps about how to build an OGG environment.<br><a id="more"></a></p>
+<h2 id="Terminology"><a href="#Terminology" class="headerlink" title="Terminology"></a>Terminology</h2><ul>
+<li><p>MGR process</p>
+<p>  The first process you should start before Extract/Replicat, it’s the control process of OGG, need to be ran on both source and target. It performs monitoring, starting other OGG process,managing the trail files and so on.</p>
+</li>
+<li><p>Extract process</p>
+<p>  This process is performing capturing changed committed data on the source, also can be configured for initialing load.</p>
+</li>
+<li><p>Trail files</p>
+<p>  Trail files can exist on both source and target. It stores changed data of database continuously to disk files, these files are called trails. Without the Data pump configured, there will be no trail files on the source. The source trail file also known as local trail, the target trail also known as remote trail.</p>
+</li>
+<li><p>Data pump process</p>
+<p>  The main purpose using pump is protecting Extract process abend or abort from network failure between source and target. This process only reside on the source. Without the pump process, the trail file only exist on the target, from the source end, the changed committed data which Extract process would be stored in the memory, in case of network connectivity broken, the Extract maybe run out of memory and abort.<br>  With the pump process, the data that Extract process will be storing into a source trail file, if the network failure, since the captured data moved to the disk, there’s no risks for running out of memory, once the connectivity restored, the pump process will read the data from the source trail and send to the target trail.</p>
+</li>
+<li><p>Replicat process</p>
+<p>  The Replicat process runs on the target system. It read the trail on the target, re-apply the DML or DDL operation to the target system.</p>
+</li>
+</ul>
+<h2 id="Configuring-the-OGG-on-the-source-system"><a href="#Configuring-the-OGG-on-the-source-system" class="headerlink" title="Configuring the OGG on the source system"></a>Configuring the OGG on the source system</h2><ul>
+<li>Creating GoldenGate users</li>
+</ul>
+<figure class="highlight hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">SQL&gt; create tablespace goldengate datafile '/u01/linora/goldengate01.dbf' size 100M;</span><br><span class="line">SQL&gt; create user ggsusr identified by oracle default tablespace goldengate account unlock;</span><br><span class="line">SQL&gt; grant resource,connect,dba to ggsusr;</span><br></pre></td></tr></table></figure>
+<ul>
+<li>Enabling the archive log mode</li>
+</ul>
+<figure class="highlight hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">SQL&gt; alter system set LOG_ARCHIVE_DEST_1 = 'LOCATION=/u01/arch' scope=both;</span><br><span class="line">SQL&gt; shutdown immediate</span><br><span class="line">SQL&gt; alter database archivelog;</span><br><span class="line">SQL&gt; alter database open;</span><br><span class="line">SQL&gt; alter system switch logfile;</span><br></pre></td></tr></table></figure>
+<ul>
+<li>Enabling the supplemental log</li>
+</ul>
+<figure class="highlight hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line">SQL&gt; select SUPPLEMENTAL_LOG_DATA_MIN,</span><br><span class="line">SUPPLEMENTAL_LOG_DATA_PK,</span><br><span class="line">SUPPLEMENTAL_LOG_DATA_UI,</span><br><span class="line">SUPPLEMENTAL_LOG_DATA_FK,</span><br><span class="line">SUPPLEMENTAL_LOG_DATA_ALL from v$database;</span><br><span class="line"></span><br><span class="line">SQL&gt; alter database add supplemental log data ;</span><br><span class="line">SQL&gt; alter database add supplemental log data (primary key, unique,foreign key) columns;</span><br><span class="line">SQL&gt; alter system switch logfile;</span><br></pre></td></tr></table></figure>
+<p>Ensure supplemental log PK,UI,FK are enabled, the ALL Columns are disabled, if the ALL Columns are enabled, use following sql to close it:<br><figure class="highlight hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">SQL&gt; alter database drop supplemental log data (ALL) columns;</span><br></pre></td></tr></table></figure></p>
+<ul>
+<li>Enabling the force logging</li>
+</ul>
+<figure class="highlight hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">SQL&gt; select FORCE_LOGGING from v$database;</span><br><span class="line">SQL&gt; alter database force logging;</span><br></pre></td></tr></table></figure>
+<ul>
+<li>Installing the GoldenGate software</li>
+</ul>
+<p>Before install the software, we need to add some variables to the profile, add the following line to oracle user’s profile:<br><figure class="highlight bash hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line"><span class="hljs-built_in">export</span> GG_HOME=/gghome</span><br><span class="line"><span class="hljs-built_in">export</span> LD_LIBRARY_PATH=<span class="hljs-variable">$GG_HOME</span>:<span class="hljs-variable">$ORACLE_HOME</span>/lib:/lib:/usr/lib</span><br><span class="line"><span class="hljs-comment">#Unzip the package with oracle user</span></span><br><span class="line"><span class="hljs-built_in">cd</span> /gghome/</span><br><span class="line">unzip V34339-01.zip</span><br><span class="line">tar -xvf fbo_ggs_Linux_x64_ora11g_64bit.tar</span><br></pre></td></tr></table></figure></p>
+<p>Create subdirs for OGG<br><figure class="highlight bash hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br></pre></td><td class="code"><pre><span class="line">[oracle@node1:/gghome]$ ./ggsci</span><br><span class="line">GGSCI (node1) 1&gt; create subdirs</span><br><span class="line">Creating subdirectories under current directory /gghome</span><br><span class="line">Parameter files                /gghome/dirprm: already exists</span><br><span class="line">Report files                   /gghome/dirrpt: created</span><br><span class="line">Checkpoint files               /gghome/dirchk: created</span><br><span class="line">Process status files           /gghome/dirpcs: created</span><br><span class="line">SQL script files               /gghome/dirsql: created</span><br><span class="line">Database definitions files     /gghome/dirdef: created</span><br><span class="line">Extract data files             /gghome/dirdat: created</span><br><span class="line">Temporary files                /gghome/dirtmp: created</span><br><span class="line">Stdout files                   /gghome/dirout: created</span><br></pre></td></tr></table></figure></p>
+<ul>
+<li>Enabling sequence support</li>
+</ul>
+<figure class="highlight hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">[oracle@node1:/gghome]$ cd /gghome/</span><br><span class="line">[oracle@node1:/gghome]$ sqlplus "/as sysdba"</span><br><span class="line">SQL&gt; @sequence.sql</span><br><span class="line">SQL&gt; GRANT EXECUTE on ggsusr.updateSequence to ggsusr;</span><br><span class="line">SQL&gt; ALTER TABLE sys.seq$ ADD SUPPLEMENTAL LOG DATA (PRIMARY KEY) COLUMNS;</span><br></pre></td></tr></table></figure>
+<ul>
+<li>Adding trandata to source tables</li>
+</ul>
+<figure class="highlight hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br></pre></td><td class="code"><pre><span class="line">SQL&gt; set head off</span><br><span class="line">SQL&gt; set feedback off</span><br><span class="line">SQL&gt; spool /gghome/dirprm/addtrandata.txt</span><br><span class="line">SQL&gt; select 'add trandata '|| owner ||'.'|| table_name from dba_tables where owner='SCOTT';</span><br><span class="line"></span><br><span class="line">add trandata SCOTT.DEPT</span><br><span class="line">add trandata SCOTT.EMP</span><br><span class="line">add trandata SCOTT.BONUS</span><br><span class="line">add trandata SCOTT.SALGRADE</span><br><span class="line">SQL&gt; spool off</span><br><span class="line"></span><br><span class="line">[oracle@node1:/home/oracle]$ cd /gghome/</span><br><span class="line">[oracle@node1:/gghome]$ ./ggsci</span><br><span class="line">GGSCI (node1) 1&gt; dblogin userid ggsusr, password oracle</span><br><span class="line">Successfully logged into database.</span><br><span class="line">GGSCI (node1) 3&gt; obey /gghome/dirprm/addtrandata.txt</span><br><span class="line">#find the result of adding trandata</span><br><span class="line">GGSCI (node1) 11&gt; info trandata scott.dept</span><br></pre></td></tr></table></figure>
+<ul>
+<li>Configuring manager process</li>
+</ul>
+<figure class="highlight bash hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br></pre></td><td class="code"><pre><span class="line"><span class="hljs-comment">#Encrept the passowrd</span></span><br><span class="line">GGSCI (node1) 2&gt; ENCRYPT PASSWORD oracle BLOWFISH ENCRYPTKEY DEFAULT</span><br><span class="line">Using default key...</span><br><span class="line"></span><br><span class="line">Encrypted password:  AACAAAAAAAAAAAGAIFAAUDVHCFUGFIYF</span><br><span class="line">Algorithm used:  BLOWFISH</span><br><span class="line"></span><br><span class="line">GGSCI (node1) 3&gt; edit params mgr</span><br><span class="line">PORT 7809</span><br><span class="line">DYNAMICPORTLIST  7810-7880</span><br><span class="line">USERID ggsusr, PASSWORD AAACAAAAAAAAAAAGAIFAAUDVHCFUGFIYF, ENCRYPTKEY default</span><br><span class="line">AUTORESTART EXTRACT *, RETRIES 5, WAITMINUTES 3</span><br><span class="line">PURGEOLDEXTRACTS ./dirdat/*, USECHECKPOINTS, MINKEEPDAYS 3</span><br><span class="line">--PURGEOLDEXTRACTS parameter is determinating how long the extract trail file is keeping</span><br><span class="line">--Disable this parameter during initail load, and <span class="hljs-built_in">enable</span> it when sychronizate</span><br><span class="line">LAGREPORTHOURS 1</span><br><span class="line">LAGINFOMINUTES 30</span><br><span class="line">LAGCRITICALMINUTES 45</span><br></pre></td></tr></table></figure>
+<ul>
+<li>Configuring Extract process</li>
+</ul>
+<figure class="highlight bash hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br></pre></td><td class="code"><pre><span class="line"><span class="hljs-comment">#We need to confirm we don't have any transactions running, otherwise, rollback it or waiting for completing.</span></span><br><span class="line">SQL&gt; select count(*) from gv<span class="hljs-variable">$transaction</span>;</span><br><span class="line">GGSCI (node1) 5&gt; dblogin userid ggsusr, password oracle</span><br><span class="line">Successfully logged into database.</span><br><span class="line">GGSCI (node1) 6&gt; edit params ext1</span><br><span class="line">GGSCI (node1) 7&gt; view params ext1</span><br><span class="line"></span><br><span class="line">EXTRACT ext1</span><br><span class="line">--SETENV (NLS_LANG=<span class="hljs-string">"AMERICAN_AMERICA.ZHS16GBK"</span>)</span><br><span class="line">USERID ggsusr, PASSWORD AAACAAAAAAAAAAAGAIFAAUDVHCFUGFIYF, ENCRYPTKEY default</span><br><span class="line">GETTRUNCATES</span><br><span class="line">REPORTCOUNT EVERY 1 MINUTES, RATE</span><br><span class="line">DISCARDFILE ./dirrpt/ext1.dsc, APPEND, MEGABYTES 1024</span><br><span class="line">WARNLONGTRANS 2h, CHECKINTERVAL 3m</span><br><span class="line">EXTTRAIL ./dirdat/la</span><br><span class="line">DYNAMICRESOLUTION</span><br><span class="line">DBOPTIONS  ALLOWUNUSEDCOLUMN</span><br><span class="line">FETCHOPTIONS NOUSESNAPSHOT</span><br><span class="line">--TRANLOGOPTIONS altarchivelogdest primary instance RACDB1 /RAC1_arch1, altarchivelogdest  instance  RACDB2 /RAC2_arch1</span><br><span class="line">--THREADOPTIONS   MAXCOMMITPROPAGATIONDELAY 60000 IOLATENCY 60000</span><br><span class="line">--TRANLOGOPTIONS is <span class="hljs-keyword">for</span> RAC, tell OGG <span class="hljs-built_in">where</span> the location to extract data from archive <span class="hljs-built_in">log</span> desc</span><br><span class="line">--table----</span><br><span class="line">obey ./dirprm/source_tables.txt</span><br></pre></td></tr></table></figure>
+<p>Generate tables using following SQLs:<br><figure class="highlight hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line">SQL&gt; set termout off</span><br><span class="line"><span class="hljs-keyword">set</span> feedback <span class="hljs-keyword">off</span></span><br><span class="line"><span class="hljs-keyword">set</span> <span class="hljs-keyword">verify</span> <span class="hljs-keyword">off</span></span><br><span class="line"><span class="hljs-keyword">set</span> pagesize <span class="hljs-number">0</span></span><br><span class="line">spool /gghome/dirprm/source_tables.txt</span><br><span class="line"><span class="hljs-keyword">SQL</span>&gt; <span class="hljs-keyword">select</span> <span class="hljs-string">'table '</span>||owner||<span class="hljs-string">'.'</span>||table_name||<span class="hljs-string">';'</span> <span class="hljs-keyword">from</span> dba_tables <span class="hljs-keyword">where</span> owner=<span class="hljs-string">'SCOTT'</span>;</span><br><span class="line">table SCOTT.DEPT;</span><br><span class="line">table SCOTT.EMP;</span><br><span class="line">table SCOTT.BONUS;</span><br><span class="line">table SCOTT.SALGRADE;</span><br><span class="line">SQL&gt; spool off</span><br></pre></td></tr></table></figure></p>
+<ul>
+<li>Configuring Data pump process</li>
+</ul>
+<figure class="highlight sql hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line">GGSCI (node1) 12&gt; edit params dpe1</span><br><span class="line">GGSCI (node1) 13&gt; view params dpe1</span><br><span class="line">EXTRACT dpe1</span><br><span class="line">PASSTHRU</span><br><span class="line">RMTHOST 192.168.56.102, MGRPORT 7809, compress</span><br><span class="line">DYNAMICRESOLUTION</span><br><span class="line">RMTTRAIL ./dirdat/ra</span><br><span class="line"><span class="hljs-comment">--table----</span></span><br><span class="line">obey ./dirprm/source_tables.txt</span><br></pre></td></tr></table></figure>
+<ul>
+<li>Adding Extract and Data pump trail file</li>
+</ul>
+<figure class="highlight hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br></pre></td><td class="code"><pre><span class="line">GGSCI (node1) 14&gt; add extract ext1, tranlog, begin now</span><br><span class="line">EXTRACT added.</span><br><span class="line"><span class="hljs-comment">--RAC use: add extract ext1, tranlog, begin now threads 2</span></span><br><span class="line"><span class="hljs-comment">--threads means how much nodes of this RAC</span></span><br><span class="line">GGSCI (node1) 16&gt; add exttrail ./dirdat/la, extract ext1, megabytes 200</span><br><span class="line">EXTTRAIL added.</span><br><span class="line">GGSCI (node1) 18&gt; add extract dpe1, exttrailsource ./dirdat/la</span><br><span class="line">EXTRACT added.</span><br><span class="line">GGSCI (node1) 19&gt; add rmttrail ./dirdat/ra, extract dpe1, megabytes 200</span><br><span class="line">RMTTRAIL added.</span><br><span class="line">GGSCI (node1) 20&gt; start mgr</span><br><span class="line">GGSCI (node1) 21&gt; start ext1</span><br></pre></td></tr></table></figure>
+<h2 id="Performing-full-online-backup-of-the-source-database"><a href="#Performing-full-online-backup-of-the-source-database" class="headerlink" title="Performing full online backup of the source database"></a>Performing full online backup of the source database</h2><ul>
+<li>Pre-backup actions</li>
+</ul>
+<figure class="highlight sql hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br></pre></td><td class="code"><pre><span class="line">SQL&gt; select count(*) from gv$transaction;</span><br><span class="line">#If no transactions running, do the full backup</span><br><span class="line">SQL&gt; select dbid from v$database;</span><br><span class="line">      DBID</span><br><span class="line">      <span class="hljs-comment">----------</span></span><br><span class="line">      3461558107</span><br><span class="line">SQL&gt; select 'set newname for datafile  '||file_id||' to '''||'/u01/linora/temp01.dbf'||''';' from dba_temp_files;</span><br><span class="line"><span class="hljs-keyword">set</span> newname <span class="hljs-keyword">for</span> <span class="hljs-keyword">datafile</span>  <span class="hljs-number">1</span> <span class="hljs-keyword">to</span> <span class="hljs-string">'/u01/linora/temp01.dbf'</span>;</span><br><span class="line"></span><br><span class="line">SQL&gt; select 'set newname for datafile '||file# ||' to '''||'/u01/linora'||''';' from v$datafile;</span><br><span class="line"><span class="hljs-keyword">set</span> newname <span class="hljs-keyword">for</span> <span class="hljs-keyword">datafile</span> <span class="hljs-number">1</span> <span class="hljs-keyword">to</span> <span class="hljs-string">'/u01/linora/system01.dbf'</span>;</span><br><span class="line"><span class="hljs-keyword">set</span> newname <span class="hljs-keyword">for</span> <span class="hljs-keyword">datafile</span> <span class="hljs-number">2</span> <span class="hljs-keyword">to</span> <span class="hljs-string">'/u01/linora/sysaux01.dbf'</span>;</span><br><span class="line"><span class="hljs-keyword">set</span> newname <span class="hljs-keyword">for</span> <span class="hljs-keyword">datafile</span> <span class="hljs-number">3</span> <span class="hljs-keyword">to</span> <span class="hljs-string">'/u01/linora/undotbs01.dbf'</span>;</span><br><span class="line"><span class="hljs-keyword">set</span> newname <span class="hljs-keyword">for</span> <span class="hljs-keyword">datafile</span> <span class="hljs-number">4</span> <span class="hljs-keyword">to</span> <span class="hljs-string">'/u01/linora/users01.dbf'</span>;</span><br><span class="line"><span class="hljs-keyword">set</span> newname <span class="hljs-keyword">for</span> <span class="hljs-keyword">datafile</span> <span class="hljs-number">5</span> <span class="hljs-keyword">to</span> <span class="hljs-string">'/u01/linora/goldengate01.dbf'</span>;</span><br><span class="line"></span><br><span class="line">#Copy the password from source to target</span><br><span class="line">scp $ORACLE_HOME/dbs/orapwlinora node2:$ORACLE_HOME/dbs/</span><br><span class="line"></span><br><span class="line">#Record source redo log location</span><br><span class="line">SQL&gt; SELECT member FROM gv$logfile;</span><br><span class="line"></span><br><span class="line">MEMBER</span><br><span class="line"><span class="hljs-comment">--------------------------------------------------------------------------------</span></span><br><span class="line">/u01/linora/redo03.log</span><br><span class="line">/u01/linora/redo02.log</span><br><span class="line">/u01/linora/redo01.log</span><br></pre></td></tr></table></figure>
+<ul>
+<li>Performing full backup</li>
+</ul>
+<figure class="highlight bash hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br></pre></td><td class="code"><pre><span class="line"><span class="hljs-meta">#!/bin/bash</span></span><br><span class="line">. ~/.bash_profile</span><br><span class="line"><span class="hljs-built_in">export</span> DB_NAME=linora</span><br><span class="line">RMAN=<span class="hljs-variable">$ORACLE_HOME</span>/bin/rman</span><br><span class="line">SQLPLUS=<span class="hljs-variable">$ORACLE_HOME</span>/bin/sqlplus</span><br><span class="line">TEE=/usr/bin/tee</span><br><span class="line">DBDEST=/backup</span><br><span class="line">LOGFILE=/backup/<span class="hljs-built_in">log</span>/backup_db_`date +<span class="hljs-string">'%Y%m%d%H%M%S'</span>`.<span class="hljs-built_in">log</span></span><br><span class="line">mkdir -p <span class="hljs-variable">$&#123;DBDEST&#125;</span>/<span class="hljs-built_in">log</span></span><br><span class="line"><span class="hljs-built_in">echo</span> <span class="hljs-string">"--------------------backup start `date +'%Y-%m-%d %H:%M:%S'`--------------------"</span> &gt; <span class="hljs-variable">$LOGFILE</span></span><br><span class="line"><span class="hljs-variable">$RMAN</span> &lt;&lt;EOF | <span class="hljs-variable">$TEE</span> -a <span class="hljs-variable">$LOGFILE</span></span><br><span class="line">connect target</span><br><span class="line">run &#123;</span><br><span class="line">ALLOCATE CHANNEL ch00 TYPE DISK MAXPIECESIZE 200G;</span><br><span class="line"></span><br><span class="line">ALLOCATE CHANNEL ch01 TYPE DISK MAXPIECESIZE 200G;</span><br><span class="line">CROSSCHECK BACKUPSET;</span><br><span class="line">DELETE NOPROMPT EXPIRED BACKUPSET;</span><br><span class="line">sql <span class="hljs-string">'alter system archive log current'</span>;</span><br><span class="line">BACKUP AS BACKUPSET SKIP INACCESSIBLE</span><br><span class="line">TAG hot_db_bk_level0 FORMAT <span class="hljs-string">'/backup/bk_%s_%p_%U_%T_%d'</span></span><br><span class="line">FULL  DATABASE;</span><br><span class="line">backup current controlfile tag <span class="hljs-string">'ctl'</span> format <span class="hljs-string">'/backup/ctl_%U_%T_%d'</span>;</span><br><span class="line">RELEASE CHANNEL ch00;</span><br><span class="line">RELEASE CHANNEL ch01;</span><br><span class="line">&#125;</span><br><span class="line"><span class="hljs-built_in">exit</span>;</span><br><span class="line">EOF</span><br><span class="line"><span class="hljs-built_in">echo</span> <span class="hljs-string">"--------------------backup end `date +'%Y-%m-%d %H:%M:%S'`--------------------"</span> &gt;&gt; <span class="hljs-variable">$LOGFILE</span></span><br><span class="line"><span class="hljs-built_in">exit</span> 0</span><br></pre></td></tr></table></figure>
+<ul>
+<li>Performing redo and archive log backup plus control file</li>
+</ul>
+<figure class="highlight bash hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br></pre></td><td class="code"><pre><span class="line"><span class="hljs-meta">#!/bin/bash</span></span><br><span class="line">. ~/.bash_profile</span><br><span class="line"><span class="hljs-built_in">export</span> DB_NAME=linora</span><br><span class="line">RMAN=<span class="hljs-variable">$ORACLE_HOME</span>/bin/rman</span><br><span class="line">SQLPLUS=<span class="hljs-variable">$ORACLE_HOME</span>/bin/sqlplus</span><br><span class="line">TEE=/usr/bin/tee</span><br><span class="line">DBDEST=/backup</span><br><span class="line">LOGFILE=/backup/<span class="hljs-built_in">log</span>/backup_archivelog_`date +<span class="hljs-string">'%Y%m%d%H%M%S'</span>`.<span class="hljs-built_in">log</span></span><br><span class="line">mkdir -p <span class="hljs-variable">$&#123;DBDEST&#125;</span></span><br><span class="line"></span><br><span class="line"><span class="hljs-built_in">echo</span> <span class="hljs-string">"--------------------backup start `date +'%Y-%m-%d %H:%M:%S'`--------------------"</span> &gt; <span class="hljs-variable">$LOGFILE</span></span><br><span class="line"><span class="hljs-variable">$RMAN</span> &lt;&lt;EOF | <span class="hljs-variable">$TEE</span> -a <span class="hljs-variable">$LOGFILE</span></span><br><span class="line">connect target</span><br><span class="line">run &#123;</span><br><span class="line">ALLOCATE CHANNEL ch00 TYPE DISK MAXPIECESIZE 200G;</span><br><span class="line">ALLOCATE CHANNEL ch01 TYPE DISK MAXPIECESIZE 200G;</span><br><span class="line">sql <span class="hljs-string">'alter system switch logfile'</span>;</span><br><span class="line">sql <span class="hljs-string">'alter system switch logfile'</span>;</span><br><span class="line">sql <span class="hljs-string">'alter system switch logfile'</span>;</span><br><span class="line">sql <span class="hljs-string">'alter system archive log current'</span>;</span><br><span class="line">BACKUP ARCHIVELOG FROM TIME <span class="hljs-string">'sysdate-3'</span> FORMAT <span class="hljs-string">'/backup/ARCH_%U_T_%d'</span>;</span><br><span class="line">RELEASE CHANNEL ch00;</span><br><span class="line">RELEASE CHANNEL ch01;</span><br><span class="line">&#125;</span><br><span class="line"><span class="hljs-built_in">exit</span>;</span><br><span class="line">EOF</span><br><span class="line"><span class="hljs-built_in">echo</span> <span class="hljs-string">"--------------------backup end `date +'%Y-%m-%d %H:%M:%S'`--------------------"</span> &gt;&gt; <span class="hljs-variable">$LOGFILE</span></span><br><span class="line"></span><br><span class="line"><span class="hljs-built_in">exit</span> 0</span><br></pre></td></tr></table></figure>
+<ul>
+<li>Retrieving the SCN after backing up the database and scp the backup images to node2</li>
+</ul>
+<figure class="highlight sql hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line">SQL&gt; select inst_id,group#,thread#,sequence#,members,status,first_change#,next_change# from gv$log;</span><br><span class="line"></span><br><span class="line">INST_ID     GROUP#    THREAD#  SEQUENCE#    MEMBERS STATUS                           FIRST_CHANGE# NEXT_CHANGE#</span><br><span class="line"><span class="hljs-comment">---------- ---------- ---------- ---------- ---------- -------------------------------- ------------- ------------</span></span><br><span class="line">1          1          1         13          1 INACTIVE                               1007503      1007512</span><br><span class="line">1          2          1         14          1 INACTIVE                               1007512      1007521</span><br><span class="line">1          3          1         15          1 CURRENT                                1007521   2.8147E+14</span><br></pre></td></tr></table></figure>
+<p>We use the largest SCN of the inactive member. Here’s 1007512.</p>
+<h2 id="Restoring-the-database-to-target-system"><a href="#Restoring-the-database-to-target-system" class="headerlink" title="Restoring the database to target system"></a>Restoring the database to target system</h2><ul>
+<li>Modifying the initial parameter file</li>
+</ul>
+<figure class="highlight bash hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">mkdir -p /u01/app/oracle/admin/linora/adump</span><br><span class="line">mkdir -p /u01/linora/</span><br><span class="line">mkdir -p /u01/app/oracle/fast_recovery_area/linora/</span><br><span class="line">mkdir -p /u01/arch</span><br><span class="line">mkdir -p /u01/app/oracle</span><br></pre></td></tr></table></figure>
+<ul>
+<li>Starting up the instance to nomount mode</li>
+</ul>
+<figure class="highlight hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">SQL&gt; startup nomount</span><br></pre></td></tr></table></figure>
+<ul>
+<li>Restoring the control file and mount the database</li>
+</ul>
+<figure class="highlight bash hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br></pre></td><td class="code"><pre><span class="line">RMAN&gt; restore controlfile from <span class="hljs-string">'/backup/ctl_0cr9c7na_1_1_20160629_LINORA'</span>;</span><br><span class="line">Starting restore at 2016-06-29 16:02:25</span><br><span class="line">using target database control file instead of recovery catalog</span><br><span class="line">allocated channel: ORA_DISK_1</span><br><span class="line">channel ORA_DISK_1: SID=18 device <span class="hljs-built_in">type</span>=DISK</span><br><span class="line">channel ORA_DISK_1: restoring control file</span><br><span class="line">channel ORA_DISK_1: restore complete, elapsed time: 00:00:01</span><br><span class="line">output file name=/u01/linora/control01.ctl</span><br><span class="line">output file name=/u01/app/oracle/fast_recovery_area/linora/control02.ctl</span><br><span class="line">Finished restore at 2016-06-29 16:02:27</span><br><span class="line"></span><br><span class="line">RMAN&gt; sql <span class="hljs-string">'alter database mount'</span>;</span><br><span class="line">sql statement: alter database mount</span><br><span class="line">released channel: ORA_DISK_1</span><br></pre></td></tr></table></figure>
+<ul>
+<li>Cataloging the backup images</li>
+</ul>
+<figure class="highlight hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">RMAN&gt; catalog start with '/backup';</span><br></pre></td></tr></table></figure>
+<ul>
+<li>Restoring and recovering the database</li>
+</ul>
+<figure class="highlight sql hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br></pre></td><td class="code"><pre><span class="line">#!/bin/bash</span><br><span class="line">. ~/.bash_profile</span><br><span class="line">export DB_NAME=linora</span><br><span class="line">RMAN=$ORACLE_HOME/bin/rman</span><br><span class="line">SQLPLUS=$ORACLE_HOME/bin/sqlplus</span><br><span class="line">TEE=/usr/bin/tee</span><br><span class="line">DBDEST=/<span class="hljs-keyword">backup</span></span><br><span class="line"><span class="hljs-keyword">LOGFILE</span>=/<span class="hljs-keyword">backup</span>/<span class="hljs-keyword">log</span>/restore_db_<span class="hljs-string">`date +'%Y%m%d%H%M%S'`</span>.log</span><br><span class="line">mkdir -p $&#123;DBDEST&#125;/<span class="hljs-keyword">log</span></span><br><span class="line"></span><br><span class="line">echo <span class="hljs-string">"--------------------restore start `date +'%Y-%m-%d %H:%M:%S'`--------------------"</span> &gt; $<span class="hljs-keyword">LOGFILE</span></span><br><span class="line">$RMAN &lt;&lt;EOF | $TEE -a $<span class="hljs-keyword">LOGFILE</span></span><br><span class="line"><span class="hljs-keyword">connect</span> target</span><br><span class="line">run&#123;</span><br><span class="line"><span class="hljs-keyword">allocate</span> channel c0 <span class="hljs-keyword">type</span> disk;</span><br><span class="line">allocate channel c1 type disk;</span><br><span class="line"><span class="hljs-keyword">set</span> newname <span class="hljs-keyword">for</span> <span class="hljs-keyword">datafile</span> <span class="hljs-number">1</span> <span class="hljs-keyword">to</span> <span class="hljs-string">'/u01/linora/system01.dbf'</span>;</span><br><span class="line"><span class="hljs-keyword">set</span> newname <span class="hljs-keyword">for</span> <span class="hljs-keyword">datafile</span> <span class="hljs-number">2</span> <span class="hljs-keyword">to</span> <span class="hljs-string">'/u01/linora/sysaux01.dbf'</span>;</span><br><span class="line"><span class="hljs-keyword">set</span> newname <span class="hljs-keyword">for</span> <span class="hljs-keyword">datafile</span> <span class="hljs-number">3</span> <span class="hljs-keyword">to</span> <span class="hljs-string">'/u01/linora/undotbs01.dbf'</span>;</span><br><span class="line"><span class="hljs-keyword">set</span> newname <span class="hljs-keyword">for</span> <span class="hljs-keyword">datafile</span> <span class="hljs-number">4</span> <span class="hljs-keyword">to</span> <span class="hljs-string">'/u01/linora/users01.dbf'</span>;</span><br><span class="line"><span class="hljs-keyword">set</span> newname <span class="hljs-keyword">for</span> <span class="hljs-keyword">datafile</span> <span class="hljs-number">5</span> <span class="hljs-keyword">to</span> <span class="hljs-string">'/u01/linora/goldengate01.dbf'</span>;</span><br><span class="line"><span class="hljs-keyword">set</span> newname <span class="hljs-keyword">for</span> tempfile <span class="hljs-number">1</span> <span class="hljs-keyword">to</span> <span class="hljs-string">'/u01/linora/temp01.dbf'</span>;</span><br><span class="line"><span class="hljs-keyword">restore</span> <span class="hljs-keyword">database</span>; </span><br><span class="line">switch datafile all;</span><br><span class="line">switch tempfile all;</span><br><span class="line"><span class="hljs-keyword">release</span> channel c0;</span><br><span class="line"><span class="hljs-keyword">release</span> channel c1;</span><br><span class="line">&#125;</span><br><span class="line">exit;</span><br><span class="line">EOF</span><br><span class="line">echo "<span class="hljs-comment">--------------------restore end `date +'%Y-%m-%d %H:%M:%S'`--------------------" &gt;&gt; $LOGFILE</span></span><br><span class="line"></span><br><span class="line">exit 0</span><br></pre></td></tr></table></figure>
+<p>If needed, rename the redo log file:<br><figure class="highlight hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">SQL&gt; SELECT member FROM gv$logfile;</span><br><span class="line">SQL&gt; alter database rename file '/u01/.../redo01.log' to '/u02/.../redo01.log';</span><br></pre></td></tr></table></figure></p>
+<p>Recover the database from specify SCN  1007512.<br><figure class="highlight hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">RMAN&gt; recover database until scn 1007512;</span><br></pre></td></tr></table></figure></p>
+<p>Check the file header and the control file SCN<br><figure class="highlight sql hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br></pre></td><td class="code"><pre><span class="line">SQL&gt; select checkpoint_change# from v$datafile;</span><br><span class="line">CHECKPOINT_CHANGE#</span><br><span class="line"><span class="hljs-comment">------------------</span></span><br><span class="line">1007512</span><br><span class="line">1007512</span><br><span class="line">1007512</span><br><span class="line">1007512</span><br><span class="line">1007512</span><br><span class="line"></span><br><span class="line">SQL&gt; select checkpoint_change# from v$datafile_header;</span><br><span class="line">CHECKPOINT_CHANGE#</span><br><span class="line"><span class="hljs-comment">------------------</span></span><br><span class="line">1007512</span><br><span class="line">1007512</span><br><span class="line">1007512</span><br><span class="line">1007512</span><br><span class="line">1007512</span><br></pre></td></tr></table></figure></p>
+<p>If we don’t have temp tablespace, we need to create the TBS:<br><figure class="highlight hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line">SQL&gt; select name,bytes/1024/1024/1024 GB from v$tempfile;</span><br><span class="line">SQL&gt; create temporary tablespace TEMP tempfile '/u01/linora/temp01.dbf' size 32G;</span><br><span class="line">SQL&gt; alter database default temporary tablespace TEMP;</span><br><span class="line">SQL&gt; alter database open resetlogs;</span><br><span class="line"><span class="hljs-comment">--using spfile instead pfile</span></span><br><span class="line">SQL&gt; create spfile from pfile;</span><br><span class="line">SQL&gt; shutdown immediate</span><br><span class="line">SQL&gt; startup</span><br></pre></td></tr></table></figure></p>
+<h2 id="Configuring-the-OGG-on-the-target-system"><a href="#Configuring-the-OGG-on-the-target-system" class="headerlink" title="Configuring the OGG on the target system"></a>Configuring the OGG on the target system</h2><ul>
+<li>Creating the Golden Gate user if we don’t have one</li>
+</ul>
+<figure class="highlight hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">SQL&gt; create tablespace goldengate datafile '+DATA' size 5000M autoextend on next 64M maxsize unlimited;</span><br><span class="line">SQL&gt; create user goldengate identified by goldengate default tablespace goldengate temporary tablespace TEMP profile DEFAULT;</span><br><span class="line">SQL&gt; grant dba to goldengate;</span><br></pre></td></tr></table></figure>
+<ul>
+<li>Disabling the trigger on the target database</li>
+</ul>
+<p>Disable trigger SP:</p>
+<figure class="highlight sql hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><span class="line"><span class="hljs-keyword">declare</span></span><br><span class="line">v_sql varchar2(<span class="hljs-number">2000</span>);</span><br><span class="line">CURSOR c_trigger IS <span class="hljs-keyword">SELECT</span> <span class="hljs-string">'alter trigger '</span>||owner||<span class="hljs-string">'.'</span>||trigger_name||<span class="hljs-string">' disable'</span> <span class="hljs-keyword">from</span> dba_triggers <span class="hljs-keyword">where</span> <span class="hljs-keyword">status</span>=<span class="hljs-string">'ENABLED'</span> <span class="hljs-keyword">and</span> owner <span class="hljs-keyword">in</span> (<span class="hljs-string">'SCOTT'</span>);</span><br><span class="line"><span class="hljs-keyword">BEGIN</span></span><br><span class="line"><span class="hljs-keyword">OPEN</span> c_trigger;</span><br><span class="line">LOOP</span><br><span class="line">FETCH c_trigger INTO v_sql;</span><br><span class="line">EXIT WHEN c_trigger%NOTFOUND;</span><br><span class="line"><span class="hljs-keyword">execute</span> <span class="hljs-keyword">immediate</span> v_sql;</span><br><span class="line"><span class="hljs-keyword">end</span> <span class="hljs-keyword">loop</span>;</span><br><span class="line">close c_trigger;</span><br><span class="line"><span class="hljs-keyword">end</span>;</span><br><span class="line">/</span><br></pre></td></tr></table></figure>
+<p>Enable trigger SP:</p>
+<figure class="highlight sql hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><span class="line"><span class="hljs-keyword">declare</span></span><br><span class="line">v_sql varchar2(<span class="hljs-number">2000</span>);</span><br><span class="line">CURSOR c_trigger IS <span class="hljs-keyword">SELECT</span> <span class="hljs-string">'alter trigger '</span>||owner||<span class="hljs-string">'.'</span>||trigger_name||<span class="hljs-string">' enable'</span> <span class="hljs-keyword">from</span> dba_triggers <span class="hljs-keyword">where</span> <span class="hljs-keyword">status</span>=<span class="hljs-string">'ENABLED'</span> <span class="hljs-keyword">and</span> owner <span class="hljs-keyword">in</span> (<span class="hljs-string">'SCOTT'</span>);</span><br><span class="line"><span class="hljs-keyword">BEGIN</span></span><br><span class="line"><span class="hljs-keyword">OPEN</span> c_trigger;</span><br><span class="line">LOOP</span><br><span class="line">FETCH c_trigger INTO v_sql;</span><br><span class="line">EXIT WHEN c_trigger%NOTFOUND;</span><br><span class="line"><span class="hljs-keyword">execute</span> <span class="hljs-keyword">immediate</span> v_sql;</span><br><span class="line"><span class="hljs-keyword">end</span> <span class="hljs-keyword">loop</span>;</span><br><span class="line">close c_trigger;</span><br><span class="line"><span class="hljs-keyword">end</span>;</span><br><span class="line">/</span><br></pre></td></tr></table></figure>
+<ul>
+<li>Disabling the foreign key</li>
+</ul>
+<p>Disable FK SP:</p>
+<figure class="highlight sql hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><span class="line"><span class="hljs-keyword">declare</span></span><br><span class="line">v_sql varchar2(<span class="hljs-number">2000</span>);</span><br><span class="line">CURSOR c_trigger IS <span class="hljs-keyword">SELECT</span> <span class="hljs-string">'alter table '</span>||owner||<span class="hljs-string">'.'</span>||table_name||<span class="hljs-string">' disable constraint '</span>||constraint_name <span class="hljs-keyword">from</span> dba_constraints <span class="hljs-keyword">where</span> constraint_type=<span class="hljs-string">'R'</span> <span class="hljs-keyword">and</span> owner <span class="hljs-keyword">in</span> (<span class="hljs-string">'SCOTT'</span>);</span><br><span class="line"><span class="hljs-keyword">BEGIN</span></span><br><span class="line"><span class="hljs-keyword">OPEN</span> c_trigger;</span><br><span class="line">LOOP</span><br><span class="line">FETCH c_trigger INTO v_sql;</span><br><span class="line">EXIT WHEN c_trigger%NOTFOUND;</span><br><span class="line"><span class="hljs-keyword">execute</span> <span class="hljs-keyword">immediate</span> v_sql;</span><br><span class="line"><span class="hljs-keyword">end</span> <span class="hljs-keyword">loop</span>;</span><br><span class="line">close c_trigger;</span><br><span class="line"><span class="hljs-keyword">end</span>;</span><br><span class="line">/</span><br></pre></td></tr></table></figure>
+<p>Enable FK SP:</p>
+<figure class="highlight sql hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><span class="line"><span class="hljs-keyword">declare</span></span><br><span class="line">v_sql varchar2(<span class="hljs-number">2000</span>);</span><br><span class="line">CURSOR c_trigger IS <span class="hljs-keyword">SELECT</span> <span class="hljs-string">'alter table '</span>||owner||<span class="hljs-string">'.'</span>||table_name||<span class="hljs-string">' enable constraint '</span>||constraint_name <span class="hljs-keyword">from</span> dba_constraints <span class="hljs-keyword">where</span> constraint_type=<span class="hljs-string">'R'</span> <span class="hljs-keyword">and</span> owner <span class="hljs-keyword">in</span> (<span class="hljs-string">'SCOTT'</span>);</span><br><span class="line"><span class="hljs-keyword">BEGIN</span></span><br><span class="line"><span class="hljs-keyword">OPEN</span> c_trigger;</span><br><span class="line">LOOP</span><br><span class="line">FETCH c_trigger INTO v_sql;</span><br><span class="line">EXIT WHEN c_trigger%NOTFOUND;</span><br><span class="line"><span class="hljs-keyword">execute</span> <span class="hljs-keyword">immediate</span> v_sql;</span><br><span class="line"><span class="hljs-keyword">end</span> <span class="hljs-keyword">loop</span>;</span><br><span class="line">close c_trigger;</span><br><span class="line"><span class="hljs-keyword">end</span>;</span><br><span class="line">/</span><br></pre></td></tr></table></figure>
+<ul>
+<li>Disabling the jobs</li>
+</ul>
+<p>When target start the replication, broken the DML job, but keep the MV job running.</p>
+<figure class="highlight hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line">SQL&gt; set line 200</span><br><span class="line">SQL&gt; col what for a50</span><br><span class="line">SQL&gt; select job,log_user what from dba_jobs;</span><br><span class="line">SQL&gt; select log_user,job,what from dba_jobs where what like '%refresh%';</span><br><span class="line">conn /as sysdba</span><br><span class="line">SQL&gt;exec dbms_ijob.broken(121,true);</span><br><span class="line">SQL&gt;exec dbms_ijob.broken(141,true);</span><br><span class="line">SQL&gt;exec dbms_ijob.broken(301,true);</span><br></pre></td></tr></table></figure>
+<ul>
+<li>Configuring the listener on the target system</li>
+</ul>
+<figure class="highlight sql hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br></pre></td><td class="code"><pre><span class="line">SID_LIST_LISTENER =</span><br><span class="line">  (SID_LIST =</span><br><span class="line">    (SID_DESC =</span><br><span class="line">      (SID_NAME = PLSExtProc)</span><br><span class="line">      (ORACLE_HOME = /u01/app/oracle/product/11.2.0/db_1)</span><br><span class="line">      (PROGRAM = extproc)</span><br><span class="line">    )</span><br><span class="line">    (SID_DESC =</span><br><span class="line">      (GLOBAL_DBNAME = linora)</span><br><span class="line">      (ORACLE_HOME = u01/app/oracle/product/11.2.0/db_1)</span><br><span class="line">      (SID_NAME = linora)</span><br><span class="line">    )</span><br><span class="line">  )</span><br><span class="line"></span><br><span class="line">LISTENER =</span><br><span class="line">  (DESCRIPTION_LIST =</span><br><span class="line">    (DESCRIPTION =</span><br><span class="line">      (ADDRESS = (PROTOCOL = TCP)(HOST = node2)(PORT = 1521))</span><br><span class="line">      (ADDRESS = (PROTOCOL = IPC)(KEY = EXTPROC1521))</span><br><span class="line">    )</span><br><span class="line">  )</span><br><span class="line"></span><br><span class="line">ADR_BASE_LISTENER = /u01/app/oracle</span><br></pre></td></tr></table></figure>
+<ul>
+<li>Other operations before installing the OGG</li>
+</ul>
+<p>Disable archival on target system<br><figure class="highlight hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">SQL&gt; shutdown immediate</span><br><span class="line">SQL&gt; startup mount</span><br><span class="line">SQL&gt; alter database noarchivelog;</span><br><span class="line">SQL&gt; alter database open;</span><br></pre></td></tr></table></figure></p>
+<p>If we have sequence support on OGG, we need to grant necessary privilege to target database.</p>
+<figure class="highlight sql hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"><span class="hljs-keyword">GRANT</span> <span class="hljs-keyword">EXECUTE</span> <span class="hljs-keyword">on</span> ggsusr.replicateSequence <span class="hljs-keyword">TO</span> ggsusr;</span><br><span class="line">exec dbms_streams_auth.grant_admin_privilege('ggsusr')</span><br></pre></td></tr></table></figure>
+<p>Disable sys user capture DDL<br><figure class="highlight sql hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="hljs-keyword">Alter</span> <span class="hljs-keyword">trigger</span> sys.GGS_DDL_TRIGGER_BEFORE <span class="hljs-keyword">disable</span>;</span><br></pre></td></tr></table></figure></p>
+<ul>
+<li><p>Installing OGG<br>Unzip and tar the OGG package. The same operation as the source.</p>
+</li>
+<li><p>Configuring GLOBAL parameters</p>
+</li>
+</ul>
+<figure class="highlight sql hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">[oracle@node2:/u01/arch]$ cd /gghome/</span><br><span class="line">[oracle@node2:/gghome]$ ./ggsci </span><br><span class="line">GGSCI (node2) 2&gt; create subdirs</span><br><span class="line">GGSCI&gt; EDIT PARAMS ./GLOBALS</span><br><span class="line">CHECKPOINTTABLE ggsusr.checktable</span><br></pre></td></tr></table></figure>
+<ul>
+<li>Enabling sequence support</li>
+</ul>
+<figure class="highlight sql hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">[oracle@node2:/<span class="hljs-keyword">backup</span>]$ cd /gghome/</span><br><span class="line">[<span class="hljs-keyword">oracle</span>@node2:/gghome]$ sqlplus <span class="hljs-string">"/as sysdba"</span></span><br><span class="line"><span class="hljs-keyword">SQL</span>&gt; @sequence.sql</span><br><span class="line"><span class="hljs-keyword">SQL</span>&gt; <span class="hljs-keyword">grant</span> <span class="hljs-keyword">execute</span> <span class="hljs-keyword">on</span> ggsusr.replicateSequence <span class="hljs-keyword">to</span> ggsusr;</span><br></pre></td></tr></table></figure>
+<ul>
+<li>Configuring manager process</li>
+</ul>
+<figure class="highlight sql hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line">GGSCI (node2) 4&gt; edit params mgr</span><br><span class="line">PORT 7809</span><br><span class="line">DYNAMICPORTLIST 7810-7880</span><br><span class="line">USERID ggsusr, PASSWORD AACAAAAAAAAAAAGAIFAAUDVHCFUGFIYF, ENCRYPTKEY default</span><br><span class="line">AUTORESTART EXTRACT *,RETRIES 5,WAITMINUTES 3</span><br><span class="line">PURGEOLDEXTRACTS ./dirdat<span class="hljs-comment">/*,usecheckpoints,minkeepdays 3</span></span><br><span class="line"><span class="hljs-comment">--PURGEOLDEXTRACTS parameter is determinating how long the extract trail file is keeping</span></span><br><span class="line"><span class="hljs-comment">--Disable this parameter during initail load, and enable it when sychronizate</span></span><br><span class="line"><span class="hljs-comment">LAGREPORTHOURS 1</span></span><br><span class="line"><span class="hljs-comment">LAGINFOMINUTES 30</span></span><br><span class="line"><span class="hljs-comment">LAGCRITICALMINUTES 45</span></span><br></pre></td></tr></table></figure>
+<ul>
+<li>Configuring Replicat process</li>
+</ul>
+<figure class="highlight sql hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br></pre></td><td class="code"><pre><span class="line">GGSCI (node2) 5&gt; dblogin userid ggsusr, password oracle</span><br><span class="line">GGSCI (node2) 6&gt; add checkpointtable ggsusr.checktable</span><br><span class="line">GGSCI (node2) 7&gt; ENCRYPT PASSWORD oracle BLOWFISH ENCRYPTKEY DEFAULT</span><br><span class="line">Using default key...</span><br><span class="line">Encrypted password:  AACAAAAAAAAAAAGAIFAAUDVHCFUGFIYF</span><br><span class="line"></span><br><span class="line">GGSCI (node2) 8&gt; edit params repy</span><br><span class="line">REPLICAT repy</span><br><span class="line"><span class="hljs-comment">--setenv (NLS_LANG=AMERICAN_AMERICA.ZHS16GBK)</span></span><br><span class="line">USERID ggsusr, PASSWORD AACAAAAAAAAAAAGAIFAAUDVHCFUGFIYF, ENCRYPTKEY default</span><br><span class="line">REPORT AT 01:59</span><br><span class="line">REPORTCOUNT EVERY 30 MINUTES, RATE</span><br><span class="line">REPERROR DEFAULT, ABEND</span><br><span class="line">DBOPTIONS DEFERREFCONST</span><br><span class="line">assumetargetdefs</span><br><span class="line">DISCARDFILE ./dirrpt/repy.dsc, APPEND, MEGABYTES 1024</span><br><span class="line">DISCARDROLLOVER AT 02:30</span><br><span class="line">GETTRUNCATES </span><br><span class="line">ALLOWNOOPUPDATES</span><br><span class="line"><span class="hljs-comment">--table--</span></span><br><span class="line">obey ./dirprm/map_tables_repy.txt</span><br></pre></td></tr></table></figure>
+<p>You can find the map_tables_repy.txt from below SQLs:<br><figure class="highlight sql hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line">SQL&gt; select 'MAP '||owner||'.'||table_name||', TARGET '||owner||'.'||table_name||';' from dba_tables where owner='SCOTT';</span><br><span class="line">'MAP'||OWNER||'.'||TABLE_NAME||',TARGET'||OWNER||'.'||TABLE_NAME||';'</span><br><span class="line"><span class="hljs-comment">----------------------------------------------------------------------------</span></span><br><span class="line">MAP SCOTT.DEPT, TARGET SCOTT.DEPT;</span><br><span class="line">MAP SCOTT.EMP, TARGET SCOTT.EMP;</span><br><span class="line">MAP SCOTT.SALGRADE, TARGET SCOTT.SALGRADE;</span><br><span class="line">MAP SCOTT.BONUS, TARGET SCOTT.BONUS;</span><br></pre></td></tr></table></figure></p>
+<p>Add replicat process:<br><figure class="highlight sql hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">GGSCI (node2) 10&gt; ADD REPLICAT repy, EXTTRAIL ./dirdat/ra, checkpointtable ggsusr.checktable</span><br><span class="line">REPLICAT added.</span><br></pre></td></tr></table></figure></p>
+<ul>
+<li>Starting the replication</li>
+</ul>
+<p>Start manager process on the target:<br><figure class="highlight hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">GGSCI (node2) 1&gt; start mgr</span><br></pre></td></tr></table></figure></p>
+<p>Start the pump process on the source, and observe if any trail files are delivery to the target:<br><figure class="highlight hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">GGSCI (node1) 4&gt; start dpe1</span><br></pre></td></tr></table></figure></p>
+<p>Start the replicat process on the target:<br><figure class="highlight hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">GGSCI (node2) 7&gt; start repy aftercsn 1007521;</span><br></pre></td></tr></table></figure></p>
+<h2 id="Testing-the-replication"><a href="#Testing-the-replication" class="headerlink" title="Testing the replication"></a>Testing the replication</h2><p>Update one of the recode of scott.emp table<br><figure class="highlight sql hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line">SQL&gt; update scott.emp set SAL=1000 where empno = 7900;</span><br><span class="line">1 row updated.</span><br><span class="line">SQL&gt; commit;</span><br><span class="line"><span class="hljs-keyword">Commit</span> complete.</span><br><span class="line"><span class="hljs-keyword">SQL</span>&gt; <span class="hljs-keyword">select</span> * <span class="hljs-keyword">from</span> scott.emp <span class="hljs-keyword">where</span> empno=<span class="hljs-number">7900</span>;</span><br><span class="line">EMPNO ENAME                JOB                       MGR HIREDATE                   SAL       COMM     DEPTNO</span><br><span class="line"><span class="hljs-comment">---------- -------------------- ------------------ ---------- ------------------- ---------- ---------- ----------</span></span><br><span class="line">7900 JAMES                CLERK                    7698 1981-12-03 00:00:00       1000                    30</span><br></pre></td></tr></table></figure></p>
+<p>After a few minutes, check the result from the target.<br><figure class="highlight sql hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">SQL&gt; select * from scott.emp where empno=7900;</span><br><span class="line">EMPNO ENAME                JOB                       MGR HIREDATE                   SAL       COMM     DEPTNO</span><br><span class="line"><span class="hljs-comment">---------- -------------------- ------------------ ---------- ------------------- ---------- ---------- ----------</span></span><br><span class="line">7900 JAMES                CLERK                    7698 1981-12-03 00:00:00       1000                    30</span><br></pre></td></tr></table></figure></p>
+<h2 id="Enable-DDL-replication"><a href="#Enable-DDL-replication" class="headerlink" title="Enable DDL replication"></a>Enable DDL replication</h2><p>Before enable ddl replication, we must ensure:</p>
+<ul>
+<li>Recyclebin has been disabled(10g).</li>
+<li>The target and source schema must be identical.</li>
+</ul>
+<p>Enable DDL support<br><figure class="highlight hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line">[oracle@node1:/home/oracle]$ cd /gghome/</span><br><span class="line">[oracle@node1:/gghome]$ sqlplus "/as sysdba"</span><br><span class="line">SQL&gt; grant execute on utl_file to ggsusr;</span><br><span class="line">SQL&gt; @marker_setup.sql</span><br><span class="line">SQL&gt; @ddl_setup.sql</span><br><span class="line">SQL&gt; @role_setup.sql</span><br><span class="line">SQL&gt; GRANT GGS_GGSUSER_ROLE TO ggsusr;</span><br><span class="line">SQL&gt; @ddl_enable.sql</span><br></pre></td></tr></table></figure></p>
+<p>Edit the OGG params:<br><figure class="highlight sql hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br></pre></td><td class="code"><pre><span class="line"><span class="hljs-comment">--Both on source and target</span></span><br><span class="line">GGSCI (node1) 12&gt; edit params GLOBALS</span><br><span class="line">GGSCHEMA ggsusr</span><br><span class="line"></span><br><span class="line"><span class="hljs-comment">--add the folloing line to Extract and Replicat.</span></span><br><span class="line">GGSCI (node1) 14&gt; edit param ext1</span><br><span class="line">ddl include mapped</span><br><span class="line">ddloptions addtrandata, report</span><br><span class="line"></span><br><span class="line"><span class="hljs-comment">--Only on target</span></span><br><span class="line">GGSCI (node2) 8&gt; edit params repy</span><br><span class="line">DDLERROR DEFAULT IGNORE</span><br></pre></td></tr></table></figure></p>
+<p>Now, have a test:<br><figure class="highlight sql hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br></pre></td><td class="code"><pre><span class="line"><span class="hljs-comment">--On the source, modify the column</span></span><br><span class="line">SQL&gt; desc scott.emp</span><br><span class="line">Name                                                              Null?    Type</span><br><span class="line"><span class="hljs-comment">----------------------------------------------------------------- -------- ---------------------</span></span><br><span class="line">EMPNO                                                             NOT NULL NUMBER(4)</span><br><span class="line">ENAME                                                                      VARCHAR2(10)</span><br><span class="line">JOB                                                                        VARCHAR2(9)</span><br><span class="line">MGR                                                                        NUMBER(4)</span><br><span class="line">HIREDATE                                                                   DATE</span><br><span class="line">SAL                                                                        NUMBER(7,2)</span><br><span class="line">COMM                                                                       NUMBER(7,2)</span><br><span class="line">DEPTNO                                                                     NUMBER(2)</span><br><span class="line">SQL&gt; alter table scott.emp add ncol varchar2(10);</span><br><span class="line">SQL&gt; create table scott.test as select * from scott.emp;</span><br><span class="line"></span><br><span class="line"><span class="hljs-comment">--On target</span></span><br><span class="line">SQL&gt; select count(*) from scott.test;</span><br><span class="line">  COUNT(*)</span><br><span class="line">  <span class="hljs-comment">----------</span></span><br><span class="line">          14</span><br></pre></td></tr></table></figure></p>
+<h2 id="Trouble-shooting"><a href="#Trouble-shooting" class="headerlink" title="Trouble shooting"></a>Trouble shooting</h2><ul>
+<li>When doing some DMLs to the table, encountered following errors:</li>
+</ul>
+<figure class="highlight bash hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">2016-06-29 21:43:43  WARNING OGG-00869  Oracle GoldenGate Delivery <span class="hljs-keyword">for</span> Oracle, repy.prm:  OCI Error ORA-26945: unsupported hint RESTRICT_ALL_REF_CONS (status = 26945). UPDATE /*+ RESTRICT_ALL_REF_CONS */ <span class="hljs-string">"SCOTT"</span>.<span class="hljs-string">"EMP"</span> SET <span class="hljs-string">"SAL"</span> = :a1 WHERE <span class="hljs-string">"EMPNO"</span> = :b0.</span><br><span class="line">2016-06-29 21:43:43  WARNING OGG-01004  Oracle GoldenGate Delivery <span class="hljs-keyword">for</span> Oracle, repy.prm:  Aborted grouped transaction on <span class="hljs-string">'SCOTT.EMP'</span>, Database error 26945 (OCI Error ORA-26945: unsupported hint RESTRICT_ALL_REF_CONS (status = 26945). UPDATE /*+ RESTRICT_ALL_REF_CONS */ <span class="hljs-string">"SCOTT"</span>.<span class="hljs-string">"EMP"</span> SET <span class="hljs-string">"SAL"</span> = :a1 WHERE <span class="hljs-string">"EMPNO"</span> = :b0).</span><br><span class="line">2016-06-29 21:43:43  WARNING OGG-01003  Oracle GoldenGate Delivery <span class="hljs-keyword">for</span> Oracle, repy.prm:  Repositioning to rba 1479 <span class="hljs-keyword">in</span> seqno 0.</span><br><span class="line">2016-06-29 21:43:43  WARNING OGG-01154  Oracle GoldenGate Delivery <span class="hljs-keyword">for</span> Oracle, repy.prm:  SQL error 26945 mapping SCOTT.EMP to SCOTT.EMP OCI Error ORA-26945: unsupported hint RESTRICT_ALL_REF_CONS (status = 26945). UPDATE /*+ RESTRICT_ALL_REF_CONS */ <span class="hljs-string">"SCOTT"</span>.<span class="hljs-string">"EMP"</span> SET <span class="hljs-string">"SAL"</span> = :a1 WHERE <span class="hljs-string">"EMPNO"</span> = :b0.</span><br></pre></td></tr></table></figure>
+<p>Solution:<br><figure class="highlight hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">SQL&gt; exec dbms_goldengate_auth.grant_admin_privilege('GGSUSR');</span><br><span class="line">SQL&gt; ALTER SYSTEM SET ENABLE_GOLDENGATE_REPLICATION = TRUE SCOPE = BOTH;</span><br></pre></td></tr></table></figure></p>
+<p>If you want to skip current transaction, do the following:<br><figure class="highlight hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">GGSCI (node2) 33&gt; START REPLICAT repy SKIPTRANSACTION</span><br></pre></td></tr></table></figure></p>
+<ul>
+<li>When enabling DDL support, encountered following errors:</li>
+</ul>
+<figure class="highlight sql hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line">SQL&gt; @ddl_setup.sql</span><br><span class="line">[oracle@node1:/gghome]$ more ddl_setup_spool.txt</span><br><span class="line">...</span><br><span class="line"><span class="hljs-keyword">BEGIN</span> <span class="hljs-string">"GGSUSR"</span> .initial_setup; <span class="hljs-keyword">END</span>;</span><br><span class="line">*</span><br><span class="line">*ERROR at line 1:</span><br><span class="line">ORA-20782: Creating GGS_DDL_RULES table:ORA-01031: insufficient privileges:ORA-01031: insufficient privileges</span><br><span class="line">ORA-06512: at "GGSUSR.INITIAL_SETUP", line 477</span><br><span class="line">ORA-06512: at line 1</span><br></pre></td></tr></table></figure>
+<p>Solution:<br><figure class="highlight hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">cd /gghome/</span><br><span class="line">sqlplus "/as sysdba"</span><br><span class="line">SQL&gt; @ddl_disable.sql</span><br><span class="line">SQL&gt; grant create table,create sequence to ggsusr;</span><br><span class="line">SQL&gt; @ddl_setup.sql</span><br></pre></td></tr></table></figure></p>
+<p><br><b>EOF</b><br></p>
+
+    
+    </div>
+    
+    <div class="columns is-variable is-1 is-multiline is-mobile">
+    
+        <span class="column is-narrow"><a class="tag is-light article-tag" href="/tags/ogg/">#ogg</a></span>
+    
+    </div>
+    
+    
+    <div class="columns is-mobile is-multiline article-nav">
+        <span class="column is-12-mobile is-half-desktop  article-nav-prev">
+            
+            <a href="/miscellaneous/markdown-syntax.html">markdown syntax</a>
+            
+        </span>
+        <span class="column is-12-mobile is-half-desktop  article-nav-next">
+            
+            <a href="/oracle/rolling-upgrade-rac-from-11g-to-12c.html">Rolling Upgrade RAC from 11g to 12c</a>
+            
+        </span>
+    </div>
+    
+</article>
+
+
+
+
+    </div>
+</section>
+    <footer class="footer">
+    <div class="container">
+        <div class="columns content">
+            <div class="column is-narrow has-text-centered">
+                &copy; 2018 Fung Kong&nbsp;
+                Powered by <a href="http://hexo.io/" target="_blank">Hexo</a> & <a
+                        href="http://github.com/ppoffice/hexo-theme-minos">Minos</a>
+            </div>
+            <div class="column is-hidden-mobile"></div>
+
+            
+            
+        </div>
+    </div>
+</footer>
+    <script src="//cdnjs.cloudflare.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
+<script src="//cdnjs.cloudflare.com/ajax/libs/moment.js/2.22.2/moment-with-locales.min.js"></script>
+
+<!-- test if the browser is outdated -->
+<div id="outdated">
+    <h6>Your browser is out-of-date!</h6>
+    <p>Update your browser to view this website correctly. <a id="btnUpdateBrowser" href="http://outdatedbrowser.com/">Update my browser now </a></p>
+    <p class="last"><a href="#" id="btnCloseUpdateBrowser" title="Close">&times;</a></p>
+</div>
+<script src="//cdnjs.cloudflare.com/ajax/libs/outdated-browser/1.1.5/outdatedbrowser.min.js"></script>
+<script>
+    $(document).ready(function () {
+        // plugin function, place inside DOM ready function
+        outdatedBrowser({
+            bgColor: '#f25648',
+            color: '#ffffff',
+            lowerThan: 'flex'
+        })
+    });
+</script>
+
+<script>
+    window.FontAwesomeConfig = {
+        searchPseudoElements: true
+    }
+    moment.locale("en-AU");
+</script>
+
+
+    
+    
+    
+    
+    
+    
+
+    
+
+
+<script src="/js/script.js"></script>
+
+    
+    <div class="searchbox ins-search">
+    <div class="searchbox-mask"></div>
+    <div class="searchbox-container ins-search-container">
+        <div class="searchbox-input-wrapper">
+            <input type="text" class="searchbox-input ins-search-input" placeholder="Type something..." />
+            <span class="searchbox-close ins-close ins-selectable"><i class="fa fa-times-circle"></i></span>
+        </div>
+        <div class="searchbox-result-wrapper ins-section-wrapper">
+            <div class="ins-section-container"></div>
+        </div>
+    </div>
+</div>
+<script>
+    (function (window) {
+        var INSIGHT_CONFIG = {
+            TRANSLATION: {
+                POSTS: 'Posts',
+                PAGES: 'Pages',
+                CATEGORIES: 'Categories',
+                TAGS: 'Tags',
+                UNTITLED: '(Untitled)',
+            },
+            CONTENT_URL: '/content.json',
+        };
+        window.INSIGHT_CONFIG = INSIGHT_CONFIG;
+    })(window);
+</script>
+<script src="/js/insight.js"></script>
+    
+</body>
+</html>

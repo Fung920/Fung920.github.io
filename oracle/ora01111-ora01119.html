@@ -1,0 +1,271 @@
+<!DOCTYPE html>
+<html class="has-navbar-fixed-top">
+<head>
+    <meta charset="utf-8">
+<title>数据文件权限导致DataGuard无法同步 - My Wiki</title>
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+
+<link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/outdated-browser/1.1.5/outdatedbrowser.min.css">
+
+
+
+
+
+
+
+
+
+
+<link rel="icon" href="/images/favicon.ico">
+
+
+<link rel="stylesheet" href="//fonts.googleapis.com/css?family=Ovo|Source+Code+Pro">
+<link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/bulma/0.6.2/css/bulma.min.css">
+
+
+
+<link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/highlight.js/9.12.0/styles/github.min.css">
+
+<link rel="stylesheet" href="/css/style.css">
+
+<script defer src="//use.fontawesome.com/releases/v5.0.8/js/all.js"></script>
+
+
+    
+    
+    
+    
+    
+    
+
+    
+
+
+</head>
+<body>
+    
+<nav class="navbar is-transparent is-fixed-top navbar-main" role="navigation" aria-label="main navigation">
+    <div class="container">
+        <div class="navbar-brand">
+            <a class="navbar-item navbar-logo" href="/">
+                
+                    
+                    My Wiki
+                    
+                
+            </a>
+            <div class="navbar-burger">
+                <span></span>
+                <span></span>
+                <span></span>
+            </div>
+        </div>
+        
+        <div class="navbar-menu navbar-start">
+            
+            <a class="navbar-item "
+               href="/">Home</a>
+            
+            <a class="navbar-item "
+               href="/archives">Archives</a>
+            
+            <a class="navbar-item "
+               href="/about">About</a>
+            
+        </div>
+        
+        <div class="navbar-menu navbar-end">
+            
+            <a class="navbar-item search" title="Search" href="javascript:;">
+                <i class="fas fa-search"></i>
+            </a>
+            
+            
+            
+        </div>
+    </div>
+</nav>
+
+    <section class="section">
+    <div class="container">
+    <article class="article content gallery" itemscope itemprop="blogPost">
+    <h1 class="article-title is-size-3 is-size-4-mobile" itemprop="name">
+        
+            数据文件权限导致DataGuard无法同步
+        
+    </h1>
+    <div class="article-meta columns is-variable is-1 is-multiline is-mobile is-size-7-mobile">
+        <span class="column is-narrow">
+            <time datetime="2013-08-29T04:00:00.000Z" itemprop="datePublished">Aug 29 2013</time>
+        </span>
+        
+        <span class="column is-narrow article-category">
+            <i class="far fa-folder"></i>
+            <a class="article-category-link" href="/categories/oracle/">oracle</a>
+        </span>
+        
+        
+        <span class="column is-narrow">
+            
+            
+            4 minutes read (About 632 words)
+        </span>
+        
+    </div>
+    <div class="article-entry is-size-6-mobile" itemprop="articleBody">
+    
+        <h3> 1.	现象 </h3>
+备库执行rman报以下错误：
+<a id="more"></a>
+<figure class="highlight plain hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><span class="line">Starting backup at 29-AUG-13 </span><br><span class="line">could not read file header for datafile 25  </span><br><span class="line">error reason 1 </span><br><span class="line">could not read file header for datafile 25  </span><br><span class="line">error reason 1 </span><br><span class="line">released channel:  </span><br><span class="line">sbt1RMAN-00571: =========================================================== </span><br><span class="line">RMAN-00569: =============== ERROR MESSAGE STACK FOLLOWS =============== </span><br><span class="line">RMAN-00571: =========================================================== </span><br><span class="line">RMAN-03002: failure of backup command at 08/29/2013 00:00:08 </span><br><span class="line">RMAN-06056: could not access datafile 25 </span><br><span class="line">RMAN&gt;  </span><br><span class="line">RMAN&gt; 2&gt; 3&gt; 4&gt; 5&gt; 6&gt; 7&gt; 8&gt;</span><br></pre></td></tr></table></figure>
+
+<h3>2.	诊断</h3> 
+查询备库alert日志，发现六天前出现如下错误：
+<figure class="highlight plain hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br></pre></td><td class="code"><pre><span class="line">WARNING: File being created with same name as in Primary </span><br><span class="line">Existing file may be overwritten </span><br><span class="line">File #25 added to control file as &apos;UNNAMED00025&apos;. </span><br><span class="line">Originally created as: </span><br><span class="line">&apos;/dev/rLNT_TXNIDX_01&apos; </span><br><span class="line">Recovery was unable to create the file as: </span><br><span class="line">&apos;/dev/rLNT_TXNIDX_01&apos; </span><br><span class="line">Errors with log /oradata/szdb/archive/1_425944_652903983.arc </span><br><span class="line">MRP0: Background Media Recovery terminated with error 1119 </span><br><span class="line">Fri Aug 23 17:20:53 BEIST 2013 </span><br><span class="line">Errors in file /oracle/admin/szdb/bdump/stdszdb_mrp0_647254.trc: </span><br><span class="line">ORA-01119: error in creating database file &apos;/dev/rLNT_TXNIDX_01&apos; </span><br><span class="line">ORA-27041: unable to open file </span><br><span class="line">IBM AIX RISC System/6000 Error: 13: Permission denied </span><br><span class="line">Additional information: 11 </span><br><span class="line">Some recovered datafiles maybe left media fuzzy </span><br><span class="line">Media recovery may continue but open resetlogs may fail </span><br><span class="line">Fri Aug 23 17:20:55 BEIST 2013 </span><br><span class="line">Errors in file /oracle/admin/szdb/bdump/stdszdb_mrp0_647254.trc: </span><br><span class="line">ORA-01119: error in creating database file &apos;/dev/rLNT_TXNIDX_01&apos; </span><br><span class="line">ORA-27041: unable to open file </span><br><span class="line">IBM AIX RISC System/6000 Error: 13: Permission denied </span><br><span class="line">Additional information: 11 </span><br><span class="line">Fri Aug 23 17:20:55 BEIST 2013 </span><br><span class="line">MRP0: Background Media Recovery process shutdown (stdszdb)</span><br></pre></td></tr></table></figure>
+
+跟客户沟通，发现在23号主库添加过数据文件，但是在备库端没有赋予相应权限，等后面改过来后，MRP进程已经被shutdown了。 
+<h3>3.	解决思路 </h3>
+日志传输仍然是正常的，尝试重启MRP进程： 
+<figure class="highlight plain hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">alter database recover managed standby database cancel; </span><br><span class="line">alter database recover managed standby database finish;</span><br></pre></td></tr></table></figure>
+
+报错如下： 
+<figure class="highlight plain hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line">SQL&gt; alter database recover managed standby database finish; </span><br><span class="line">alter database recover managed standby database finish </span><br><span class="line">*</span><br><span class="line">ERROR at line 1: </span><br><span class="line">ORA-00283: recovery session canceled due to errors </span><br><span class="line">ORA-01111: name for data file 25 is unknown - rename to correct file </span><br><span class="line">ORA-01110: data file 25: &apos;/oracle/product/10.2.0/db_1/dbs/UNNAMED00025&apos; </span><br><span class="line">ORA-01157: cannot identify/lock data file 25 - see DBWR trace file </span><br><span class="line">ORA-01111: name for data file 25 is unknown - rename to correct file </span><br><span class="line">ORA-01110: data file 25: &apos;/oracle/product/10.2.0/db_1/dbs/UNNAMED00025&apos;</span><br></pre></td></tr></table></figure>
+
+尝试在备机重建数据文件： 
+<figure class="highlight plain hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line">SQL&gt; select file#，name from v$datafile where file#=25; </span><br><span class="line">SQL&gt; alter database create datafile &apos;/oracle/product/10.2.0/db_1/dbs/UNNAMED00025&apos; as &apos;/dev/rLNT_TXNIDX_01&apos;; </span><br><span class="line">alter database create datafile &apos;/oracle/product/10.2.0/db_1/dbs/UNNAMED00025&apos; as &apos;/dev/rLNT_TXNIDX_01&apos; </span><br><span class="line">*</span><br><span class="line">ERROR at line 1: </span><br><span class="line">ORA-01275: Operation CREATE DATAFILE is not allowed if standby file management is automatic.</span><br></pre></td></tr></table></figure>
+
+最后将Standby file management修改为manual，再重新创建数据文件即可。操作如下： 
+<figure class="highlight plain hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">alter system set standby_file_management=manual; </span><br><span class="line">alter database create datafile &apos;/oracle/product/10.2.0/db_1/dbs/UNNAMED00025&apos; as &apos;/dev/rLNT_TXNIDX_01&apos;; </span><br><span class="line">alter database recover managed standby database cancel; </span><br><span class="line">alter database recover managed standby database disconnect from session; </span><br><span class="line">alter system set standby_file_management=&apos;auto&apos; scope=both;</span><br></pre></td></tr></table></figure>
+
+ <h3>4.	结果 </h3>
+查询Standby alert日志，发现已经开始同步：
+<figure class="highlight plain hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">Thu Aug 29 14:29:53 BEIST 2013 </span><br><span class="line">Media Recovery Log /oradata/szdb/archive/1_426095_652903983.arc </span><br><span class="line">Media Recovery Log /oradata/szdb/archive/2_335064_652903983.arc</span><br></pre></td></tr></table></figure>
+
+在主备端各自查询最大log sequence： 
+<figure class="highlight plain hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line">select thread#,max(sequence#) from v$log_history group by thread#; </span><br><span class="line">   	THREAD#	MAX(SEQUENCE#) </span><br><span class="line">1	1	428326 </span><br><span class="line">2	2	336500 </span><br><span class="line"></span><br><span class="line">    THREAD# MAX(SEQUENCE#) </span><br><span class="line">---------- -------------- </span><br><span class="line">         1         426090 </span><br><span class="line">         2         335062</span><br></pre></td></tr></table></figure>
+
+日志已经在同步，但是因为相差时间太久，需要时间才能同步完。 <br>
+
+<b> EOF </b>
+ 
+
+    
+    </div>
+    
+    <div class="columns is-variable is-1 is-multiline is-mobile">
+    
+        <span class="column is-narrow"><a class="tag is-light article-tag" href="/tags/ora01111/">#ora01111</a></span>
+    
+        <span class="column is-narrow"><a class="tag is-light article-tag" href="/tags/ora01119/">#ora01119</a></span>
+    
+    </div>
+    
+    
+    <div class="columns is-mobile is-multiline article-nav">
+        <span class="column is-12-mobile is-half-desktop  article-nav-prev">
+            
+            <a href="/oracle/recovery-datafile-without-backup.html">无备份恢复丢失的数据文件</a>
+            
+        </span>
+        <span class="column is-12-mobile is-half-desktop  article-nav-next">
+            
+            <a href="/oracle/create-database-command-line.html">Create database with command line</a>
+            
+        </span>
+    </div>
+    
+</article>
+
+
+
+
+    </div>
+</section>
+    <footer class="footer">
+    <div class="container">
+        <div class="columns content">
+            <div class="column is-narrow has-text-centered">
+                &copy; 2018 Kong&nbsp;
+                Powered by <a href="http://hexo.io/" target="_blank">Hexo</a> & <a
+                        href="http://github.com/ppoffice/hexo-theme-minos">Minos</a>
+            </div>
+            <div class="column is-hidden-mobile"></div>
+
+            
+            
+        </div>
+    </div>
+</footer>
+    <script src="//cdnjs.cloudflare.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
+<script src="//cdnjs.cloudflare.com/ajax/libs/moment.js/2.22.2/moment-with-locales.min.js"></script>
+
+<!-- test if the browser is outdated -->
+<div id="outdated">
+    <h6>Your browser is out-of-date!</h6>
+    <p>Update your browser to view this website correctly. <a id="btnUpdateBrowser" href="http://outdatedbrowser.com/">Update my browser now </a></p>
+    <p class="last"><a href="#" id="btnCloseUpdateBrowser" title="Close">&times;</a></p>
+</div>
+<script src="//cdnjs.cloudflare.com/ajax/libs/outdated-browser/1.1.5/outdatedbrowser.min.js"></script>
+<script>
+    $(document).ready(function () {
+        // plugin function, place inside DOM ready function
+        outdatedBrowser({
+            bgColor: '#f25648',
+            color: '#ffffff',
+            lowerThan: 'flex'
+        })
+    });
+</script>
+
+<script>
+    window.FontAwesomeConfig = {
+        searchPseudoElements: true
+    }
+    moment.locale("en-AU");
+</script>
+
+
+    
+    
+    
+    
+    
+    
+
+    
+
+
+<script src="/js/script.js"></script>
+
+    
+    <div class="searchbox ins-search">
+    <div class="searchbox-mask"></div>
+    <div class="searchbox-container ins-search-container">
+        <div class="searchbox-input-wrapper">
+            <input type="text" class="searchbox-input ins-search-input" placeholder="Type something..." />
+            <span class="searchbox-close ins-close ins-selectable"><i class="fa fa-times-circle"></i></span>
+        </div>
+        <div class="searchbox-result-wrapper ins-section-wrapper">
+            <div class="ins-section-container"></div>
+        </div>
+    </div>
+</div>
+<script>
+    (function (window) {
+        var INSIGHT_CONFIG = {
+            TRANSLATION: {
+                POSTS: 'Posts',
+                PAGES: 'Pages',
+                CATEGORIES: 'Categories',
+                TAGS: 'Tags',
+                UNTITLED: '(Untitled)',
+            },
+            CONTENT_URL: '/content.json',
+        };
+        window.INSIGHT_CONFIG = INSIGHT_CONFIG;
+    })(window);
+</script>
+<script src="/js/insight.js"></script>
+    
+</body>
+</html>

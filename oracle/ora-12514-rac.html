@@ -1,0 +1,251 @@
+<!DOCTYPE html>
+<html class="has-navbar-fixed-top">
+<head>
+    <meta charset="utf-8">
+<title>ora-12514解决一例 - My Wiki</title>
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+
+<link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/outdated-browser/1.1.5/outdatedbrowser.min.css">
+
+
+
+
+
+
+
+
+
+
+<link rel="icon" href="/images/favicon.ico">
+
+
+<link rel="stylesheet" href="//fonts.googleapis.com/css?family=Ovo|Source+Code+Pro">
+<link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/bulma/0.6.2/css/bulma.min.css">
+
+
+
+<link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/highlight.js/9.12.0/styles/github.min.css">
+
+<link rel="stylesheet" href="/css/style.css">
+
+<script defer src="//use.fontawesome.com/releases/v5.0.8/js/all.js"></script>
+
+
+    
+    
+    
+    
+    
+    
+
+    
+
+
+</head>
+<body>
+    
+<nav class="navbar is-transparent is-fixed-top navbar-main" role="navigation" aria-label="main navigation">
+    <div class="container">
+        <div class="navbar-brand">
+            <a class="navbar-item navbar-logo" href="/">
+                
+                    
+                    My Wiki
+                    
+                
+            </a>
+            <div class="navbar-burger">
+                <span></span>
+                <span></span>
+                <span></span>
+            </div>
+        </div>
+        
+        <div class="navbar-menu navbar-start">
+            
+            <a class="navbar-item "
+               href="/">Home</a>
+            
+            <a class="navbar-item "
+               href="/archives">Archives</a>
+            
+            <a class="navbar-item "
+               href="/about">About</a>
+            
+        </div>
+        
+        <div class="navbar-menu navbar-end">
+            
+            <a class="navbar-item search" title="Search" href="javascript:;">
+                <i class="fas fa-search"></i>
+            </a>
+            
+            
+            
+        </div>
+    </div>
+</nav>
+
+    <section class="section">
+    <div class="container">
+    <article class="article content gallery" itemscope itemprop="blogPost">
+    <h1 class="article-title is-size-3 is-size-4-mobile" itemprop="name">
+        
+            ora-12514解决一例
+        
+    </h1>
+    <div class="article-meta columns is-variable is-1 is-multiline is-mobile is-size-7-mobile">
+        <span class="column is-narrow">
+            <time datetime="2013-09-02T04:00:00.000Z" itemprop="datePublished">Sep 2 2013</time>
+        </span>
+        
+        <span class="column is-narrow article-category">
+            <i class="far fa-folder"></i>
+            <a class="article-category-link" href="/categories/oracle/">oracle</a>
+        </span>
+        
+        
+        <span class="column is-narrow">
+            
+            
+            3 minutes read (About 431 words)
+        </span>
+        
+    </div>
+    <div class="article-entry is-size-6-mobile" itemprop="articleBody">
+    
+         1.环境 
+11g RAC,重装时取消了REMOTE_LISTENER参数，导致在连接tns的时候报错。
+<a id="more"></a>
+<figure class="highlight plain hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br></pre></td><td class="code"><pre><span class="line">C:\Users\Administrator&gt;tnsping fung</span><br><span class="line">TNS Ping Utility for 32-bit Windows: Version 10.2.0.4.0 - Production on 02-9月 - </span><br><span class="line">2013 15:52:32 </span><br><span class="line">Copyright (c) 1997,  2007, Oracle.  All rights reserved. </span><br><span class="line"></span><br><span class="line"> 已使用的参数文件: </span><br><span class="line">D:\OraClient\oracle\product\10.2.0\client_1\network\admin\sqlnet.ora</span><br><span class="line">已使用 TNSNAMES 适配器来解析别名 </span><br><span class="line">Attempting to contact (DESCRIPTION = (ADDRESS = (PROTOCOL = TCP)(HOST = 192.168. </span><br><span class="line">137.112)(PORT = 1521)) (CONNECT_DATA = (SERVER = DEDICATED) (SERVICE_NAME = fung </span><br><span class="line">))) </span><br><span class="line">OK (20 毫秒) </span><br><span class="line">C:\Users\Administrator&gt;sqlplus system@fung </span><br><span class="line">SQL*Plus: Release 10.2.0.4.0 - Production on 星期一 9月 2 15:52:39 2013 </span><br><span class="line">Copyright (c) 1982, 2007, Oracle.  All Rights Reserved. </span><br><span class="line">输入口令: </span><br><span class="line">ERROR: </span><br><span class="line">ORA-12514: TNS: 监听程序当前无法识别连接描述符中请求的服务</span><br></pre></td></tr></table></figure>
+
+2.登录Server，查询该参数
+<figure class="highlight plain hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br></pre></td><td class="code"><pre><span class="line">[oracle@ora11g:/home/oracle]$ sqlplus &quot;/as sysdba&quot;</span><br><span class="line">SQL*Plus: Release 11.2.0.4.0 Production on Mon Sep 2 16:04:36 2013 </span><br><span class="line">Copyright (c) 1982, 2013, Oracle.  All rights reserved. </span><br><span class="line">Connected to: </span><br><span class="line">Oracle Database 11g Enterprise Edition Release 11.2.0.4.0 - 64bit Production </span><br><span class="line">With the Partitioning, Real Application Clusters, Automatic Storage Management, OLAP, </span><br><span class="line">Data Mining and Real Application Testing options</span><br><span class="line">SQL&gt; show parameter remote </span><br><span class="line"></span><br><span class="line"> NAME                                 TYPE        VALUE </span><br><span class="line">------------------------------------ ----------- ------------------------------ </span><br><span class="line">remote_dependencies_mode             string      TIMESTAMP </span><br><span class="line">remote_listener                      string </span><br><span class="line">remote_login_passwordfile            string      EXCLUSIVE </span><br><span class="line">remote_os_authent                    boolean     FALSE </span><br><span class="line">remote_os_roles                      boolean     FALSE </span><br><span class="line">result_cache_remote_expiration       integer     0</span><br></pre></td></tr></table></figure>
+
+在spfile中添加remote_listener： 
+<figure class="highlight plain hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line">SQL&gt; alter system set remote_listener=&apos;scan-ip:1521&apos; scope=both sid=&apos;*&apos;; </span><br><span class="line">alter system set remote_listener=&apos;scan-ip:1521&apos; scope=both sid=&apos;*&apos; </span><br><span class="line">*</span><br><span class="line">ERROR at line 1: </span><br><span class="line">ORA-02097: parameter cannot be modified because specified value is invalid </span><br><span class="line">ORA-00119: invalid specification for system parameter REMOTE_LISTENER </span><br><span class="line">ORA-00132: syntax error or unresolved network name &apos;scan-ip:1521&apos;</span><br></pre></td></tr></table></figure>
+
+再次报错，使用另一种方式解析： 
+<figure class="highlight plain hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br></pre></td><td class="code"><pre><span class="line">SQL&gt; alter system set remote_listener=&apos;(ADDRESS_LIST=(Address=(Protocol=tcp) (Host=scan-ip)(Port=1521)))&apos; scope=both sid=&apos;*&apos;; </span><br><span class="line">System altered. </span><br><span class="line">SQL&gt; show parameter remote </span><br><span class="line">NAME                                 TYPE        VALUE </span><br><span class="line">------------------------------------ ----------- ------------------------------ </span><br><span class="line">remote_dependencies_mode             string      TIMESTAMP </span><br><span class="line">remote_listener                      string      (ADDRESS_LIST=(Address=(Protoc </span><br><span class="line">                                                 ol=tcp) (Host=scan-ip)(Port=15 </span><br><span class="line">                                                 21))) </span><br><span class="line">remote_login_passwordfile            string      EXCLUSIVE </span><br><span class="line">remote_os_authent                    boolean     FALSE </span><br><span class="line">remote_os_roles                      boolean     FALSE </span><br><span class="line">result_cache_remote_expiration       integer     0 </span><br><span class="line"></span><br><span class="line">C:\Users\Administrator&gt;sqlplus system@fung</span><br><span class="line">SQL*Plus: Release 10.2.0.4.0 - Production on 星期一 9月 2 16:02:01 2013 </span><br><span class="line">Copyright (c) 1982, 2007, Oracle.  All Rights Reserved. </span><br><span class="line">输入口令: </span><br><span class="line">连接到: </span><br><span class="line">Oracle Database 11g Enterprise Edition Release 11.2.0.4.0 - 64bit Production </span><br><span class="line">With the Partitioning, Real Application Clusters, Automatic Storage Management, </span><br><span class="line">OLAP, </span><br><span class="line">Data Mining and Real Application Testing options </span><br><span class="line">SQL&gt;</span><br></pre></td></tr></table></figure>
+
+
+    
+    </div>
+    
+    <div class="columns is-variable is-1 is-multiline is-mobile">
+    
+        <span class="column is-narrow"><a class="tag is-light article-tag" href="/tags/ora-00132/">#ora-00132</a></span>
+    
+        <span class="column is-narrow"><a class="tag is-light article-tag" href="/tags/ora-12514/">#ora-12514</a></span>
+    
+    </div>
+    
+    
+    <div class="columns is-mobile is-multiline article-nav">
+        <span class="column is-12-mobile is-half-desktop  article-nav-prev">
+            
+            <a href="/oracle/11gr2-rac-voting-ocr-manage.html">11gr2 RAC Voting Disk及OCR管理</a>
+            
+        </span>
+        <span class="column is-12-mobile is-half-desktop  article-nav-next">
+            
+            <a href="/oracle/recovery-datafile-without-backup.html">无备份恢复丢失的数据文件</a>
+            
+        </span>
+    </div>
+    
+</article>
+
+
+
+
+    </div>
+</section>
+    <footer class="footer">
+    <div class="container">
+        <div class="columns content">
+            <div class="column is-narrow has-text-centered">
+                &copy; 2018 Kong&nbsp;
+                Powered by <a href="http://hexo.io/" target="_blank">Hexo</a> & <a
+                        href="http://github.com/ppoffice/hexo-theme-minos">Minos</a>
+            </div>
+            <div class="column is-hidden-mobile"></div>
+
+            
+            
+        </div>
+    </div>
+</footer>
+    <script src="//cdnjs.cloudflare.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
+<script src="//cdnjs.cloudflare.com/ajax/libs/moment.js/2.22.2/moment-with-locales.min.js"></script>
+
+<!-- test if the browser is outdated -->
+<div id="outdated">
+    <h6>Your browser is out-of-date!</h6>
+    <p>Update your browser to view this website correctly. <a id="btnUpdateBrowser" href="http://outdatedbrowser.com/">Update my browser now </a></p>
+    <p class="last"><a href="#" id="btnCloseUpdateBrowser" title="Close">&times;</a></p>
+</div>
+<script src="//cdnjs.cloudflare.com/ajax/libs/outdated-browser/1.1.5/outdatedbrowser.min.js"></script>
+<script>
+    $(document).ready(function () {
+        // plugin function, place inside DOM ready function
+        outdatedBrowser({
+            bgColor: '#f25648',
+            color: '#ffffff',
+            lowerThan: 'flex'
+        })
+    });
+</script>
+
+<script>
+    window.FontAwesomeConfig = {
+        searchPseudoElements: true
+    }
+    moment.locale("en-AU");
+</script>
+
+
+    
+    
+    
+    
+    
+    
+
+    
+
+
+<script src="/js/script.js"></script>
+
+    
+    <div class="searchbox ins-search">
+    <div class="searchbox-mask"></div>
+    <div class="searchbox-container ins-search-container">
+        <div class="searchbox-input-wrapper">
+            <input type="text" class="searchbox-input ins-search-input" placeholder="Type something..." />
+            <span class="searchbox-close ins-close ins-selectable"><i class="fa fa-times-circle"></i></span>
+        </div>
+        <div class="searchbox-result-wrapper ins-section-wrapper">
+            <div class="ins-section-container"></div>
+        </div>
+    </div>
+</div>
+<script>
+    (function (window) {
+        var INSIGHT_CONFIG = {
+            TRANSLATION: {
+                POSTS: 'Posts',
+                PAGES: 'Pages',
+                CATEGORIES: 'Categories',
+                TAGS: 'Tags',
+                UNTITLED: '(Untitled)',
+            },
+            CONTENT_URL: '/content.json',
+        };
+        window.INSIGHT_CONFIG = INSIGHT_CONFIG;
+    })(window);
+</script>
+<script src="/js/insight.js"></script>
+    
+</body>
+</html>

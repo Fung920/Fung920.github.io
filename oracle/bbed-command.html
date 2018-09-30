@@ -1,0 +1,348 @@
+<!DOCTYPE html>
+<html class="has-navbar-fixed-top">
+<head>
+    <meta charset="utf-8">
+<title>BBED基本命令 - My Wiki</title>
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+
+<link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/outdated-browser/1.1.5/outdatedbrowser.min.css">
+
+
+<meta name="description" content="bbed基本命令">
+
+
+
+<meta name="keywords" content="bbed">
+
+
+
+
+
+
+
+<link rel="icon" href="/images/favicon.ico">
+
+
+<link rel="stylesheet" href="//fonts.googleapis.com/css?family=Ovo|Source+Code+Pro">
+<link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/bulma/0.6.2/css/bulma.min.css">
+
+
+
+<link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/highlight.js/9.12.0/styles/github.min.css">
+
+<link rel="stylesheet" href="/css/style.css">
+
+<script defer src="//use.fontawesome.com/releases/v5.0.8/js/all.js"></script>
+
+
+    
+    
+    
+    
+    
+    
+
+    
+
+
+</head>
+<body>
+    
+<nav class="navbar is-transparent is-fixed-top navbar-main" role="navigation" aria-label="main navigation">
+    <div class="container">
+        <div class="navbar-brand">
+            <a class="navbar-item navbar-logo" href="/">
+                
+                    
+                    My Wiki
+                    
+                
+            </a>
+            <div class="navbar-burger">
+                <span></span>
+                <span></span>
+                <span></span>
+            </div>
+        </div>
+        
+        <div class="navbar-menu navbar-start">
+            
+            <a class="navbar-item "
+               href="/">Home</a>
+            
+            <a class="navbar-item "
+               href="/archives">Archives</a>
+            
+            <a class="navbar-item "
+               href="/about">About</a>
+            
+        </div>
+        
+        <div class="navbar-menu navbar-end">
+            
+            <a class="navbar-item search" title="Search" href="javascript:;">
+                <i class="fas fa-search"></i>
+            </a>
+            
+            
+            
+        </div>
+    </div>
+</nav>
+
+    <section class="section">
+    <div class="container">
+    <article class="article content gallery" itemscope itemprop="blogPost">
+    <h1 class="article-title is-size-3 is-size-4-mobile" itemprop="name">
+        
+            BBED基本命令
+        
+    </h1>
+    <div class="article-meta columns is-variable is-1 is-multiline is-mobile is-size-7-mobile">
+        <span class="column is-narrow">
+            <time datetime="2014-09-01T15:20:52.000Z" itemprop="datePublished">Sep 1 2014</time>
+        </span>
+        
+        <span class="column is-narrow article-category">
+            <i class="far fa-folder"></i>
+            <a class="article-category-link" href="/categories/oracle/">oracle</a>
+        </span>
+        
+        
+        <span class="column is-narrow">
+            
+            
+            20 minutes read (About 3062 words)
+        </span>
+        
+    </div>
+    <div class="article-entry is-size-6-mobile" itemprop="articleBody">
+    
+        <p>前文<a href="/bbed-in-linux.html">Linux下编译BBED</a>描述了如何在Linux下编译使用bbed，本文介绍bbed常用的一些命令。<br><a id="more"></a><br>BBED命令帮助:<br><figure class="highlight plain hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line">BBED&gt; help all</span><br><span class="line">SET DBA [ dba | file#, block# ]</span><br><span class="line">SET FILENAME &apos;filename&apos;</span><br><span class="line">...</span><br><span class="line">UNDO</span><br><span class="line">HELP [ &lt;bbed command&gt; | ALL ]</span><br><span class="line">VERIFY [ DBA | FILE | FILENAME | BLOCK ]</span><br><span class="line">CORRUPT [ DBA | FILE | FILENAME | BLOCK ]</span><br></pre></td></tr></table></figure></p>
+<h3 id="1-set命令"><a href="#1-set命令" class="headerlink" title="1. set命令"></a>1. set命令</h3><p>set主要用于定位所修改的记录所在的数据块的具体位置。在Oracle内部，数据块记录的具体位置是由RDBA和偏移量offset决定，RDBA表示修改的记录所在的数据块在数据文件的位置，offset表示修改的记录在数据块内的具体位置。<br><figure class="highlight plain hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line">--查找数据dba</span><br><span class="line">SYS@linora&gt; SELECT DBMS_ROWID.ROWID_OBJECT(rowid) &quot;OBJECT&quot;,</span><br><span class="line">  2  DBMS_ROWID.ROWID_RELATIVE_FNO(rowid) &quot;FILE&quot;,</span><br><span class="line">  3  DBMS_ROWID.ROWID_BLOCK_NUMBER(rowid) &quot;BLOCK&quot;,</span><br><span class="line">  4  DBMS_ROWID.ROWID_ROW_NUMBER(rowid) &quot;ROW&quot;</span><br><span class="line">  5  FROM hr.employees where employee_id=200;    </span><br><span class="line">    OBJECT       FILE      BLOCK        ROW</span><br><span class="line">---------- ---------- ---------- ----------</span><br><span class="line">     84737          8      11477          2</span><br></pre></td></tr></table></figure></p>
+<p>bbed参数文件设置：<br><figure class="highlight plain hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br></pre></td><td class="code"><pre><span class="line">[oracle@linora:/home/oracle/bbed]$ cat parfile.txt </span><br><span class="line">blocksize=8192</span><br><span class="line">listfile=filelist.txt</span><br><span class="line">mode=edit</span><br><span class="line">[oracle@linora:/home/oracle/bbed]$ cat filelist.txt </span><br><span class="line">1 /oradata/datafile/linora/system01.dbf 754974720</span><br><span class="line">2 /oradata/datafile/linora/sysaux01.dbf 702545920</span><br><span class="line">3 /oradata/datafile/linora/undotbs01.dbf 566231040</span><br><span class="line">4 /oradata/datafile/linora/users01.dbf 36700160</span><br><span class="line">5 /oradata/datafile/linora/fung01.dbf 246415360</span><br><span class="line">6 /oradata/datafile/linora/undotbs02.dbf 1048576</span><br><span class="line">7 /oradata/datafile/linora/fung02.dbf 10485760</span><br><span class="line">8 /oradata/datafile/linora/perf01.dbf 314572800</span><br><span class="line">9 /oradata/datafile/linora/demotsdata.dbf 104857600</span><br><span class="line">10 /oradata/datafile/linora/demotsidx.dbf 104857600</span><br><span class="line">11 /oradata/datafile/linora/test01.dbf 1048576</span><br></pre></td></tr></table></figure></p>
+<h4 id="set-dba"><a href="#set-dba" class="headerlink" title="set dba"></a>set dba</h4><p>使用DBA定位数据块位置，默认offset为0，也可以指定offset。<br><figure class="highlight plain hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line">BBED&gt; set dba 8,11477</span><br><span class="line">        DBA             0x02002cd5 (33565909 8,11477)</span><br><span class="line">BBED&gt; d</span><br><span class="line"> File: /oradata/datafile/linora/perf01.dbf (8)</span><br><span class="line"> Block: 11477            Offsets:    0 to  511           Dba:0x02002cd5</span><br><span class="line">--默认offset为0</span><br></pre></td></tr></table></figure></p>
+<h4 id="set-filename"><a href="#set-filename" class="headerlink" title="set filename"></a>set filename</h4><p>以数据文件名指定当前修改的数据文件，需要绝对路径<br><figure class="highlight plain hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">BBED&gt; set filename &apos;/oradata/datafile/linora/perf01.dbf&apos;</span><br><span class="line">        FILENAME        /oradata/datafile/linora/perf01.dbf</span><br></pre></td></tr></table></figure></p>
+<h4 id="set-file"><a href="#set-file" class="headerlink" title="set file"></a>set file</h4><p>以file_id指定当前修改的数据文件<br><figure class="highlight plain hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">BBED&gt; set file 8</span><br><span class="line">        FILE#           8</span><br></pre></td></tr></table></figure></p>
+<h4 id="set-block"><a href="#set-block" class="headerlink" title="set block"></a>set block</h4><p>指定当前修改的块号，在设定块号之前，需要先指定数据文件，可使用绝对块号，或者使用’+’，’-‘号指定离当前块号距离的目标块号<br><figure class="highlight plain hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">BBED&gt; set block 11476</span><br><span class="line">        BLOCK#          11476</span><br><span class="line">BBED&gt; set block +1</span><br><span class="line">        BLOCK#          11477</span><br></pre></td></tr></table></figure></p>
+<h4 id="set-offset"><a href="#set-offset" class="headerlink" title="set offset"></a>set offset</h4><p>指定当前块内的起始偏移量，用法跟set block类似，也可用’+’，’-‘号来表示跟当前offset的相对offset<br><figure class="highlight plain hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br></pre></td><td class="code"><pre><span class="line">BBED&gt; set offset 10</span><br><span class="line">        OFFSET          10</span><br><span class="line">BBED&gt; d</span><br><span class="line"> File: /oradata/datafile/linora/perf01.dbf (8)</span><br><span class="line"> Block: 11477            Offsets:   10 to  521           Dba:0x02002cd5</span><br><span class="line">--offset为10</span><br><span class="line">BBED&gt; set offset +10</span><br><span class="line">        OFFSET          20</span><br><span class="line">BBED&gt; d</span><br><span class="line"> File: /oradata/datafile/linora/perf01.dbf (8)</span><br><span class="line"> Block: 11477            Offsets:   20 to  531           Dba:0x02002cd5</span><br><span class="line">--offset为20</span><br></pre></td></tr></table></figure></p>
+<h4 id="set-blocksize"><a href="#set-blocksize" class="headerlink" title="set blocksize"></a>set blocksize</h4><p>设置当前数据文件的块大小，必须是当前数据文件的块大小，否则报错<br><figure class="highlight plain hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">BBED&gt; set blocksize 8192</span><br><span class="line">        BLOCKSIZE       8192</span><br><span class="line">BBED&gt; set blocksize 16384</span><br><span class="line">BBED-00307: incorrect blocksize (8192) or truncated file</span><br></pre></td></tr></table></figure></p>
+<h4 id="set-listfile"><a href="#set-listfile" class="headerlink" title="set listfile"></a>set listfile</h4><p>设置使用的listfile文件，listfile文件包含bbed所要编辑的数据文件列表<br><figure class="highlight plain hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">BBED&gt; set listfile &apos;filelist.txt&apos;</span><br><span class="line">        LISTFILE        filelist.txt</span><br></pre></td></tr></table></figure></p>
+<h4 id="set-count"><a href="#set-count" class="headerlink" title="set count"></a>set count</h4><p>设置dump命令显示的对应数据块的字节数，默认为512个字节。如果需要看到一个8k数据块的整个块内容，可以设置count为8192或者更大<br><figure class="highlight plain hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br></pre></td><td class="code"><pre><span class="line">BBED&gt; set dba 8,11477</span><br><span class="line">        DBA             0x02002cd5 (33565909 8,11477)</span><br><span class="line">BBED&gt; d </span><br><span class="line"> File: /oradata/datafile/linora/perf01.dbf (8)</span><br><span class="line"> Block: 11477            Offsets:    0 to  511           Dba:0x02002cd5</span><br><span class="line">--默认dump显示为0~511即512个字节</span><br><span class="line">BBED&gt; set count 8192</span><br><span class="line">        COUNT           8192</span><br><span class="line">BBED&gt; d</span><br><span class="line"> File: /oradata/datafile/linora/perf01.dbf (8)</span><br><span class="line"> Block: 11477            Offsets:    0 to 8191           Dba:0x02002cd5</span><br><span class="line">--设置count为8k后，显示字节为0~8191即8192个字节</span><br></pre></td></tr></table></figure></p>
+<h4 id="set-ibase"><a href="#set-ibase" class="headerlink" title="set ibase"></a>set ibase</h4><p>设置使用set block,set file,set offset使用的进制:Dec-十进制 Hex-十六进制 Oct-八进制，默认为10进制<br><figure class="highlight plain hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">BBED&gt; show ibase</span><br><span class="line">        IBASE           Dec</span><br></pre></td></tr></table></figure></p>
+<h4 id="set-obase"><a href="#set-obase" class="headerlink" title="set obase"></a>set obase</h4><p>此命令未知。</p>
+<h4 id="set-mode"><a href="#set-mode" class="headerlink" title="set mode"></a>set mode</h4><p>设置bbed模式是编辑(edit)还是浏览(browse)，浏览模式无法对数据块进行修改<br><figure class="highlight plain hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line">BBED&gt; show mode</span><br><span class="line">        MODE            Edit</span><br><span class="line">BBED&gt; set mode browse</span><br><span class="line">        MODE            Browse</span><br><span class="line">BBED&gt; show mode</span><br><span class="line">        MODE            Browse</span><br></pre></td></tr></table></figure></p>
+<h3 id="2-show命令"><a href="#2-show命令" class="headerlink" title="2. show命令"></a>2. show命令</h3><p>显示当前bbed的配置<br><figure class="highlight plain hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br></pre></td><td class="code"><pre><span class="line">BBED&gt; set dba 8, 11476</span><br><span class="line">        DBA             0x02002cd4 (33565908 8,11476)</span><br><span class="line">BBED&gt; show</span><br><span class="line">        FILE#           8</span><br><span class="line">        BLOCK#          11476</span><br><span class="line">        OFFSET          0</span><br><span class="line">        DBA             0x02002cd4 (33565908 8,11476)</span><br><span class="line">        FILENAME        /oradata/datafile/linora/perf01.dbf</span><br><span class="line">        BIFILE          bifile.bbd</span><br><span class="line">        LISTFILE        filelist.txt</span><br><span class="line">        BLOCKSIZE       8192</span><br><span class="line">        MODE            Edit</span><br><span class="line">        EDIT            Unrecoverable</span><br><span class="line">        IBASE           Dec</span><br><span class="line">        OBASE           Dec</span><br><span class="line">        WIDTH           80</span><br><span class="line">        COUNT           512</span><br><span class="line">        LOGFILE         log.bbd</span><br><span class="line">        SPOOL           No</span><br></pre></td></tr></table></figure></p>
+<h3 id="3-info命令"><a href="#3-info命令" class="headerlink" title="3. info命令"></a>3. info命令</h3><p>显示当前的listfile内容<br><figure class="highlight plain hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br></pre></td><td class="code"><pre><span class="line">BBED&gt; info</span><br><span class="line"> File#  Name                                                        Size(blks)</span><br><span class="line"> -----  ----                                                        ----------</span><br><span class="line">     1  /oradata/datafile/linora/system01.dbf                            92160</span><br><span class="line">     2  /oradata/datafile/linora/sysaux01.dbf                            85760</span><br><span class="line">     3  /oradata/datafile/linora/undotbs01.dbf                           69120</span><br><span class="line">     4  /oradata/datafile/linora/users01.dbf                              4480</span><br><span class="line">     5  /oradata/datafile/linora/fung01.dbf                              30080</span><br><span class="line">     6  /oradata/datafile/linora/undotbs02.dbf                             128</span><br><span class="line">     7  /oradata/datafile/linora/fung02.dbf                               1280</span><br><span class="line">     8  /oradata/datafile/linora/perf01.dbf                              38400</span><br><span class="line">     9  /oradata/datafile/linora/demotsdata.dbf                          12800</span><br><span class="line">    10  /oradata/datafile/linora/demotsidx.dbf                           12800</span><br><span class="line">    11  /oradata/datafile/linora/test01.dbf                                128</span><br></pre></td></tr></table></figure></p>
+<h3 id="4-map命令"><a href="#4-map命令" class="headerlink" title="4. map命令"></a>4. map命令</h3><p>map显示数据块结构，如果加上<code>/v</code>则表示显示数据块结构的同时显示结构体(Oracle 定义的Structure)的每个字段。<br><figure class="highlight plain hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br></pre></td><td class="code"><pre><span class="line">--map不加dba表示显示当前块结构及字段，加上dba表示显示指定的块结构和字段</span><br><span class="line">BBED&gt; map /v dba 8,11476</span><br><span class="line">BBED&gt; map /v dba 8,11476</span><br><span class="line"> File: /oradata/datafile/linora/perf01.dbf (8)</span><br><span class="line"> Block: 11476                                 Dba:0x02002cd4</span><br><span class="line">------------------------------------------------------------</span><br><span class="line"> KTB Data Block (Table/Cluster)</span><br><span class="line"></span><br><span class="line"> struct kcbh, 20 bytes                      @0       </span><br><span class="line">    ub1 type_kcbh                           @0       </span><br><span class="line">    ub1 frmt_kcbh                           @1       </span><br><span class="line">    ub1 spare1_kcbh                         @2       </span><br><span class="line">    ub1 spare2_kcbh                         @3       </span><br><span class="line">    ub4 rdba_kcbh                           @4       </span><br><span class="line">    ub4 bas_kcbh                            @8       </span><br><span class="line">    ub2 wrp_kcbh                            @12      </span><br><span class="line">    ub1 seq_kcbh                            @14      </span><br><span class="line">    ub1 flg_kcbh                            @15      </span><br><span class="line">    ub2 chkval_kcbh                         @16      </span><br><span class="line">    ub2 spare3_kcbh                         @18      </span><br><span class="line"></span><br><span class="line"> struct ktbbh, 72 bytes                     @20      </span><br><span class="line">    ub1 ktbbhtyp                            @20      </span><br><span class="line">    union ktbbhsid, 4 bytes                 @24      </span><br><span class="line">    struct ktbbhcsc, 8 bytes                @28      </span><br><span class="line">    sb2 ktbbhict                            @36      </span><br><span class="line">    ub1 ktbbhflg                            @38      </span><br><span class="line">    ub1 ktbbhfsl                            @39      </span><br><span class="line">    ub4 ktbbhfnx                            @40      </span><br><span class="line">    struct ktbbhitl[2], 48 bytes            @44      </span><br><span class="line"></span><br><span class="line"> struct kdbh, 14 bytes                      @100     </span><br><span class="line">    ub1 kdbhflag                            @100     </span><br><span class="line">    sb1 kdbhntab                            @101     </span><br><span class="line">    sb2 kdbhnrow                            @102     </span><br><span class="line">    sb2 kdbhfrre                            @104     </span><br><span class="line">    sb2 kdbhfsbo                            @106     </span><br><span class="line">    sb2 kdbhfseo                            @108     </span><br><span class="line">    sb2 kdbhavsp                            @110     </span><br><span class="line">    sb2 kdbhtosp                            @112     </span><br><span class="line"></span><br><span class="line"> struct kdbt[1], 4 bytes                    @114     </span><br><span class="line">    sb2 kdbtoffs                            @114     </span><br><span class="line">    sb2 kdbtnrow                            @116     </span><br><span class="line"></span><br><span class="line"> sb2 kdbr[98]                               @118     </span><br><span class="line"></span><br><span class="line"> ub1 freespace[686]                         @314     </span><br><span class="line"></span><br><span class="line"> ub1 rowdata[7188]                          @1000    </span><br><span class="line"></span><br><span class="line"> ub4 tailchk                                @8188</span><br></pre></td></tr></table></figure></p>
+<h3 id="5-dump命令"><a href="#5-dump命令" class="headerlink" title="5. dump命令"></a>5. dump命令</h3><p>dump命令用于查看指定block、指定offset的数据块内记录的内容，这些内容以16进制记载。相当于对当前block进行strings操作。此命令可缩写为d。<br><figure class="highlight plain hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br></pre></td><td class="code"><pre><span class="line">BBED&gt; set dba 8, 11476 offset 1024 count 20</span><br><span class="line">        DBA             0x02002cd4 (33565908 8,11476)</span><br><span class="line">        OFFSET          1024</span><br><span class="line">        COUNT           20</span><br><span class="line">BBED&gt; d /v</span><br><span class="line"> File: /oradata/datafile/linora/perf01.dbf (8)</span><br><span class="line"> Block: 11476   Offsets: 1024 to 1043  Dba:0x02002cd4</span><br><span class="line">-------------------------------------------------------</span><br><span class="line"> 0c353135 2e313233 2e343536 37077867 l .515.123.4567.xg</span><br><span class="line"> 06110101                            l ....</span><br><span class="line">&lt;16 bytes per line&gt;</span><br><span class="line">--或者</span><br><span class="line">BBED&gt; d /v dba 8,11476 offset 1024 count 50</span><br><span class="line"> File: /oradata/datafile/linora/perf01.dbf (8)</span><br><span class="line"> Block: 11476   Offsets: 1024 to 1073  Dba:0x02002cd4</span><br><span class="line">-------------------------------------------------------</span><br><span class="line"> 0c353135 2e313233 2e343536 37077867 l .515.123.4567.xg</span><br><span class="line"> 06110101 01074144 5f505245 5304c304 l ......AD_PRES...</span><br><span class="line"> 2e3dffff 02c15b2c 000b02c2 02065374 l .=....[,......St</span><br><span class="line"> 6576                                l ev</span><br></pre></td></tr></table></figure></p>
+<h3 id="6-print命令"><a href="#6-print命令" class="headerlink" title="6. print命令"></a>6. print命令</h3><p>显示数据块中offset位置的块结构。<br><figure class="highlight plain hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">--打印指定dba offset，下面是返回kcbh及数据块头(Data Block Header)</span><br><span class="line">BBED&gt; p dba 8,11476 offset 0</span><br><span class="line">kcbh.type_kcbh</span><br><span class="line">--------------</span><br><span class="line">ub1 type_kcbh                               @0        0x06</span><br></pre></td></tr></table></figure></p>
+<p>打印指定数据结构，下面的例子中，分三列，第三列是具体值<br><figure class="highlight plain hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><span class="line">BBED&gt; p kcbh</span><br><span class="line">struct kcbh, 20 bytes                       @0       </span><br><span class="line">   ub1 type_kcbh                            @0        0x06</span><br><span class="line">   ub1 frmt_kcbh                            @1        0xa2</span><br><span class="line">   ub1 spare1_kcbh                          @2        0x00</span><br><span class="line">   ub1 spare2_kcbh                          @3        0x00</span><br><span class="line">   ub4 rdba_kcbh                            @4        0x02002cd4</span><br><span class="line">   ub4 bas_kcbh                             @8        0x00316808</span><br><span class="line">   ub2 wrp_kcbh                             @12       0x0000</span><br><span class="line">   ub1 seq_kcbh                             @14       0x01</span><br><span class="line">   ub1 flg_kcbh                             @15       0x06 (KCBHFDLC, KCBHFCKV)</span><br><span class="line">   ub2 chkval_kcbh                          @16       0x8920</span><br><span class="line">   ub2 spare3_kcbh                          @18       0x0000</span><br></pre></td></tr></table></figure></p>
+<p>跟dump结果对应下，可以看到，data block Header，dump存储的数据跟print的数据存在一定的关系。<br><figure class="highlight plain hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line">BBED&gt; set count 20</span><br><span class="line">        COUNT           20</span><br><span class="line">BBED&gt; d</span><br><span class="line"> File: /oradata/datafile/linora/perf01.dbf (8)</span><br><span class="line"> Block: 11476            Offsets:    0 to   19           Dba:0x02002cd4</span><br><span class="line">------------------------------------------------------------------------</span><br><span class="line"> 06a20000 d42c0002 08683100 00000106 20890000</span><br></pre></td></tr></table></figure></p>
+<p>print还可以通过kdbr[n]来定位到当前块的第n行记录，数据块存储记录是有0行开始。<br><figure class="highlight plain hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">--定位数据块内第三行记录</span><br><span class="line">BBED&gt; p dba 8,11477 *kdbr[2]</span><br><span class="line">rowdata[410]</span><br><span class="line">------------</span><br><span class="line">ub1 rowdata[410]                            @7976     0x2c</span><br></pre></td></tr></table></figure></p>
+<p>显示当前偏移量的值为2c，和dump出来的第一个字节相同，即普通数据块中行记录所在的行头的标识。<br><figure class="highlight plain hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br></pre></td><td class="code"><pre><span class="line">BBED&gt; d /v dba 8,11477 offset 7976 count 512</span><br><span class="line"> File: /oradata/datafile/linora/perf01.dbf (8)</span><br><span class="line"> Block: 11477   Offsets: 7976 to 8191  Dba:0x02002cd5</span><br><span class="line">-------------------------------------------------------</span><br><span class="line"> 2c010b02 c203084a 656e6e69 66657206 l ,......Jennifer.</span><br><span class="line"> 5768616c 656e074a 5748414c 454e0c35 l Whalen.JWHALEN.5</span><br><span class="line"> 31352e31 32332e34 34343407 78670911 l 15.123.4444.xg..</span><br><span class="line"> 01010107 41445f41 53535402 c22dff03 l ....AD_ASST..-..</span><br><span class="line"> c2020202 c10b2c01 0b03c202 6407446f l ......,.....d.Do</span><br><span class="line"> 75676c61 73054772 616e7406 44475241 l uglas.Grant.DGRA</span><br><span class="line"> 4e540c36 35302e35 30372e39 38343407 l NT.650.507.9844.</span><br><span class="line"> 786c010d 01010108 53485f43 4c45524b l xl......SH_CLERK</span><br><span class="line"> 02c21bff 03c20219 02c1332c 010b03c2 l ..........3,....</span><br><span class="line"> 02630644 6f6e616c 64084f43 6f6e6e65 l .c.Donald.OConne</span><br><span class="line"> 6c6c0844 4f434f4e 4e454c0c 3635302e l ll.DOCONNEL.650.</span><br><span class="line"> 3530372e 39383333 07786b06 15010101 l 507.9833.xk.....</span><br><span class="line"> 0853485f 434c4552 4b02c21b ff03c202 l .SH_CLERK.......</span><br><span class="line"> 1902c133 010695d7                   l ...3....</span><br><span class="line"> &lt;32 bytes per line&gt;</span><br></pre></td></tr></table></figure></p>
+<p>print的参数如下：</p>
+<table>
+<thead>
+<tr>
+<th>parameters</th>
+<th>format</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>/x</td>
+<td>十六进制</td>
+</tr>
+<tr>
+<td>/d</td>
+<td>带符号十进制</td>
+</tr>
+<tr>
+<td>/u</td>
+<td>无符号十进制</td>
+</tr>
+<tr>
+<td>/o</td>
+<td>八进制</td>
+</tr>
+<tr>
+<td>/c</td>
+<td>字符</td>
+</tr>
+<tr>
+<td>/n</td>
+<td>number</td>
+</tr>
+<tr>
+<td>/t</td>
+<td>Oracle时间类型</td>
+</tr>
+<tr>
+<td>/i</td>
+<td>Oracle rowid</td>
+</tr>
+</tbody>
+</table>
+<figure class="highlight plain hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br></pre></td><td class="code"><pre><span class="line">BBED&gt; p /c rowdata </span><br><span class="line">ub1 rowdata[0]                              @7566    ,</span><br><span class="line">ub1 rowdata[1]                              @7567    .</span><br><span class="line">ub1 rowdata[2]                              @7568    .</span><br><span class="line">...</span><br><span class="line">ub1 rowdata[603]                            @8169    S</span><br><span class="line">ub1 rowdata[604]                            @8170    H</span><br><span class="line">ub1 rowdata[605]                            @8171    _</span><br><span class="line">ub1 rowdata[606]                            @8172    C</span><br><span class="line">ub1 rowdata[607]                            @8173    L</span><br><span class="line">ub1 rowdata[608]                            @8174    E</span><br><span class="line">ub1 rowdata[609]                            @8175    R</span><br><span class="line">ub1 rowdata[610]                            @8176    K</span><br><span class="line">...</span><br></pre></td></tr></table></figure>
+<h3 id="7-examine命令"><a href="#7-examine命令" class="headerlink" title="7. examine命令"></a>7. examine命令</h3><p>此命令用于将当前数据块的行记录从16进制翻译成文本,其后可接参数/r，表示read，且/r后可接一堆参数，其中n表示number，c表示character，即varchar或者varchar2类型的字符串，t表示日期类型。<br><figure class="highlight plain hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br></pre></td><td class="code"><pre><span class="line">--table bigtable字段为ccnc类型</span><br><span class="line">FUNG@linora&gt; desc bigtable</span><br><span class="line"> Name                           Null?    Type</span><br><span class="line"> ------------------------------ -------- -------------------</span><br><span class="line"> ID                                      VARCHAR2(10)</span><br><span class="line"> INC_DATETIME                            VARCHAR2(19)</span><br><span class="line"> RANDOM_ID                               NUMBER</span><br><span class="line"> RANDOM_STRING                           VARCHAR2(4000)</span><br><span class="line">--查找某条记录</span><br><span class="line">FUNG@linora&gt; select * from bigtable where id=&apos;101401999&apos;;</span><br><span class="line">ID         INC_DATETIME         RANDOM_ID RANDOM_STRING</span><br><span class="line">---------- ------------------- ---------- ----------------------------</span><br><span class="line">101401999  2014-07-16 11:01:37         10 EST7QUM940KAEOZSV2ZF</span><br><span class="line">--查找某条记录的dba</span><br><span class="line">FUNG@linora&gt; SELECT DBMS_ROWID.ROWID_OBJECT(rowid) &quot;OBJECT&quot;,</span><br><span class="line">  2  DBMS_ROWID.ROWID_RELATIVE_FNO(rowid) &quot;FILE&quot;,</span><br><span class="line">  3  DBMS_ROWID.ROWID_BLOCK_NUMBER(rowid) &quot;BLOCK&quot;,</span><br><span class="line">  4  DBMS_ROWID.ROWID_ROW_NUMBER(rowid) &quot;ROW&quot;</span><br><span class="line">  5  FROM fung.bigtable where id=&apos;101401999&apos;; </span><br><span class="line"></span><br><span class="line">    OBJECT       FILE      BLOCK        ROW</span><br><span class="line">---------- ---------- ---------- ----------</span><br><span class="line">     85368          5        243          0</span><br></pre></td></tr></table></figure></p>
+<p>使用bbed的examine命令打印当前行记录。<br><figure class="highlight plain hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br></pre></td><td class="code"><pre><span class="line">BBED&gt; set dba 5,243</span><br><span class="line">        DBA             0x014000f3 (20971763 5,243)</span><br><span class="line">BBED&gt; p *kdbr[0]</span><br><span class="line">rowdata[7703]</span><br><span class="line">-------------</span><br><span class="line">ub1 rowdata[7703]                           @8131     0x2c</span><br><span class="line">BBED&gt; x /rccnc</span><br><span class="line">rowdata[7703]                               @8131    </span><br><span class="line">-------------</span><br><span class="line">flag@8131: 0x2c (KDRHFL, KDRHFF, KDRHFH)</span><br><span class="line">lock@8132: 0x00</span><br><span class="line">cols@8133:    4</span><br><span class="line"></span><br><span class="line">col    0[9] @8134: 101401999</span><br><span class="line">col   1[19] @8144: 2014-07-16 11:01:37</span><br><span class="line">col    2[2] @8164: 10 </span><br><span class="line">col   3[20] @8167: EST7QUM940KAEOZSV2ZF</span><br></pre></td></tr></table></figure></p>
+<p>可以看到bbed出来的结果记录和select语句一致，如果/r后的c和n调换位置，则会出现其他情况：<br><figure class="highlight plain hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line">BBED&gt; x /rnnc</span><br><span class="line">rowdata[7703]                               @8131    </span><br><span class="line">-------------</span><br><span class="line">flag@8131: 0x2c (KDRHFL, KDRHFF, KDRHFH)</span><br><span class="line">lock@8132: 0x00</span><br><span class="line">cols@8133:    4</span><br><span class="line"></span><br><span class="line">col    0[9] @8134: ######################################### </span><br><span class="line">col   1[19] @8144: ######################################### </span><br><span class="line">col    2[2] @8164: ..</span><br><span class="line">col   3[20] @8167: EST7QUM940KAEOZSV2ZF</span><br></pre></td></tr></table></figure></p>
+<p>由此可得知，使用x命令进行read的时候，要和表定义的数据类型一致。</p>
+<h3 id="8-find命令"><a href="#8-find命令" class="headerlink" title="8. find命令"></a>8. find命令</h3><p>find用于查找指定字符串在指定数据块的具体位置，可简写为f，查找出符合条件后，再输入f会显示下一条符合条件的记录。find命令参数如下表所示</p>
+<table>
+<thead>
+<tr>
+<th>parameter</th>
+<th>datatype</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>/x</td>
+<td>十六进制</td>
+</tr>
+<tr>
+<td>/d</td>
+<td>十进制</td>
+</tr>
+<tr>
+<td>/u</td>
+<td>无符号十进制</td>
+</tr>
+<tr>
+<td>/o</td>
+<td>八进制</td>
+</tr>
+<tr>
+<td>/c</td>
+<td>字符</td>
+</tr>
+</tbody>
+</table>
+<figure class="highlight plain hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br></pre></td><td class="code"><pre><span class="line">BBED&gt; set dba 8,11477</span><br><span class="line">        DBA             0x02002cd5 (33565909 8,11477)</span><br><span class="line">--从当前offset查找</span><br><span class="line">BBED&gt; find /c Jen CURR </span><br><span class="line">BBED-00212: search string not found</span><br><span class="line">--从offset=0开始查找</span><br><span class="line">BBED&gt; find /c Jen TOP</span><br><span class="line"> File: /oradata/datafile/linora/perf01.dbf (8)</span><br><span class="line"> Block: 11477            Offsets: 7983 to 8191           Dba:0x02002cd5</span><br><span class="line">------------------------------------------------------------------------</span><br><span class="line"> 4a656e6e 69666572 06576861 6c656e07 4a574841 4c454e0c 3531352e 3132332e </span><br><span class="line"> 34343434 07786709 11010101 0741445f 41535354 02c22dff 03c20202 02c10b2c </span><br><span class="line"> 010b03c2 02640744 6f75676c 61730547 72616e74 06444752 414e540c 3635302e </span><br><span class="line"> 3530372e 39383434 07786c01 0d010101 0853485f 434c4552 4b02c21b ff03c202 </span><br><span class="line"> 1902c133 2c010b03 c2026306 446f6e61 6c64084f 436f6e6e 656c6c08 444f434f </span><br><span class="line"> 4e4e454c 0c363530 2e353037 2e393833 3307786b 06150101 01085348 5f434c45 </span><br><span class="line"> 524b02c2 1bff03c2 021902c1 33010695 d7 </span><br><span class="line">--此时的offset被设置为匹配搜索的第一个位置</span><br><span class="line">BBED&gt; show offset</span><br><span class="line">        OFFSET          7983</span><br><span class="line">--验证当前offset是否为Jen</span><br><span class="line">BBED&gt; p /c </span><br><span class="line">rowdata[417]</span><br><span class="line">------------</span><br><span class="line">ub1 rowdata[417]                            @7983    J</span><br><span class="line">BBED&gt; p /c offset +1</span><br><span class="line">rowdata[418]</span><br><span class="line">------------</span><br><span class="line">ub1 rowdata[418]                            @7984    e</span><br><span class="line">BBED&gt; p /c offset +1</span><br><span class="line">rowdata[419]</span><br><span class="line">------------</span><br><span class="line">ub1 rowdata[419]                            @7985    n</span><br></pre></td></tr></table></figure>
+<h3 id="9-copy命令"><a href="#9-copy命令" class="headerlink" title="9. copy命令"></a>9. copy命令</h3><p>copy用于复制一个数据块到另一个地方，如：<br><figure class="highlight plain hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">BBED&gt; copy dba 8,11476 to dba 11,10240</span><br></pre></td></tr></table></figure></p>
+<h3 id="10-modify命令"><a href="#10-modify命令" class="headerlink" title="10. modify命令"></a>10. modify命令</h3><p>modify为修改块内数据的命令，其命令指定的数据格式跟find相同，可简写为m。如修改dba 8,block 11477的Jen为JAN：<br><figure class="highlight plain hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br></pre></td><td class="code"><pre><span class="line">--查找Jen所在offset</span><br><span class="line">BBED&gt; f /c Jen TOP</span><br><span class="line"> File: /oradata/datafile/linora/perf01.dbf (8)</span><br><span class="line"> Block: 11477            Offsets: 7983 to 8191           Dba:0x02002cd5</span><br><span class="line">------------------------------------------------------------------------</span><br><span class="line"> 4a656e6e 69666572 06576861 6c656e07 4a574841 4c454e0c 3531352e 3132332e </span><br><span class="line"> 34343434 07786709 11010101 0741445f 41535354 02c22dff 03c20202 02c10b2c </span><br><span class="line"> 010b03c2 02640744 6f75676c 61730547 72616e74 06444752 414e540c 3635302e </span><br><span class="line"> 3530372e 39383434 07786c01 0d010101 0853485f 434c4552 4b02c21b ff03c202 </span><br><span class="line"> 1902c133 2c010b03 c2026306 446f6e61 6c64084f 436f6e6e 656c6c08 444f434f </span><br><span class="line"> 4e4e454c 0c363530 2e353037 2e393833 3307786b 06150101 01085348 5f434c45 </span><br><span class="line"> 524b02c2 1bff03c2 021902c1 33010695 d7 </span><br><span class="line">--验证offset是否以Jen开头</span><br><span class="line">BBED&gt; d /v</span><br><span class="line"> File: /oradata/datafile/linora/perf01.dbf (8)</span><br><span class="line"> Block: 11477   Offsets: 7983 to 8191  Dba:0x02002cd5</span><br><span class="line">-------------------------------------------------------</span><br><span class="line"> 4a656e6e 69666572 06576861 6c656e07 l Jennifer.Whalen.</span><br><span class="line"> 4a574841 4c454e0c 3531352e 3132332e l JWHALEN.515.123.</span><br><span class="line"> 34343434 07786709 11010101 0741445f l 4444.xg......AD_</span><br><span class="line"> 41535354 02c22dff 03c20202 02c10b2c l ASST..-........,</span><br><span class="line"> 010b03c2 02640744 6f75676c 61730547 l .....d.Douglas.G</span><br><span class="line"> 72616e74 06444752 414e540c 3635302e l rant.DGRANT.650.</span><br><span class="line"> 3530372e 39383434 07786c01 0d010101 l 507.9844.xl.....</span><br><span class="line"> 0853485f 434c4552 4b02c21b ff03c202 l .SH_CLERK.......</span><br><span class="line"> 1902c133 2c010b03 c2026306 446f6e61 l ...3,.....c.Dona</span><br><span class="line"> 6c64084f 436f6e6e 656c6c08 444f434f l ld.OConnell.DOCO</span><br><span class="line"> 4e4e454c 0c363530 2e353037 2e393833 l NNEL.650.507.983</span><br><span class="line"> 3307786b 06150101 01085348 5f434c45 l 3.xk......SH_CLE</span><br><span class="line"> 524b02c2 1bff03c2 021902c1 33010695 l RK..........3...</span><br><span class="line"> d7                                  l .</span><br><span class="line">--以字符格式进行修改</span><br><span class="line">BBED&gt; m /c JAN dba 8,11477 offset 7983</span><br><span class="line"> File: /oradata/datafile/linora/perf01.dbf (8)</span><br><span class="line"> Block: 11477            Offsets: 7983 to 8191           Dba:0x02002cd5</span><br><span class="line">------------------------------------------------------------------------</span><br><span class="line"> 4a414e6e 69666572 06576861 6c656e07 4a574841 4c454e0c 3531352e 3132332e </span><br><span class="line"> 34343434 07786709 11010101 0741445f 41535354 02c22dff 03c20202 02c10b2c </span><br><span class="line"> 010b03c2 02640744 6f75676c 61730547 72616e74 06444752 414e540c 3635302e </span><br><span class="line"> 3530372e 39383434 07786c01 0d010101 0853485f 434c4552 4b02c21b ff03c202 </span><br><span class="line"> 1902c133 2c010b03 c2026306 446f6e61 6c64084f 436f6e6e 656c6c08 444f434f </span><br><span class="line"> 4e4e454c 0c363530 2e353037 2e393833 3307786b 06150101 01085348 5f434c45 </span><br><span class="line"> 524b02c2 1bff03c2 021902c1 33010695 d7 </span><br><span class="line">--验证修改结果</span><br><span class="line">BBED&gt; d /v</span><br><span class="line"> File: /oradata/datafile/linora/perf01.dbf (8)</span><br><span class="line"> Block: 11477   Offsets: 7983 to 8191  Dba:0x02002cd5</span><br><span class="line">-------------------------------------------------------</span><br><span class="line"> 4a414e6e 69666572 06576861 6c656e07 l JANnifer.Whalen.</span><br><span class="line"> 4a574841 4c454e0c 3531352e 3132332e l JWHALEN.515.123.</span><br><span class="line"> 34343434 07786709 11010101 0741445f l 4444.xg......AD_</span><br><span class="line"> 41535354 02c22dff 03c20202 02c10b2c l ASST..-........,</span><br><span class="line"> 010b03c2 02640744 6f75676c 61730547 l .....d.Douglas.G</span><br><span class="line"> 72616e74 06444752 414e540c 3635302e l rant.DGRANT.650.</span><br><span class="line"> 3530372e 39383434 07786c01 0d010101 l 507.9844.xl.....</span><br><span class="line"> 0853485f 434c4552 4b02c21b ff03c202 l .SH_CLERK.......</span><br><span class="line"> 1902c133 2c010b03 c2026306 446f6e61 l ...3,.....c.Dona</span><br><span class="line"> 6c64084f 436f6e6e 656c6c08 444f434f l ld.OConnell.DOCO</span><br><span class="line"> 4e4e454c 0c363530 2e353037 2e393833 l NNEL.650.507.983</span><br><span class="line"> 3307786b 06150101 01085348 5f434c45 l 3.xk......SH_CLE</span><br><span class="line"> 524b02c2 1bff03c2 021902c1 33010695 l RK..........3...</span><br><span class="line"> d7                                  l .</span><br></pre></td></tr></table></figure></p>
+<p>注意，在以前的bbed版本中进行修改，会以交互模式提醒是否确定要修改，但11g以后已经没有了这个提示。</p>
+<h3 id="11-sum命令"><a href="#11-sum命令" class="headerlink" title="11. sum命令"></a>11. sum命令</h3><p>sum命令用来检测和设置block的Checksum。<br><figure class="highlight plain hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line">--验证数据块Checksum</span><br><span class="line">BBED&gt; sum dba 8,11477</span><br><span class="line">Check value for File 8, Block 11477:</span><br><span class="line">current = 0x62bf, required = 0x429b</span><br><span class="line">--更新数据块Checksum</span><br><span class="line">BBED&gt; sum dba 8,11477 apply</span><br><span class="line">Check value for File 8, Block 11477:</span><br><span class="line">current = 0x429b, required = 0x429b</span><br></pre></td></tr></table></figure></p>
+<p>更新完毕后，可以刷新缓冲池，在数据库内查看修改结果。<br><figure class="highlight plain hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line">SYS@linora&gt; alter system flush buffer_cache;</span><br><span class="line">System altered.</span><br><span class="line"></span><br><span class="line">SYS@linora&gt; SELECT DBMS_ROWID.ROWID_RELATIVE_FNO(rowid) &quot;FILE&quot;,</span><br><span class="line">  2  DBMS_ROWID.ROWID_BLOCK_NUMBER(rowid) &quot;BLOCK&quot;,first_name</span><br><span class="line">  3  FROM hr.employees where employee_id=200;</span><br><span class="line">      FILE      BLOCK FIRST_NAME</span><br><span class="line">---------- ---------- --------------------</span><br><span class="line">         8      11477 JANnifer</span><br></pre></td></tr></table></figure></p>
+<p>Reference：<br><a href="http://www.orafaq.com/papers/dissassembling_the_data_block.pdf" target="_blank" rel="noopener">dissassembling_the_data_block</a></p>
+
+    
+    </div>
+    
+    <div class="columns is-variable is-1 is-multiline is-mobile">
+    
+        <span class="column is-narrow"><a class="tag is-light article-tag" href="/tags/bbed/">#bbed</a></span>
+    
+    </div>
+    
+    
+    <div class="columns is-mobile is-multiline article-nav">
+        <span class="column is-12-mobile is-half-desktop  article-nav-prev">
+            
+            <a href="/oracle/bbed-structure.html">BBED Structure</a>
+            
+        </span>
+        <span class="column is-12-mobile is-half-desktop  article-nav-next">
+            
+            <a href="/oracle/bbed-in-linux.html">Linux下编译BBED</a>
+            
+        </span>
+    </div>
+    
+</article>
+
+
+
+
+    </div>
+</section>
+    <footer class="footer">
+    <div class="container">
+        <div class="columns content">
+            <div class="column is-narrow has-text-centered">
+                &copy; 2018 Kong&nbsp;
+                Powered by <a href="http://hexo.io/" target="_blank">Hexo</a> & <a
+                        href="http://github.com/ppoffice/hexo-theme-minos">Minos</a>
+            </div>
+            <div class="column is-hidden-mobile"></div>
+
+            
+            
+        </div>
+    </div>
+</footer>
+    <script src="//cdnjs.cloudflare.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
+<script src="//cdnjs.cloudflare.com/ajax/libs/moment.js/2.22.2/moment-with-locales.min.js"></script>
+
+<!-- test if the browser is outdated -->
+<div id="outdated">
+    <h6>Your browser is out-of-date!</h6>
+    <p>Update your browser to view this website correctly. <a id="btnUpdateBrowser" href="http://outdatedbrowser.com/">Update my browser now </a></p>
+    <p class="last"><a href="#" id="btnCloseUpdateBrowser" title="Close">&times;</a></p>
+</div>
+<script src="//cdnjs.cloudflare.com/ajax/libs/outdated-browser/1.1.5/outdatedbrowser.min.js"></script>
+<script>
+    $(document).ready(function () {
+        // plugin function, place inside DOM ready function
+        outdatedBrowser({
+            bgColor: '#f25648',
+            color: '#ffffff',
+            lowerThan: 'flex'
+        })
+    });
+</script>
+
+<script>
+    window.FontAwesomeConfig = {
+        searchPseudoElements: true
+    }
+    moment.locale("en-AU");
+</script>
+
+
+    
+    
+    
+    
+    
+    
+
+    
+
+
+<script src="/js/script.js"></script>
+
+    
+    <div class="searchbox ins-search">
+    <div class="searchbox-mask"></div>
+    <div class="searchbox-container ins-search-container">
+        <div class="searchbox-input-wrapper">
+            <input type="text" class="searchbox-input ins-search-input" placeholder="Type something..." />
+            <span class="searchbox-close ins-close ins-selectable"><i class="fa fa-times-circle"></i></span>
+        </div>
+        <div class="searchbox-result-wrapper ins-section-wrapper">
+            <div class="ins-section-container"></div>
+        </div>
+    </div>
+</div>
+<script>
+    (function (window) {
+        var INSIGHT_CONFIG = {
+            TRANSLATION: {
+                POSTS: 'Posts',
+                PAGES: 'Pages',
+                CATEGORIES: 'Categories',
+                TAGS: 'Tags',
+                UNTITLED: '(Untitled)',
+            },
+            CONTENT_URL: '/content.json',
+        };
+        window.INSIGHT_CONFIG = INSIGHT_CONFIG;
+    })(window);
+</script>
+<script src="/js/insight.js"></script>
+    
+</body>
+</html>

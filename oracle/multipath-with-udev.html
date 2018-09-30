@@ -1,0 +1,253 @@
+<!DOCTYPE html>
+<html class="has-navbar-fixed-top">
+<head>
+    <meta charset="utf-8">
+<title>Multipath with udev in RHEL6 - My Wiki</title>
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+
+<link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/outdated-browser/1.1.5/outdatedbrowser.min.css">
+
+
+
+
+<meta name="keywords" content="multipath,udev">
+
+
+
+
+
+
+
+<link rel="icon" href="/images/favicon.ico">
+
+
+<link rel="stylesheet" href="//fonts.googleapis.com/css?family=Ovo|Source+Code+Pro">
+<link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/bulma/0.6.2/css/bulma.min.css">
+
+
+
+<link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/highlight.js/9.12.0/styles/github.min.css">
+
+<link rel="stylesheet" href="/css/style.css">
+
+<script defer src="//use.fontawesome.com/releases/v5.0.8/js/all.js"></script>
+
+
+    
+    
+    
+    
+    
+    
+
+    
+
+
+</head>
+<body>
+    
+<nav class="navbar is-transparent is-fixed-top navbar-main" role="navigation" aria-label="main navigation">
+    <div class="container">
+        <div class="navbar-brand">
+            <a class="navbar-item navbar-logo" href="/">
+                
+                    
+                    My Wiki
+                    
+                
+            </a>
+            <div class="navbar-burger">
+                <span></span>
+                <span></span>
+                <span></span>
+            </div>
+        </div>
+        
+        <div class="navbar-menu navbar-start">
+            
+            <a class="navbar-item "
+               href="/">Home</a>
+            
+            <a class="navbar-item "
+               href="/archives">Archives</a>
+            
+            <a class="navbar-item "
+               href="/about">About</a>
+            
+        </div>
+        
+        <div class="navbar-menu navbar-end">
+            
+            <a class="navbar-item search" title="Search" href="javascript:;">
+                <i class="fas fa-search"></i>
+            </a>
+            
+            
+            
+        </div>
+    </div>
+</nav>
+
+    <section class="section">
+    <div class="container">
+    <article class="article content gallery" itemscope itemprop="blogPost">
+    <h1 class="article-title is-size-3 is-size-4-mobile" itemprop="name">
+        
+            Multipath with udev in RHEL6
+        
+    </h1>
+    <div class="article-meta columns is-variable is-1 is-multiline is-mobile is-size-7-mobile">
+        <span class="column is-narrow">
+            <time datetime="2015-06-16T01:51:56.000Z" itemprop="datePublished">Jun 15 2015</time>
+        </span>
+        
+        <span class="column is-narrow article-category">
+            <i class="far fa-folder"></i>
+            <a class="article-category-link" href="/categories/oracle/">oracle</a>
+        </span>
+        
+        
+        <span class="column is-narrow">
+            
+            
+            11 minutes read (About 1664 words)
+        </span>
+        
+    </div>
+    <div class="article-entry is-size-6-mobile" itemprop="articleBody">
+    
+        <p>Multipath为linux自带多路径聚合软件，用于磁盘路径设备名称绑定，在6.x后期版本中，已经不支持multipath直接修改磁盘权限，需要通过udev进行设定。<br><a id="more"></a></p>
+<h3 id="1-multipath安装"><a href="#1-multipath安装" class="headerlink" title="1.multipath安装"></a>1.multipath安装</h3><figure class="highlight plain hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br></pre></td><td class="code"><pre><span class="line">[root@orl6 ~]# yum install device-mapper-multipath -y</span><br><span class="line">[root@orl6 ~]# /etc/init.d/multipathd start</span><br><span class="line">Starting multipathd daemon: [  OK  ]</span><br><span class="line">[root@orl6 ~]# chkconfig multipathd on</span><br><span class="line">[root@orl6 ~]# multipath enable</span><br><span class="line">Jun 15 22:09:36 | /etc/multipath.conf does not exist, blacklisting all devices.</span><br><span class="line">Jun 15 22:09:36 | A sample multipath.conf file is located at</span><br><span class="line">Jun 15 22:09:36 | /usr/share/doc/device-mapper-multipath-0.4.9/multipath.conf</span><br><span class="line">Jun 15 22:09:36 | You can run /sbin/mpathconf to create or modify /etc/multipath.conf</span><br><span class="line">[root@orl6 ~]# cp /usr/share/doc/device-mapper-multipath-0.4.9/multipath.conf /etc/multipath.conf</span><br><span class="line">[root@orl6 ~]# grep -v ^# /etc/multipath.conf</span><br><span class="line">defaults &#123;</span><br><span class="line">        user_friendly_names yes</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<h3 id="2-配置multipath-conf"><a href="#2-配置multipath-conf" class="headerlink" title="2.配置multipath.conf"></a>2.配置multipath.conf</h3><p>通过<code>scsi_id</code>命令找出磁盘wwid，并按照模板写入multipath.conf<br><figure class="highlight plain hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line">[root@orl6 ~]# for i in a b c d;</span><br><span class="line">&gt; do </span><br><span class="line">&gt; /sbin/scsi_id --whitelisted --replace-whitespace --device=/dev/sd$i</span><br><span class="line">&gt; done</span><br><span class="line">1ATA_VBOX_HARDDISK_VBfe43d230-3b43fe42</span><br><span class="line">1ATA_VBOX_HARDDISK_VB9b70e1bb-9ea5e71b</span><br><span class="line">14f504e46494c45526354355179652d663752632d6d755741</span><br><span class="line">14f504e46494c45526354355179652d663752632d6d755741</span><br></pre></td></tr></table></figure></p>
+<p>可以看到，<code>/dev/sdc</code>和<code>/dev/sdd</code>是同一块磁盘，通过多路径聚合成一块，最后的配置文件如下：<br><figure class="highlight plain hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br></pre></td><td class="code"><pre><span class="line">[root@orl6 ~]# grep -v ^# /etc/multipath.conf</span><br><span class="line">blacklist &#123;</span><br><span class="line">        #devnode &quot;^(ram|raw|loop|fd|md|dm-|sr|scd|st)[0-9]*&quot;</span><br><span class="line">        #devnode &quot;^hd[a-z]&quot;</span><br><span class="line">        devnode &quot;sda&quot;            #排除本地硬盘</span><br><span class="line">        #wwid 1ATA_VBOX_HARDDISK_VB2314099c-4ddf514a </span><br><span class="line">        #wwid 1ATA_VBOX_HARDDISK_VB9b70e1bb-9ea5e71b</span><br><span class="line">&#125;</span><br><span class="line">defaults &#123;</span><br><span class="line">        user_friendly_names no</span><br><span class="line">        getuid_callout &quot;/sbin/scsi_id --whitelisted --replace-whitespace --device=/dev/%n&quot;</span><br><span class="line">&#125;</span><br><span class="line">multipaths &#123;</span><br><span class="line">    multipath &#123;</span><br><span class="line">        wwid 1ATA_VBOX_HARDDISK_VB9b70e1bb-9ea5e71b  #原有ASM磁盘</span><br><span class="line">        alias mpath1</span><br><span class="line">    &#125;</span><br><span class="line">    multipath &#123;</span><br><span class="line">        wwid 14f504e46494c45526354355179652d663752632d6d755741</span><br><span class="line">        alias data_mpath2</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure></p>
+<p>通过multipath路径即可发现聚合后的路径<br><figure class="highlight plain hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br></pre></td><td class="code"><pre><span class="line">[root@orl6 ~]# multipath -F</span><br><span class="line">[root@orl6 ~]# multipath -v2</span><br><span class="line">create: mpath1 (1ATA_VBOX_HARDDISK_VB9b70e1bb-9ea5e71b) undef ATA,VBOX HARDDISK</span><br><span class="line">size=20G features=&apos;0&apos; hwhandler=&apos;0&apos; wp=undef</span><br><span class="line">`-+- policy=&apos;round-robin 0&apos; prio=1 status=undef</span><br><span class="line">  `- 3:0:0:0 sdb 8:16 undef ready running</span><br><span class="line">create: data_mpath2 (14f504e46494c45526354355179652d663752632d6d755741) undef OPNFILER,VIRTUAL-DISK</span><br><span class="line">size=15G features=&apos;0&apos; hwhandler=&apos;0&apos; wp=undef</span><br><span class="line">|-+- policy=&apos;round-robin 0&apos; prio=1 status=undef</span><br><span class="line">| `- 5:0:0:0 sdc 8:32 undef ready running</span><br><span class="line">`-+- policy=&apos;round-robin 0&apos; prio=1 status=undef</span><br><span class="line">  `- 4:0:0:0 sdd 8:48 undef ready running</span><br></pre></td></tr></table></figure></p>
+<p>Liunx自带device mapper的命令<code>dmsetup</code>:<br><figure class="highlight plain hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br></pre></td><td class="code"><pre><span class="line">[root@orl6 ~]# dmsetup ls</span><br><span class="line">mpath1  (252:0)</span><br><span class="line">data_mpath2     (252:1)</span><br><span class="line">[root@orl6 ~]# dmsetup info</span><br><span class="line">Name:              mpath1</span><br><span class="line">State:             ACTIVE</span><br><span class="line">Read Ahead:        256</span><br><span class="line">Tables present:    LIVE</span><br><span class="line">Open count:        22</span><br><span class="line">Event number:      1</span><br><span class="line">Major, minor:      252, 0</span><br><span class="line">Number of targets: 1</span><br><span class="line">UUID: mpath-1ATA_VBOX_HARDDISK_VB9b70e1bb-9ea5e71b</span><br><span class="line"></span><br><span class="line">Name:              data_mpath2</span><br><span class="line">State:             ACTIVE</span><br><span class="line">Read Ahead:        256</span><br><span class="line">Tables present:    LIVE</span><br><span class="line">Open count:        0</span><br><span class="line">Event number:      0</span><br><span class="line">Major, minor:      252, 1</span><br><span class="line">Number of targets: 1</span><br><span class="line">UUID: mpath-14f504e46494c45526354355179652d663752632d6d755741</span><br></pre></td></tr></table></figure></p>
+<h3 id="3-通过udev设置磁盘权限"><a href="#3-通过udev设置磁盘权限" class="headerlink" title="3.通过udev设置磁盘权限"></a>3.通过udev设置磁盘权限</h3><p>磁盘权限的设定在6后期版本中，multipath有自带的模板文件，如下：<br><figure class="highlight plain hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br></pre></td><td class="code"><pre><span class="line">[root@orl6 ~]# find / -name &quot;12-dm-permissions.rules&quot;</span><br><span class="line">/usr/share/doc/device-mapper-1.02.79/12-dm-permissions.rules</span><br><span class="line">[root@orl6 ~]# cat /usr/share/doc/device-mapper-1.02.79/12-dm-permissions.rules</span><br><span class="line">--部分关于multipath的权限设定如下</span><br><span class="line"># Copyright (C) 2009 Red Hat, Inc. All rights reserved.</span><br><span class="line">#</span><br><span class="line"># This file is part of LVM2.</span><br><span class="line"># Udev rules for device-mapper devices.</span><br><span class="line">#</span><br><span class="line"># These rules set permissions for DM devices.</span><br><span class="line">#</span><br><span class="line"># This file is considered to be a template where users can put their</span><br><span class="line"># own entries and then put a copy of it manually to a usual place with</span><br><span class="line"># user-edited udev rules (usually /etc/udev/rules.d).</span><br><span class="line">#</span><br><span class="line"># There are some environment variables set that can be used:</span><br><span class="line">#   DM_UDEV_RULES_VSN - DM udev rules version</span><br><span class="line">#   DM_NAME - actual DM device&apos;s name</span><br><span class="line">#   DM_UUID - UUID set for DM device (blank if not specified)</span><br><span class="line">#   DM_SUSPENDED - suspended state of DM device (0 or 1)</span><br><span class="line">#   DM_LV_NAME - logical volume name (not set if LVM device not present)</span><br><span class="line">#   DM_VG_NAME - volume group name (not set if LVM device not present)</span><br><span class="line">#   DM_LV_LAYER - logical volume layer (not set if LVM device not present)</span><br><span class="line"># PLAIN DM DEVICES</span><br><span class="line">#</span><br><span class="line"># Set permissions for a DM device named &apos;my_device&apos; exactly</span><br><span class="line"># ENV&#123;DM_NAME&#125;==&quot;my_device&quot;, OWNER:=&quot;root&quot;, GROUP:=&quot;root&quot;, MODE:=&quot;660&quot;</span><br><span class="line"></span><br><span class="line"># Set permissions for all DM devices having &apos;MY_UUID-&apos; UUID prefix</span><br><span class="line"># ENV&#123;DM_UUID&#125;==&quot;MY_UUID-?*&quot;, OWNER:=&quot;root&quot;, GROUP:=&quot;root&quot;, MODE:=&quot;660&quot;</span><br><span class="line"># MULTIPATH DEVICES</span><br><span class="line">#</span><br><span class="line"># Set permissions for all multipath devices</span><br><span class="line"># ENV&#123;DM_UUID&#125;==&quot;mpath-?*&quot;, OWNER:=&quot;root&quot;, GROUP:=&quot;root&quot;, MODE:=&quot;660&quot;</span><br><span class="line"></span><br><span class="line"># Set permissions for first two partitions created on a multipath device (and detected by kpartx)</span><br><span class="line"># ENV&#123;DM_UUID&#125;==&quot;part[1-2]-mpath-?*&quot;, OWNER:=&quot;root&quot;, GROUP:=&quot;root&quot;, MODE:=&quot;660&quot;</span><br></pre></td></tr></table></figure></p>
+<p>按照模板文件修改属主权限即可。<br><figure class="highlight plain hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><span class="line">[root@orl6 ~]# cat /etc/udev/rules.d/12-asm-perssion.rules </span><br><span class="line">ENV&#123;DM_NAME&#125;==&quot;mpath1&quot;,NAME=&quot;asmdisk1&quot;, OWNER:=&quot;grid&quot;, GROUP:=&quot;oinstall&quot;, MODE:=&quot;660&quot;</span><br><span class="line">ENV&#123;DM_NAME&#125;==&quot;data_mpath2&quot;,NAME=&quot;asmdisk2&quot;, OWNER:=&quot;grid&quot;, GROUP:=&quot;oinstall&quot;, MODE:=&quot;660&quot;</span><br><span class="line">下面一段可以不加：</span><br><span class="line">#[root@orl6 ~]# cat /etc/udev/rules.d/99-asm-rules.rules </span><br><span class="line">#KERNEL==&quot;sd*&quot;, SUBSYSTEM==&quot;block&quot;, ENV&#123;DEVTYPE&#125;==&quot;disk&quot;, ENV&#123;ID_SERIAL&#125;==&quot;1ATA_VBOX_HARDDISK_VB9b70e1bb-9ea5e71b&quot;, OWNER=&quot;grid&quot;, GROUP=&quot;oinstall&quot;, MODE=&quot;0660&quot;</span><br><span class="line">#KERNEL==&quot;sd*&quot;, SUBSYSTEM==&quot;block&quot;, ENV&#123;DEVTYPE&#125;==&quot;disk&quot;, ENV&#123;ID_SERIAL&#125;==&quot;14f504e46494c45526354355179652d663752632d6d755741&quot;, OWNER=&quot;grid&quot;, GROUP=&quot;oinstall&quot;, MODE=&quot;0660&quot;</span><br><span class="line">#重启udev</span><br><span class="line">[root@orl6 ~]# start_udev</span><br><span class="line">Starting udev: [  OK  ]</span><br><span class="line">[root@orl6 ~]# ll /dev/asm*</span><br><span class="line">brw-rw----. 1 grid oinstall 252, 0 Jun 15 22:17 /dev/asmdisk1</span><br><span class="line">brw-rw----. 1 grid oinstall 252, 1 Jun 15 22:17 /dev/asmdisk2</span><br></pre></td></tr></table></figure></p>
+<p>此时，grid用户通过asmca可发现可用磁盘。<br>另外，udev自带的模板在[root@orl6 ~]# more /lib/udev/rules.d/50-udev-default.rules下。</p>
+<h3 id="4-EMC-PowerPath使用udev"><a href="#4-EMC-PowerPath使用udev" class="headerlink" title="4.EMC PowerPath使用udev"></a>4.EMC PowerPath使用udev</h3><figure class="highlight plain hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br></pre></td><td class="code"><pre><span class="line">[root@db01 ~]# ls -l /dev/emc*</span><br><span class="line">crw-r--r--. 1 root root  10,  56 Jun 10 14:56 /dev/emcpower</span><br><span class="line">brw-rw----. 1 root disk 120,   0 Jun 10 14:56 /dev/emcpowera</span><br><span class="line">brw-rw----. 1 root disk 120,  16 Jun 10 14:56 /dev/emcpowerb</span><br><span class="line">brw-rw----. 1 root disk 120,  32 Jun 10 14:56 /dev/emcpowerc</span><br><span class="line">brw-rw----. 1 root disk 120,  48 Jun 10 14:56 /dev/emcpowerd</span><br><span class="line">brw-rw----. 1 root disk 120,  64 Jun 10 14:56 /dev/emcpowere</span><br><span class="line">brw-rw----. 1 root disk 120,  80 Jun 10 14:56 /dev/emcpowerf</span><br><span class="line">brw-rw----. 1 root disk 120,  96 Jun 10 14:56 /dev/emcpowerg</span><br><span class="line">brw-rw----. 1 root disk 120, 112 Jun 10 14:56 /dev/emcpowerh</span><br><span class="line">brw-rw----. 1 root disk 120, 128 Jun 10 14:56 /dev/emcpoweri</span><br><span class="line">[root@db01 rules.d]# cat 99-oracle-asmdevices.rules</span><br><span class="line">SUBSYSTEM==&quot;block&quot;, KERNEL==&quot;emcpowera&quot;, GROUP=&quot;dba&quot;, OWNER=&quot;grid&quot;, MODE=&quot;0660&quot;</span><br><span class="line">SUBSYSTEM==&quot;block&quot;, KERNEL==&quot;emcpowerb&quot;, GROUP=&quot;dba&quot;, OWNER=&quot;grid&quot;, MODE=&quot;0660&quot;</span><br><span class="line">SUBSYSTEM==&quot;block&quot;, KERNEL==&quot;emcpowerc&quot;, GROUP=&quot;dba&quot;, OWNER=&quot;grid&quot;, MODE=&quot;0660&quot;</span><br><span class="line">SUBSYSTEM==&quot;block&quot;, KERNEL==&quot;emcpowerd&quot;, GROUP=&quot;dba&quot;, OWNER=&quot;grid&quot;, MODE=&quot;0660&quot;</span><br><span class="line">...</span><br><span class="line">[root@db01 rules.d]# start_udev</span><br><span class="line">[root@db01 app]# ll /dev/emc*</span><br><span class="line">crw-rw---- 1 root root  10,  56 6月  10 15:30 /dev/emcpower</span><br><span class="line">brw-rw---- 1 grid dba  120,   0 6月  10 15:34 /dev/emcpowera</span><br><span class="line">brw-rw---- 1 grid dba  120,  16 6月  10 15:34 /dev/emcpowerb</span><br><span class="line">brw-rw---- 1 grid dba  120,  32 6月  10 15:34 /dev/emcpowerc</span><br><span class="line">brw-rw---- 1 grid dba  120,  48 6月  10 15:34 /dev/emcpowerd</span><br><span class="line">brw-rw---- 1 grid dba  120,  64 6月  10 15:34 /dev/emcpowere</span><br><span class="line">brw-rw---- 1 grid dba  120,  80 6月  10 15:34 /dev/emcpowerf</span><br><span class="line">brw-rw---- 1 grid dba  120,  96 6月  10 15:34 /dev/emcpowerg</span><br><span class="line">brw-rw---- 1 grid dba  120, 112 6月  10 15:34 /dev/emcpowerh</span><br><span class="line">brw-rw---- 1 grid dba  120, 128 6月  10 15:34 /dev/emcpoweri</span><br></pre></td></tr></table></figure>
+<h3 id="5-Multipathd指令"><a href="#5-Multipathd指令" class="headerlink" title="5.Multipathd指令"></a>5.Multipathd指令</h3><figure class="highlight plain hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br></pre></td><td class="code"><pre><span class="line">--检查设备</span><br><span class="line">[root@orl6 ~]# multipathd show devices</span><br><span class="line">available block devices:</span><br><span class="line">    sda devnode blacklisted, unmonitored</span><br><span class="line">    sdb devnode whitelisted, monitored</span><br><span class="line">    sdc devnode whitelisted, monitored</span><br><span class="line">    sdd devnode whitelisted, monitored</span><br><span class="line">    sr0 devnode blacklisted, unmonitored</span><br><span class="line">    sr1 devnode blacklisted, unmonitored</span><br><span class="line">    dm-0 devnode blacklisted, unmonitored</span><br><span class="line">...</span><br><span class="line">--检查映射情况</span><br><span class="line">[root@orl6 ~]# multipathd show maps</span><br><span class="line">name        sysfs uuid                                             </span><br><span class="line">mpath1      dm-0  1ATA_VBOX_HARDDISK_VB9b70e1bb-9ea5e71b           </span><br><span class="line">data_mpath2 dm-1  14f504e46494c45526354355179652d663752632d6d755741</span><br><span class="line">[root@orl6 ~]# multipathd show topology</span><br><span class="line">#此命令等同于&lt;code&gt;multipath -ll&lt;/code&gt;</span><br><span class="line">mpath1 (1ATA_VBOX_HARDDISK_VB9b70e1bb-9ea5e71b) dm-0 ATA,VBOX HARDDISK</span><br><span class="line">size=20G features=&apos;0&apos; hwhandler=&apos;0&apos; wp=rw</span><br><span class="line">`-+- policy=&apos;round-robin 0&apos; prio=1 status=active</span><br><span class="line">  `- 3:0:0:0 sdb 8:16 active ready running</span><br><span class="line">data_mpath2 (14f504e46494c45526354355179652d663752632d6d755741) dm-1 OPNFILER,VIRTUAL-DISK</span><br><span class="line">size=15G features=&apos;0&apos; hwhandler=&apos;0&apos; wp=rw</span><br><span class="line">|-+- policy=&apos;round-robin 0&apos; prio=1 status=enabled</span><br><span class="line">| `- 5:0:0:0 sdc 8:32 active ready running</span><br><span class="line">`-+- policy=&apos;round-robin 0&apos; prio=1 status=active</span><br><span class="line">  `- 4:0:0:0 sdd 8:48 active ready running</span><br></pre></td></tr></table></figure>
+<p>更加详细的命令可以参照man，<code>multipathd -k</code>为交互模式。</p>
+<h3 id="6-Multipath相关配置文件"><a href="#6-Multipath相关配置文件" class="headerlink" title="6.Multipath相关配置文件"></a>6.Multipath相关配置文件</h3><figure class="highlight plain hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br></pre></td><td class="code"><pre><span class="line">[root@orl6 ~]# cat /etc/multipath/bindings </span><br><span class="line"># Multipath bindings, Version : 1.0</span><br><span class="line"># NOTE: this file is automatically maintained by the multipath program.</span><br><span class="line"># You should not need to edit this file in normal circumstances.</span><br><span class="line">#</span><br><span class="line"># Format:</span><br><span class="line"># alias wwid</span><br><span class="line">#</span><br><span class="line">mpatha 1ATA     VBOX HARDDISK                           VBfe43d230-3b43fe42 </span><br><span class="line">mpathb 1ATA     VBOX HARDDISK                           VB9b70e1bb-9ea5e71b </span><br><span class="line">mpathc 14f504e46494c45526354355179652d663752632d6d755741</span><br><span class="line">[root@orl6 ~]# cat /etc/multipath/wwids </span><br><span class="line"># Multipath wwids, Version : 1.0</span><br><span class="line"># NOTE: This file is automatically maintained by multipath and multipathd.</span><br><span class="line"># You should not need to edit this file in normal circumstances.</span><br><span class="line">#</span><br><span class="line"># Valid WWIDs:</span><br><span class="line">/1ATA_VBOX_HARDDISK_VB9b70e1bb-9ea5e71b/</span><br><span class="line">/14f504e46494c45526354355179652d663752632d6d755741/</span><br><span class="line">[root@orl6 ~]# grep -v ^# /etc/multipath.conf |grep -v ^$</span><br><span class="line">blacklist &#123;</span><br><span class="line">        #devnode &quot;^(ram|raw|loop|fd|md|dm-|sr|scd|st)[0-9]*&quot;</span><br><span class="line">        #devnode &quot;^hd[a-z]&quot;</span><br><span class="line">        devnode &quot;sda&quot;</span><br><span class="line">        #wwid 1ATA_VBOX_HARDDISK_VB2314099c-4ddf514a </span><br><span class="line">        #wwid 1ATA_VBOX_HARDDISK_VB9b70e1bb-9ea5e71b</span><br><span class="line">&#125;</span><br><span class="line">defaults &#123;</span><br><span class="line">        user_friendly_names no</span><br><span class="line">        getuid_callout &quot;/sbin/scsi_id --whitelisted --replace-whitespace --device=/dev/%n&quot;</span><br><span class="line">&#125;</span><br><span class="line">multipaths &#123;</span><br><span class="line">    multipath &#123;</span><br><span class="line">        wwid 1ATA_VBOX_HARDDISK_VB9b70e1bb-9ea5e71b</span><br><span class="line">        alias mpath1</span><br><span class="line">    &#125;</span><br><span class="line">    multipath &#123;</span><br><span class="line">        wwid 14f504e46494c45526354355179652d663752632d6d755741</span><br><span class="line">        alias data_mpath2</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<h3 id="7-RHEL7-4-ASM-udev加盘"><a href="#7-RHEL7-4-ASM-udev加盘" class="headerlink" title="7. RHEL7.4 ASM udev加盘"></a>7. RHEL7.4 ASM udev加盘</h3><figure class="highlight plain hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">/usr/bin/scsi-rescan</span><br><span class="line">multipath -ll</span><br><span class="line">vi /etc/udev/rule.d/99-oracle-asmdevices.rules</span><br><span class="line">--restart udev</span><br><span class="line">/sbin/udevadm trigger --type=devices --action=change</span><br></pre></td></tr></table></figure>
+<p>Reference:<br><a href="https://support.oracle.com/epmos/faces/DocumentDisplay?id=1538626.1" target="_blank" rel="noopener">ID 1538626.1</a><br><a href="https://support.oracle.com/epmos/faces/DocumentDisplay?id=1521757.1" target="_blank" rel="noopener">ID 1521757.1</a>   </p>
+<p><br><br><b>EOF</b><br><br></p>
+
+    
+    </div>
+    
+    <div class="columns is-variable is-1 is-multiline is-mobile">
+    
+        <span class="column is-narrow"><a class="tag is-light article-tag" href="/tags/udev/">#udev</a></span>
+    
+    </div>
+    
+    
+    <div class="columns is-mobile is-multiline article-nav">
+        <span class="column is-12-mobile is-half-desktop  article-nav-prev">
+            
+            <a href="/oracle/asm-utilities.html">ASM utilities</a>
+            
+        </span>
+        <span class="column is-12-mobile is-half-desktop  article-nav-next">
+            
+            <a href="/oracle/migrate-asm-to-different-host.html">Migrate ASM to different host</a>
+            
+        </span>
+    </div>
+    
+</article>
+
+
+
+
+    </div>
+</section>
+    <footer class="footer">
+    <div class="container">
+        <div class="columns content">
+            <div class="column is-narrow has-text-centered">
+                &copy; 2018 Kong&nbsp;
+                Powered by <a href="http://hexo.io/" target="_blank">Hexo</a> & <a
+                        href="http://github.com/ppoffice/hexo-theme-minos">Minos</a>
+            </div>
+            <div class="column is-hidden-mobile"></div>
+
+            
+            
+        </div>
+    </div>
+</footer>
+    <script src="//cdnjs.cloudflare.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
+<script src="//cdnjs.cloudflare.com/ajax/libs/moment.js/2.22.2/moment-with-locales.min.js"></script>
+
+<!-- test if the browser is outdated -->
+<div id="outdated">
+    <h6>Your browser is out-of-date!</h6>
+    <p>Update your browser to view this website correctly. <a id="btnUpdateBrowser" href="http://outdatedbrowser.com/">Update my browser now </a></p>
+    <p class="last"><a href="#" id="btnCloseUpdateBrowser" title="Close">&times;</a></p>
+</div>
+<script src="//cdnjs.cloudflare.com/ajax/libs/outdated-browser/1.1.5/outdatedbrowser.min.js"></script>
+<script>
+    $(document).ready(function () {
+        // plugin function, place inside DOM ready function
+        outdatedBrowser({
+            bgColor: '#f25648',
+            color: '#ffffff',
+            lowerThan: 'flex'
+        })
+    });
+</script>
+
+<script>
+    window.FontAwesomeConfig = {
+        searchPseudoElements: true
+    }
+    moment.locale("en-AU");
+</script>
+
+
+    
+    
+    
+    
+    
+    
+
+    
+
+
+<script src="/js/script.js"></script>
+
+    
+    <div class="searchbox ins-search">
+    <div class="searchbox-mask"></div>
+    <div class="searchbox-container ins-search-container">
+        <div class="searchbox-input-wrapper">
+            <input type="text" class="searchbox-input ins-search-input" placeholder="Type something..." />
+            <span class="searchbox-close ins-close ins-selectable"><i class="fa fa-times-circle"></i></span>
+        </div>
+        <div class="searchbox-result-wrapper ins-section-wrapper">
+            <div class="ins-section-container"></div>
+        </div>
+    </div>
+</div>
+<script>
+    (function (window) {
+        var INSIGHT_CONFIG = {
+            TRANSLATION: {
+                POSTS: 'Posts',
+                PAGES: 'Pages',
+                CATEGORIES: 'Categories',
+                TAGS: 'Tags',
+                UNTITLED: '(Untitled)',
+            },
+            CONTENT_URL: '/content.json',
+        };
+        window.INSIGHT_CONFIG = INSIGHT_CONFIG;
+    })(window);
+</script>
+<script src="/js/insight.js"></script>
+    
+</body>
+</html>

@@ -1,0 +1,248 @@
+<!DOCTYPE html>
+<html class="has-navbar-fixed-top">
+<head>
+    <meta charset="utf-8">
+<title>ORA-19511 - My Wiki</title>
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+
+<link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/outdated-browser/1.1.5/outdatedbrowser.min.css">
+
+
+<meta name="description" content="Communication with the server has not been initiated or the server status has not been retrieved from the serve">
+
+
+
+<meta name="keywords" content="NBU,ora-19511">
+
+
+
+
+
+
+
+<link rel="icon" href="/images/favicon.ico">
+
+
+<link rel="stylesheet" href="//fonts.googleapis.com/css?family=Ovo|Source+Code+Pro">
+<link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/bulma/0.6.2/css/bulma.min.css">
+
+
+
+<link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/highlight.js/9.12.0/styles/github.min.css">
+
+<link rel="stylesheet" href="/css/style.css">
+
+<script defer src="//use.fontawesome.com/releases/v5.0.8/js/all.js"></script>
+
+
+    
+    
+    
+    
+    
+    
+
+    
+
+
+</head>
+<body>
+    
+<nav class="navbar is-transparent is-fixed-top navbar-main" role="navigation" aria-label="main navigation">
+    <div class="container">
+        <div class="navbar-brand">
+            <a class="navbar-item navbar-logo" href="/">
+                
+                    
+                    My Wiki
+                    
+                
+            </a>
+            <div class="navbar-burger">
+                <span></span>
+                <span></span>
+                <span></span>
+            </div>
+        </div>
+        
+        <div class="navbar-menu navbar-start">
+            
+            <a class="navbar-item "
+               href="/">Home</a>
+            
+            <a class="navbar-item "
+               href="/archives">Archives</a>
+            
+            <a class="navbar-item "
+               href="/about">About</a>
+            
+        </div>
+        
+        <div class="navbar-menu navbar-end">
+            
+            <a class="navbar-item search" title="Search" href="javascript:;">
+                <i class="fas fa-search"></i>
+            </a>
+            
+            
+            
+        </div>
+    </div>
+</nav>
+
+    <section class="section">
+    <div class="container">
+    <article class="article content gallery" itemscope itemprop="blogPost">
+    <h1 class="article-title is-size-3 is-size-4-mobile" itemprop="name">
+        
+            ORA-19511
+        
+    </h1>
+    <div class="article-meta columns is-variable is-1 is-multiline is-mobile is-size-7-mobile">
+        <span class="column is-narrow">
+            <time datetime="2014-12-16T15:37:15.000Z" itemprop="datePublished">Dec 16 2014</time>
+        </span>
+        
+        <span class="column is-narrow article-category">
+            <i class="far fa-folder"></i>
+            <a class="article-category-link" href="/categories/oracle/">oracle</a>
+        </span>
+        
+        
+        <span class="column is-narrow">
+            
+            
+            4 minutes read (About 585 words)
+        </span>
+        
+    </div>
+    <div class="article-entry is-size-6-mobile" itemprop="articleBody">
+    
+        <p>客户最近因升级主机，NBU客户端重新安装，最近说NBU备份Oracle老是报错。我过去现场一看，最早记录10月份，从那时开始一直在报错，这一个多月就从没备份成功过。很有可能NBU客户端安装后就一直备份不成功，但是客户一直没发现。<br><a id="more"></a></p>
+<h3 id="1-现象"><a href="#1-现象" class="headerlink" title="1.现象"></a>1.现象</h3><p>当时重现了一下错误过程，从RMAN后台日志发现第一个backup piece能成功备份，第二个开始报错，RMAN报错信息如下：<br><figure class="highlight plain hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br></pre></td><td class="code"><pre><span class="line">RMAN-03009: failure of backup command on ch01 channel at 11/17/2014 15:59:51</span><br><span class="line">ORA-19506: failed to create sequential file, name=&quot;al_37873_1_863883864&quot;, parms=&quot;&quot;</span><br><span class="line">ORA-27028: skgfqcre: sbtbackup returned error</span><br><span class="line">ORA-19511: Error received from media manager layer, error text:</span><br><span class="line">   VxBSACreateObject: Failed with error:</span><br><span class="line">   Server Status:  Communication with the server has not been initiated or the server status has not been retrieved from</span><br><span class="line"> the serve</span><br><span class="line">RMAN-03009: failure of backup command on ch00 channel at 11/17/2014 15:59:51</span><br><span class="line">ORA-19506: failed to create sequential file, name=&quot;al_37872_1_863883864&quot;, parms=&quot;&quot;</span><br><span class="line">ORA-27028: skgfqcre: sbtbackup returned error</span><br><span class="line">ORA-19511: Error received from media manager layer, error text:</span><br><span class="line">   VxBSACreateObject: Failed with error:</span><br><span class="line">   Server Status:  Communication with the server has not been initiated or the server status has not been retrieved from</span><br><span class="line"> the serve</span><br></pre></td></tr></table></figure></p>
+<h3 id="2-可能的解决方法"><a href="#2-可能的解决方法" class="headerlink" title="2.可能的解决方法"></a>2.可能的解决方法</h3><h3 id="2-1-主机名解析及连通性"><a href="#2-1-主机名解析及连通性" class="headerlink" title="2.1 主机名解析及连通性"></a>2.1 主机名解析及连通性</h3><p>首先我想到的是客户端和server端主机名/etc/hosts及bp.conf的解析，但是相互解析都是OK的。<br>在client端执行：<br><figure class="highlight plain hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">/usr/openv/netbackup/bin/bptestnetconn -as -sc</span><br></pre></td></tr></table></figure></p>
+<p>进一步我想查看日志，没有相关日志目录，在客户端自己创建一个。<br><figure class="highlight plain hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line">mkdir -p /usr/openv/netbackup/logs/bpdbm</span><br><span class="line">mkdir -p /usr/openv/netbackup/logs/bpdbm</span><br><span class="line">mkdir -p /usr/openv/netbackup/logs/bptm</span><br><span class="line">mkdir -p /usr/openv/netbackup/logs/bpcd</span><br><span class="line">mkdir -p /usr/openv/netbackup/logs/vnetd</span><br><span class="line">mkdir -p /usr/openv/netbackup/logs/bprd</span><br><span class="line">mkdir -p /usr/openv/netbackup/logs/dbclient</span><br><span class="line">chmod -R 777 /usr/openv/netbackup/logs</span><br></pre></td></tr></table></figure></p>
+<p>重新运行备份作业，并没有得到有用的日志信息。  </p>
+<h4 id="2-2-在备份脚本中执行backup-server、client及policy"><a href="#2-2-在备份脚本中执行backup-server、client及policy" class="headerlink" title="2.2 在备份脚本中执行backup server、client及policy"></a>2.2 在备份脚本中执行backup server、client及policy</h4><figure class="highlight plain hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">SEND &apos;NB_ORA_SERV=Master,NB_ORA_CLIENT=Client,NB_ORA_POLICY=oracle_arch&apos;;</span><br></pre></td></tr></table></figure>
+<p>重新尝试备份，结果依旧一样。</p>
+<h3 id="3-问题的解决"><a href="#3-问题的解决" class="headerlink" title="3.问题的解决"></a>3.问题的解决</h3><p>继续“盘问”客户，得知这是一套HACMP架构，而bp.conf里面使用的是虚拟IP地址，且有多网卡。<br>在bp.conf中指定使用那张网卡，问题得到解决。<br><figure class="highlight plain hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">SERVER = backupserver</span><br><span class="line">CLIENT_NAME = oracle</span><br><span class="line">REQUIRED_INTERFACE = 192.168.11.155</span><br></pre></td></tr></table></figure></p>
+<p>其实这是一个很简单的问题，处理时间比较久是因为本身对NBU备份HA不熟悉。</p>
+
+    
+    </div>
+    
+    <div class="columns is-variable is-1 is-multiline is-mobile">
+    
+        <span class="column is-narrow"><a class="tag is-light article-tag" href="/tags/ora-19511/">#ora-19511</a></span>
+    
+    </div>
+    
+    
+    <div class="columns is-mobile is-multiline article-nav">
+        <span class="column is-12-mobile is-half-desktop  article-nav-prev">
+            
+            <a href="/oracle/opatch.html">opatch</a>
+            
+        </span>
+        <span class="column is-12-mobile is-half-desktop  article-nav-next">
+            
+            <a href="/oracle/bbed-demo.html">BBED Demo</a>
+            
+        </span>
+    </div>
+    
+</article>
+
+
+
+
+    </div>
+</section>
+    <footer class="footer">
+    <div class="container">
+        <div class="columns content">
+            <div class="column is-narrow has-text-centered">
+                &copy; 2018 Kong&nbsp;
+                Powered by <a href="http://hexo.io/" target="_blank">Hexo</a> & <a
+                        href="http://github.com/ppoffice/hexo-theme-minos">Minos</a>
+            </div>
+            <div class="column is-hidden-mobile"></div>
+
+            
+            
+        </div>
+    </div>
+</footer>
+    <script src="//cdnjs.cloudflare.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
+<script src="//cdnjs.cloudflare.com/ajax/libs/moment.js/2.22.2/moment-with-locales.min.js"></script>
+
+<!-- test if the browser is outdated -->
+<div id="outdated">
+    <h6>Your browser is out-of-date!</h6>
+    <p>Update your browser to view this website correctly. <a id="btnUpdateBrowser" href="http://outdatedbrowser.com/">Update my browser now </a></p>
+    <p class="last"><a href="#" id="btnCloseUpdateBrowser" title="Close">&times;</a></p>
+</div>
+<script src="//cdnjs.cloudflare.com/ajax/libs/outdated-browser/1.1.5/outdatedbrowser.min.js"></script>
+<script>
+    $(document).ready(function () {
+        // plugin function, place inside DOM ready function
+        outdatedBrowser({
+            bgColor: '#f25648',
+            color: '#ffffff',
+            lowerThan: 'flex'
+        })
+    });
+</script>
+
+<script>
+    window.FontAwesomeConfig = {
+        searchPseudoElements: true
+    }
+    moment.locale("en-AU");
+</script>
+
+
+    
+    
+    
+    
+    
+    
+
+    
+
+
+<script src="/js/script.js"></script>
+
+    
+    <div class="searchbox ins-search">
+    <div class="searchbox-mask"></div>
+    <div class="searchbox-container ins-search-container">
+        <div class="searchbox-input-wrapper">
+            <input type="text" class="searchbox-input ins-search-input" placeholder="Type something..." />
+            <span class="searchbox-close ins-close ins-selectable"><i class="fa fa-times-circle"></i></span>
+        </div>
+        <div class="searchbox-result-wrapper ins-section-wrapper">
+            <div class="ins-section-container"></div>
+        </div>
+    </div>
+</div>
+<script>
+    (function (window) {
+        var INSIGHT_CONFIG = {
+            TRANSLATION: {
+                POSTS: 'Posts',
+                PAGES: 'Pages',
+                CATEGORIES: 'Categories',
+                TAGS: 'Tags',
+                UNTITLED: '(Untitled)',
+            },
+            CONTENT_URL: '/content.json',
+        };
+        window.INSIGHT_CONFIG = INSIGHT_CONFIG;
+    })(window);
+</script>
+<script src="/js/insight.js"></script>
+    
+</body>
+</html>

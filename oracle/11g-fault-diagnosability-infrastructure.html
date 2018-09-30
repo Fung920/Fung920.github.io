@@ -1,0 +1,253 @@
+<!DOCTYPE html>
+<html class="has-navbar-fixed-top">
+<head>
+    <meta charset="utf-8">
+<title>11g新特性—FDI简介 - My Wiki</title>
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+
+<link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/outdated-browser/1.1.5/outdatedbrowser.min.css">
+
+
+
+
+
+
+
+
+
+
+<link rel="icon" href="/images/favicon.ico">
+
+
+<link rel="stylesheet" href="//fonts.googleapis.com/css?family=Ovo|Source+Code+Pro">
+<link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/bulma/0.6.2/css/bulma.min.css">
+
+
+
+<link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/highlight.js/9.12.0/styles/github.min.css">
+
+<link rel="stylesheet" href="/css/style.css">
+
+<script defer src="//use.fontawesome.com/releases/v5.0.8/js/all.js"></script>
+
+
+    
+    
+    
+    
+    
+    
+
+    
+
+
+</head>
+<body>
+    
+<nav class="navbar is-transparent is-fixed-top navbar-main" role="navigation" aria-label="main navigation">
+    <div class="container">
+        <div class="navbar-brand">
+            <a class="navbar-item navbar-logo" href="/">
+                
+                    
+                    My Wiki
+                    
+                
+            </a>
+            <div class="navbar-burger">
+                <span></span>
+                <span></span>
+                <span></span>
+            </div>
+        </div>
+        
+        <div class="navbar-menu navbar-start">
+            
+            <a class="navbar-item "
+               href="/">Home</a>
+            
+            <a class="navbar-item "
+               href="/archives">Archives</a>
+            
+            <a class="navbar-item "
+               href="/about">About</a>
+            
+        </div>
+        
+        <div class="navbar-menu navbar-end">
+            
+            <a class="navbar-item search" title="Search" href="javascript:;">
+                <i class="fas fa-search"></i>
+            </a>
+            
+            
+            
+        </div>
+    </div>
+</nav>
+
+    <section class="section">
+    <div class="container">
+    <article class="article content gallery" itemscope itemprop="blogPost">
+    <h1 class="article-title is-size-3 is-size-4-mobile" itemprop="name">
+        
+            11g新特性—FDI简介
+        
+    </h1>
+    <div class="article-meta columns is-variable is-1 is-multiline is-mobile is-size-7-mobile">
+        <span class="column is-narrow">
+            <time datetime="2013-09-09T04:00:00.000Z" itemprop="datePublished">Sep 9 2013</time>
+        </span>
+        
+        <span class="column is-narrow article-category">
+            <i class="far fa-folder"></i>
+            <a class="article-category-link" href="/categories/oracle/">oracle</a>
+        </span>
+        
+        
+        <span class="column is-narrow">
+            
+            
+            10 minutes read (About 1550 words)
+        </span>
+        
+    </div>
+    <div class="article-entry is-size-6-mobile" itemprop="articleBody">
+    
+        <p> </p><h1>1.FDI简介</h1><p></p>
+<p></p><p>从11g开始，Oracle增强了自动化错误诊断的功能。诊断数据包括以前版本的trace files，dumps，core file等等。</p><br><a id="more"></a><p></p>
+<p></p><p>FDI（Fault Diagnosability Infrastructure）在于阻止、检测、诊断及解决问题。当数据库检测到critical errors，会将这些诊断数据保存到Automatic Diagnostic Repository(ADR)里面。ADR类似OFA，在诊断文件中，也有了系统的存储规划架构。</p><br><figure class="highlight plain hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br></pre></td><td class="code"><pre><span class="line">SQL&gt; show parameter diagnostic_dest </span><br><span class="line"></span><br><span class="line"> NAME                                 TYPE        VALUE </span><br><span class="line">------------------------------------ ----------- ------------------------------ </span><br><span class="line">diagnostic_dest                      string      /u01/app/oracle </span><br><span class="line">SQL&gt; !tree -d /u01/app/oracle/diag </span><br><span class="line">/u01/app/oracle/diag </span><br><span class="line">|-- asm </span><br><span class="line">|-- clients </span><br><span class="line">|-- crs </span><br><span class="line">|-- diagtool </span><br><span class="line">|-- lsnrctl </span><br><span class="line">|-- netcman </span><br><span class="line">|-- ofm </span><br><span class="line">|-- rdbms </span><br><span class="line">|   `-- racdb </span><br><span class="line">|       `-- racdb1 </span><br><span class="line">|           |-- alert </span><br><span class="line">|           |-- cdump </span><br><span class="line">|           |-- hm </span><br><span class="line">|           |-- incident </span><br><span class="line">|           |-- incpkg </span><br><span class="line">|           |-- ir </span><br><span class="line">|           |-- lck </span><br><span class="line">|           |-- metadata </span><br><span class="line">|           |-- metadata_dgif </span><br><span class="line">|           |-- metadata_pv </span><br><span class="line">|           |-- stage </span><br><span class="line">|           |-- sweep </span><br><span class="line">|           `-- trace </span><br><span class="line">`-- tnslsnr </span><br><span class="line"></span><br><span class="line"> 24 directories </span><br><span class="line"></span><br><span class="line">SQL&gt; col name for a30 </span><br><span class="line">SQL&gt;  col value for a80 </span><br><span class="line">SQL&gt; set linesize 200 </span><br><span class="line">SQL&gt; select * from v$diag_info; </span><br><span class="line"></span><br><span class="line">    INST_ID NAME                           VALUE </span><br><span class="line">---------- ------------------------------ -------------------------------------------------------------------------------- </span><br><span class="line">         1 Diag Enabled                   TRUE </span><br><span class="line">         1 ADR Base                       /u01/app/oracle </span><br><span class="line">         1 ADR Home                       /u01/app/oracle/diag/rdbms/racdb/racdb1 </span><br><span class="line">         1 Diag Trace                     /u01/app/oracle/diag/rdbms/racdb/racdb1/trace </span><br><span class="line">         1 Diag Alert                     /u01/app/oracle/diag/rdbms/racdb/racdb1/alert </span><br><span class="line">         1 Diag Incident                  /u01/app/oracle/diag/rdbms/racdb/racdb1/incident </span><br><span class="line">         1 Diag Cdump                     /u01/app/oracle/diag/rdbms/racdb/racdb1/cdump </span><br><span class="line">         1 Health Monitor                 /u01/app/oracle/diag/rdbms/racdb/racdb1/hm </span><br><span class="line">         1 Default Trace File             /u01/app/oracle/diag/rdbms/racdb/racdb1/trace/racdb1_ora_27059.trc </span><br><span class="line">         1 Active Problem Count           0 </span><br><span class="line">         1 Active Incident Count          0 </span><br><span class="line"></span><br><span class="line"> 11 rows selected. </span><br><span class="line"></span><br><span class="line"> SQL&gt;</span><br></pre></td></tr></table></figure><p></p>
+<p></p><h1>2.FDI核心组件</h1><br>FDI的核心组件包括ADR、alter log、trace files，dumps，core files。<p></p>
+<p></p><h2>2.1. ADR</h2><br>ADR是一个小型的外部XML数据库，它用于存储数据库，ASM，CRS等的诊断信息，每个实例拥有各自的ADR home目录，例如在一个RAC环境下，分别以grid及Oracle用户查询，将会得到不同的ADR HOME：<br><figure class="highlight plain hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br></pre></td><td class="code"><pre><span class="line">[oracle@orcl1:/home/oracle]$ adrci </span><br><span class="line"></span><br><span class="line"> ADRCI: Release 11.2.0.4.0 - Production on Mon Sep 9 12:33:23 2013 </span><br><span class="line"></span><br><span class="line"> Copyright (c) 1982, 2011, Oracle and/or its affiliates.  All rights reserved. </span><br><span class="line"></span><br><span class="line"> ADR base = &quot;/u01/app/oracle&quot; </span><br><span class="line">adrci&gt; show home </span><br><span class="line">ADR Homes:  </span><br><span class="line">diag/rdbms/racdb/racdb1 </span><br><span class="line"></span><br><span class="line"> [grid@orcl1:/home/grid]$ adrci </span><br><span class="line"></span><br><span class="line"> ADRCI: Release 11.2.0.4.0 - Production on Mon Sep 9 12:33:40 2013 </span><br><span class="line"></span><br><span class="line"> Copyright (c) 1982, 2011, Oracle and/or its affiliates.  All rights reserved. </span><br><span class="line"></span><br><span class="line"> ADR base = &quot;/u01/app/grid&quot; </span><br><span class="line">adrci&gt; show home </span><br><span class="line">ADR Homes:  </span><br><span class="line">diag/tnslsnr/orcl1/listener </span><br><span class="line">diag/asm/+asm/+ASM1 </span><br><span class="line">adrci&gt;</span><br></pre></td></tr></table></figure><p></p>
+<p>因为从11g开始，所有的诊断文件，包括alter log都包含在ADR中，因此，BACKUPGROUND_DUMP_DEST及USER_DUMP_DESTl两个参数已经被废弃了，取而代之的是代表ADR目录的DIAGNOSTIC_DEST。如果此参数没有被设置，那么它将依靠以下两点进行设置默认值：</p>
+<p><ul><br>    <li>如果ORACLE_BASE环境变量设置生效了，此参数将被设为ORACLE_BASE</li><br>    <li>如果ORACLE_HOME没有设置，那么，此参数将会设置成ORACLE_HOME/log</li><br></ul></p>
+<p></p><h2>2.2. ADRCI工具</h2><br>在11g中的alter log已经是一个XML文件了，需要通过adrci工具或者EM工具才能查看，它包含了以下信息：<p></p>
+<p><ul><br>    <li>严重错误、事件</li><br>    <li>管理数据的一些动作，如启停数据库，恢复数据库或者创建删除表空间等</li><br>    <li>自动刷新MView的错误</li><br>    <li>其他数据库事件信息</li><br></ul></p>
+<p></p><h2>2.3. ADRCI示例</h2><br>首先模拟一个ora错误：<br><figure class="highlight plain hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br></pre></td><td class="code"><pre><span class="line">SQL&gt; create undo tablespace undotbs2 datafile &apos;/oradata/datafile/linora/undotbs02.dbf&apos; size 1m;</span><br><span class="line"></span><br><span class="line">Tablespace created.</span><br><span class="line"></span><br><span class="line">SQL&gt; </span><br><span class="line">SQL&gt; alter system set undo_tablespace=undotbs2;</span><br><span class="line"></span><br><span class="line">System altered.</span><br><span class="line"></span><br><span class="line">SQL&gt; show parameter undo;</span><br><span class="line"></span><br><span class="line">NAME                                 TYPE        VALUE</span><br><span class="line">------------------------------------ ----------- ------------------------------</span><br><span class="line">undo_management                      string      AUTO</span><br><span class="line">undo_retention                       integer     900</span><br><span class="line">undo_tablespace                      string      UNDOTBS2</span><br><span class="line">SQL&gt; conn fung/oracle;</span><br><span class="line">Connected.</span><br><span class="line">SQL&gt; create table test as select object_id,object_name from dba_objects;</span><br><span class="line"></span><br><span class="line">Table created.</span><br><span class="line"></span><br><span class="line">SQL&gt; insert into test select * FROM TEST;</span><br><span class="line">insert into test select * FROM TEST</span><br><span class="line">            *</span><br><span class="line">ERROR at line 1:</span><br><span class="line">ORA-30036: unable to extend segment by 8 in undo tablespace &apos;UNDOTBS2&apos;</span><br></pre></td></tr></table></figure><p></p>
+<p>切换至adrci命令行查找：<br><figure class="highlight plain hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br></pre></td><td class="code"><pre><span class="line">[root@linora ~]# su - oracle</span><br><span class="line">[oracle@linora:/home/oracle]$ adrci</span><br><span class="line"></span><br><span class="line">ADRCI: Release 11.2.0.4.0 - Production on Thu May 15 09:52:49 2014</span><br><span class="line"></span><br><span class="line">Copyright (c) 1982, 2011, Oracle and/or its affiliates.  All rights reserved.</span><br><span class="line"></span><br><span class="line">ADR base = &quot;/u01/app/oracle&quot;</span><br><span class="line">adrci&gt; show problem</span><br><span class="line"></span><br><span class="line">ADR Home = /u01/app/oracle/diag/tnslsnr/linora/listener:</span><br><span class="line">*************************************************************************</span><br><span class="line">0 rows fetched</span><br><span class="line"></span><br><span class="line">ADR Home = /u01/app/oracle/diag/diagtool/user_oracle/host_1587426630_80:</span><br><span class="line">*************************************************************************</span><br><span class="line">PROBLEM_ID           PROBLEM_KEY                                                 LAST_INCIDENT        LASTINC_TIME                             </span><br><span class="line">-------------------- ----------------------------------------------------------- -------------------- ---------------------------------------- </span><br><span class="line">1                    DIA 48001 [dbgvcis_ostream_write_1]                         1                    2014-05-15 09:26:41.240000 +08:00       </span><br><span class="line"></span><br><span class="line">ADR Home = /u01/app/oracle/diag/rdbms/linora/linora:</span><br><span class="line">*************************************************************************</span><br><span class="line">0 rows fetched</span><br></pre></td></tr></table></figure></p>
+<p>上述结果显示了，在2014年5月15日，发生了一个dia-48001的错误。但这并不是一个rdbms的错误，因为ADR HOME目录是在diagtool下面。通过<code>show incident</code>可以查找出这个错误究竟影响了哪些东西：<br><figure class="highlight plain hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br></pre></td><td class="code"><pre><span class="line">adrci&gt; show incident</span><br><span class="line"></span><br><span class="line">ADR Home = /u01/app/oracle/diag/tnslsnr/linora/listener:</span><br><span class="line">*************************************************************************</span><br><span class="line">0 rows fetched</span><br><span class="line"></span><br><span class="line">ADR Home = /u01/app/oracle/diag/diagtool/user_oracle/host_1587426630_80:</span><br><span class="line">*************************************************************************</span><br><span class="line">INCIDENT_ID          PROBLEM_KEY                                                 CREATE_TIME                              </span><br><span class="line">-------------------- ----------------------------------------------------------- ---------------------------------------- </span><br><span class="line">1                    DIA 48001 [dbgvcis_ostream_write_1]                         2014-05-15 09:26:41.240000 +08:00       </span><br><span class="line"></span><br><span class="line">ADR Home = /u01/app/oracle/diag/rdbms/linora/linora:</span><br><span class="line">*************************************************************************</span><br><span class="line">0 rows fetched</span><br></pre></td></tr></table></figure></p>
+<p>在本例中，并无影响。<br>通过以下命令，可以查找这个错误的trace file及trace file的详细信息：<br><figure class="highlight plain hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br></pre></td><td class="code"><pre><span class="line">adrci&gt; show tracefile -I 1</span><br><span class="line">     diag/diagtool/user_oracle/host_1587426630_80/incident/incdir_1/ora_2011_139919799314176_i1.trc</span><br><span class="line">adrci&gt; show incident -mode detail -p &quot;incident_id=1&quot; </span><br><span class="line"></span><br><span class="line">ADR Home = /u01/app/oracle/diag/tnslsnr/linora/listener:</span><br><span class="line">*************************************************************************</span><br><span class="line">0 rows fetched</span><br><span class="line">&lt;INCIDENT_INFO mode=&quot;detail&quot;&gt;</span><br><span class="line">&lt;ADR_HOME name=&quot;/u01/app/oracle/diag/tnslsnr/linora/listener&quot;&gt;</span><br><span class="line"></span><br><span class="line">ADR Home = /u01/app/oracle/diag/diagtool/user_oracle/host_1587426630_80:</span><br><span class="line">*************************************************************************</span><br><span class="line"></span><br><span class="line">**********************************************************</span><br><span class="line">INCIDENT INFO RECORD 1</span><br><span class="line">**********************************************************</span><br><span class="line">   INCIDENT_ID                   1</span><br><span class="line">   STATUS                        ready</span><br><span class="line">   CREATE_TIME                   2014-05-15 09:26:41.240000 +08:00</span><br><span class="line">   PROBLEM_ID                    1</span><br><span class="line">   CLOSE_TIME                    &lt;NULL&gt;</span><br><span class="line">   FLOOD_CONTROLLED              none</span><br><span class="line">   ERROR_FACILITY                DIA</span><br><span class="line">   ERROR_NUMBER                  48001</span><br><span class="line">   ERROR_ARG1                    dbgvcis_ostream_write_1</span><br><span class="line">   ERROR_ARG2                    &lt;NULL&gt;</span><br><span class="line">   ERROR_ARG3                    &lt;NULL&gt;</span><br><span class="line">   ERROR_ARG4                    &lt;NULL&gt;</span><br><span class="line">   ERROR_ARG5                    &lt;NULL&gt;</span><br><span class="line">   ERROR_ARG6                    &lt;NULL&gt;</span><br><span class="line">   ERROR_ARG7                    &lt;NULL&gt;</span><br><span class="line">   ERROR_ARG8                    &lt;NULL&gt;</span><br><span class="line">   ERROR_ARG9                    &lt;NULL&gt;</span><br><span class="line">   ERROR_ARG10                   &lt;NULL&gt;</span><br><span class="line">   ERROR_ARG11                   &lt;NULL&gt;</span><br><span class="line">   ERROR_ARG12                   &lt;NULL&gt;</span><br><span class="line">   SIGNALLING_COMPONENT          diag_fmwk</span><br><span class="line">   SIGNALLING_SUBCOMPONENT       &lt;NULL&gt;</span><br><span class="line">   SUSPECT_COMPONENT             &lt;NULL&gt;</span><br><span class="line">   SUSPECT_SUBCOMPONENT          &lt;NULL&gt;</span><br><span class="line">   ECID                          &lt;NULL&gt;</span><br><span class="line">   IMPACTS                       0</span><br><span class="line">   PROBLEM_KEY                   DIA 48001 [dbgvcis_ostream_write_1]</span><br><span class="line">   FIRST_INCIDENT                1</span><br><span class="line">   FIRSTINC_TIME                 2014-05-15 09:26:41.240000 +08:00</span><br><span class="line">   LAST_INCIDENT                 1</span><br><span class="line">   LASTINC_TIME                  2014-05-15 09:26:41.240000 +08:00</span><br><span class="line">   IMPACT1                       0</span><br><span class="line">   IMPACT2                       0</span><br><span class="line">   IMPACT3                       0</span><br><span class="line">   IMPACT4                       0</span><br><span class="line">   OWNER_ID                      1</span><br><span class="line">   INCIDENT_FILE                 /u01/app/oracle/diag/diagtool/user_oracle/host_1587426630_80/trace/ora_2011_139919799314176.trc</span><br><span class="line">   OWNER_ID                      1</span><br><span class="line">   INCIDENT_FILE                 /u01/app/oracle/diag/diagtool/user_oracle/host_1587426630_80/incident/incdir_1/ora_2011_139919799314176_i1.trc</span><br><span class="line"></span><br><span class="line">ADR Home = /u01/app/oracle/diag/rdbms/linora/linora:</span><br><span class="line">*************************************************************************</span><br><span class="line">0 rows fetched</span><br></pre></td></tr></table></figure></p>
+<p>最后，可以通过<code>create package</code>对trace file进行打包，以便作为sr中的附件给oracle support分析。<br><figure class="highlight plain hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line">adrci&gt; set home diag/diagtool/user_oracle/host_1587426630_80</span><br><span class="line">adrci&gt; ips create package incident 1</span><br><span class="line">Created package 1 based on incident id 1, correlation level typical</span><br><span class="line">adrci&gt; ips add incident 1 package 1</span><br><span class="line">Added incident 1 to package 1</span><br><span class="line">adrci&gt; ips add file /u01/app/oracle/diag/rdbms/linora/linora/trace/alert_linora.log package 1</span><br><span class="line">Added file /u01/app/oracle/diag/rdbms/linora/linora/trace/alert_linora.log to package 1</span><br><span class="line">adrci&gt; ips generate package 1 in /home/oracle</span><br><span class="line">Generated package 1 in file /home/oracle/DIA48001d_20140515100720_COM_1.zip, mode complete</span><br></pre></td></tr></table></figure></p>
+<p>解压上述包，可用如下命令：<br><figure class="highlight plain hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br></pre></td><td class="code"><pre><span class="line">adrci&gt; ips get metadata from file /home/oracle/DIA48001d_20140515100720_COM_1.zip</span><br><span class="line">IPS metadata from file /home/oracle/DIA48001d_20140515100720_COM_1.zip:</span><br><span class="line">----------------------------------------------------------</span><br><span class="line">&lt;?xml version=&quot;1.0&quot; encoding=&quot;US-ASCII&quot;?&gt;</span><br><span class="line">&lt;PACKAGE&gt;</span><br><span class="line">    &lt;PACKAGE_ID&gt;1&lt;/PACKAGE_ID&gt;</span><br><span class="line">    &lt;PACKAGE_NAME&gt;DIA48001d_20140515100720&lt;/PACKAGE_NAME&gt;</span><br><span class="line">    &lt;MODE&gt;Complete&lt;/MODE&gt;</span><br><span class="line">    &lt;SEQUENCE&gt;1&lt;/SEQUENCE&gt;</span><br><span class="line">    &lt;LAST_COMPLETE&gt;1&lt;/LAST_COMPLETE&gt;</span><br><span class="line">    &lt;DATE&gt;2014-05-15 10:12:10.050452 +08:00&lt;/DATE&gt;</span><br><span class="line">    &lt;ADR_BASE&gt;/u01/app/oracle&lt;/ADR_BASE&gt;</span><br><span class="line">    &lt;ADR_HOME&gt;/u01/app/oracle/diag/diagtool/user_oracle/host_1587426630_80&lt;/ADR_HOME&gt;</span><br><span class="line">    &lt;PROD_NAME&gt;diagtool&lt;/PROD_NAME&gt;</span><br><span class="line">    &lt;PROD_ID&gt;user_oracle&lt;/PROD_ID&gt;</span><br><span class="line">    &lt;INST_ID&gt;host_1587426630_80&lt;/INST_ID&gt;</span><br><span class="line">    &lt;OCM_GUID/&gt;</span><br><span class="line">    &lt;OCM_ANNOTATION/&gt;</span><br><span class="line">    &lt;FINALIZED&gt;1&lt;/FINALIZED&gt;</span><br><span class="line">&lt;/PACKAGE&gt;</span><br><span class="line"></span><br><span class="line">----------------------------------------------------------</span><br><span class="line">adrci&gt;  ips unpack file /home/oracle/DIA48001d_20140515100720_COM_1.zip</span><br><span class="line">Unpacking file /home/oracle/DIA48001d_20140515100720_COM_1.zip into current working directory</span><br><span class="line">[oracle@linora ~]$ ls -l</span><br><span class="line">total 102816</span><br><span class="line">-rw-r--r-- 1 oracle oinstall    76421 May 15 10:12 DIA48001d_20140515100720_COM_1.zip</span><br><span class="line">drwxrwxr-x 3 oracle oinstall     4096 May 15 10:20 diag</span><br></pre></td></tr></table></figure></p>
+<p></p><h2>2.4. ADRCI基本命令</h2><br><figure class="highlight plain hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br></pre></td><td class="code"><pre><span class="line">adrci&gt; show base</span><br><span class="line">ADR base is &quot;/u01/app/oracle&quot;</span><br><span class="line">adrci&gt; show home</span><br><span class="line">ADR Homes: </span><br><span class="line">diag/tnslsnr/linora/listener</span><br><span class="line">diag/diagtool/user_oracle/host_1587426630_80</span><br><span class="line">diag/rdbms/linora/linora</span><br><span class="line">adrci&gt; set home diag/rdbms/linora/linora</span><br><span class="line">adrci&gt; show alert -tail 5</span><br><span class="line">2014-05-15 09:51:15.569000 +08:00</span><br><span class="line">ORA-1119 signalled during: create undo tablespace undotbs2 datafile &apos;/oradata/datafile/linora/undotbs02.dbf&apos;...</span><br><span class="line">2014-05-15 09:51:47.709000 +08:00</span><br><span class="line">create undo tablespace undotbs2 datafile &apos;/oradata/datafile/linora/undotbs02.dbf&apos; size 1m</span><br><span class="line">ORA-1652: unable to extend temp segment by 8 in tablespace                 UNDOTBS2 </span><br><span class="line">Completed: create undo tablespace undotbs2 datafile &apos;/oradata/datafile/linora/undotbs02.dbf&apos; size 1m</span><br><span class="line">2014-05-15 09:51:55.397000 +08:00</span><br><span class="line">[2048] Successfully onlined Undo Tablespace 6.</span><br><span class="line">[2048] Undo Tablespace 2 successfully switched out.</span><br><span class="line">ALTER SYSTEM SET undo_tablespace=&apos;UNDOTBS2&apos; SCOPE=BOTH;</span><br></pre></td></tr></table></figure><p></p>
+<p>其他详细命令请参照手册：<br><b>Oracle® Database Administrator’s Guide 11<i>g</i> Release 2 (11.2)</b> </p>
+<p> <b>EOF</b> </p>
+
+    
+    </div>
+    
+    <div class="columns is-variable is-1 is-multiline is-mobile">
+    
+        <span class="column is-narrow"><a class="tag is-light article-tag" href="/tags/new-featrure/">#new featrure</a></span>
+    
+    </div>
+    
+    
+    <div class="columns is-mobile is-multiline article-nav">
+        <span class="column is-12-mobile is-half-desktop  article-nav-prev">
+            
+            <a href="/oracle/install-11gr2-rac-in-silent-mode.html">Step by step install 11gr2 RAC in silent mode</a>
+            
+        </span>
+        <span class="column is-12-mobile is-half-desktop  article-nav-next">
+            
+            <a href="/oracle/deletenodes-in-11g-rac.html">11gr2 RAC删除节点</a>
+            
+        </span>
+    </div>
+    
+</article>
+
+
+
+
+    </div>
+</section>
+    <footer class="footer">
+    <div class="container">
+        <div class="columns content">
+            <div class="column is-narrow has-text-centered">
+                &copy; 2018 Kong&nbsp;
+                Powered by <a href="http://hexo.io/" target="_blank">Hexo</a> & <a
+                        href="http://github.com/ppoffice/hexo-theme-minos">Minos</a>
+            </div>
+            <div class="column is-hidden-mobile"></div>
+
+            
+            
+        </div>
+    </div>
+</footer>
+    <script src="//cdnjs.cloudflare.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
+<script src="//cdnjs.cloudflare.com/ajax/libs/moment.js/2.22.2/moment-with-locales.min.js"></script>
+
+<!-- test if the browser is outdated -->
+<div id="outdated">
+    <h6>Your browser is out-of-date!</h6>
+    <p>Update your browser to view this website correctly. <a id="btnUpdateBrowser" href="http://outdatedbrowser.com/">Update my browser now </a></p>
+    <p class="last"><a href="#" id="btnCloseUpdateBrowser" title="Close">&times;</a></p>
+</div>
+<script src="//cdnjs.cloudflare.com/ajax/libs/outdated-browser/1.1.5/outdatedbrowser.min.js"></script>
+<script>
+    $(document).ready(function () {
+        // plugin function, place inside DOM ready function
+        outdatedBrowser({
+            bgColor: '#f25648',
+            color: '#ffffff',
+            lowerThan: 'flex'
+        })
+    });
+</script>
+
+<script>
+    window.FontAwesomeConfig = {
+        searchPseudoElements: true
+    }
+    moment.locale("en-AU");
+</script>
+
+
+    
+    
+    
+    
+    
+    
+
+    
+
+
+<script src="/js/script.js"></script>
+
+    
+    <div class="searchbox ins-search">
+    <div class="searchbox-mask"></div>
+    <div class="searchbox-container ins-search-container">
+        <div class="searchbox-input-wrapper">
+            <input type="text" class="searchbox-input ins-search-input" placeholder="Type something..." />
+            <span class="searchbox-close ins-close ins-selectable"><i class="fa fa-times-circle"></i></span>
+        </div>
+        <div class="searchbox-result-wrapper ins-section-wrapper">
+            <div class="ins-section-container"></div>
+        </div>
+    </div>
+</div>
+<script>
+    (function (window) {
+        var INSIGHT_CONFIG = {
+            TRANSLATION: {
+                POSTS: 'Posts',
+                PAGES: 'Pages',
+                CATEGORIES: 'Categories',
+                TAGS: 'Tags',
+                UNTITLED: '(Untitled)',
+            },
+            CONTENT_URL: '/content.json',
+        };
+        window.INSIGHT_CONFIG = INSIGHT_CONFIG;
+    })(window);
+</script>
+<script src="/js/insight.js"></script>
+    
+</body>
+</html>

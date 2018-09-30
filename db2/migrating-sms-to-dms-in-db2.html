@@ -1,0 +1,259 @@
+<!DOCTYPE html>
+<html class="has-navbar-fixed-top">
+<head>
+    <meta charset="utf-8">
+<title>Migrating SMS to DMS in DB2 - My Wiki</title>
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+
+<link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/outdated-browser/1.1.5/outdatedbrowser.min.css">
+
+
+<meta name="description" content="How to use db2look and db2move to migrate SMS to DMS">
+
+
+
+<meta name="keywords" content="db2look, db2move">
+
+
+
+
+
+
+
+<link rel="icon" href="/images/favicon.ico">
+
+
+<link rel="stylesheet" href="//fonts.googleapis.com/css?family=Ovo|Source+Code+Pro">
+<link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/bulma/0.6.2/css/bulma.min.css">
+
+
+
+<link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/highlight.js/9.12.0/styles/github.min.css">
+
+<link rel="stylesheet" href="/css/style.css">
+
+<script defer src="//use.fontawesome.com/releases/v5.0.8/js/all.js"></script>
+
+
+    
+    
+    
+    
+    
+    
+
+    
+
+
+</head>
+<body>
+    
+<nav class="navbar is-transparent is-fixed-top navbar-main" role="navigation" aria-label="main navigation">
+    <div class="container">
+        <div class="navbar-brand">
+            <a class="navbar-item navbar-logo" href="/">
+                
+                    
+                    My Wiki
+                    
+                
+            </a>
+            <div class="navbar-burger">
+                <span></span>
+                <span></span>
+                <span></span>
+            </div>
+        </div>
+        
+        <div class="navbar-menu navbar-start">
+            
+            <a class="navbar-item "
+               href="/">Home</a>
+            
+            <a class="navbar-item "
+               href="/archives">Archives</a>
+            
+            <a class="navbar-item "
+               href="/about">About</a>
+            
+        </div>
+        
+        <div class="navbar-menu navbar-end">
+            
+            <a class="navbar-item search" title="Search" href="javascript:;">
+                <i class="fas fa-search"></i>
+            </a>
+            
+            
+            
+        </div>
+    </div>
+</nav>
+
+    <section class="section">
+    <div class="container">
+    <article class="article content gallery" itemscope itemprop="blogPost">
+    <h1 class="article-title is-size-3 is-size-4-mobile" itemprop="name">
+        
+            Migrating SMS to DMS in DB2
+        
+    </h1>
+    <div class="article-meta columns is-variable is-1 is-multiline is-mobile is-size-7-mobile">
+        <span class="column is-narrow">
+            <time datetime="2016-10-18T11:12:16.000Z" itemprop="datePublished">Oct 18 2016</time>
+        </span>
+        
+        <span class="column is-narrow article-category">
+            <i class="far fa-folder"></i>
+            <a class="article-category-link" href="/categories/db2/">db2</a>
+        </span>
+        
+        
+        <span class="column is-narrow">
+            
+            
+            8 minutes read (About 1169 words)
+        </span>
+        
+    </div>
+    <div class="article-entry is-size-6-mobile" itemprop="articleBody">
+    
+        <p>Some DBA would be required to convert the SMS tablespace to DMS tablespace. But seems DB2 do not have such utilities to convert SMS to DMS directly. We cannot use backup/restore for restoring the SMS to DMS, the traditional way to convert SMS to DMS is to use <code>db2look</code> and <code>db2move</code>. Also hope some people can tell me a better option.<br><a id="more"></a><br>To convert the SMS to DMS( in my production environment, there are over 300 tables belong to multiple schemas), following steps would be required(Outage required):</p>
+<figure class="highlight plain hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line">1. Extract tables&apos; DDL in the tablespace   </span><br><span class="line">2. Export all the data belong to the tablespace   </span><br><span class="line">3. Create a new DMS tablespace   </span><br><span class="line">4. Drop the old SMS tablespace   </span><br><span class="line">5. Modify the DDL script and create the tables from the DDL script   </span><br><span class="line">6. Load the data back into the new DMS tablespace   </span><br><span class="line">7. Set integrity for the tables</span><br></pre></td></tr></table></figure>
+<h2 id="1-Extracting-the-DDL-of-the-tables"><a href="#1-Extracting-the-DDL-of-the-tables" class="headerlink" title="1. Extracting the DDL of the tables"></a>1. Extracting the DDL of the tables</h2><p>Before migration:</p>
+<figure class="highlight sql hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br></pre></td><td class="code"><pre><span class="line">[db2inst1@db2srv ~]$ db2 "<span class="hljs-keyword">select</span> <span class="hljs-keyword">substr</span>(TABLE_SCHEMA,<span class="hljs-number">1</span>,<span class="hljs-number">10</span>) <span class="hljs-keyword">as</span> <span class="hljs-keyword">schema</span>,<span class="hljs-keyword">substr</span>(TABLE_NAME,<span class="hljs-number">1</span>,<span class="hljs-number">15</span>) <span class="hljs-keyword">as</span> tabname, \</span><br><span class="line"><span class="hljs-keyword">substr</span>(TABLESPACE_NAME,<span class="hljs-number">1</span>,<span class="hljs-number">15</span>) <span class="hljs-keyword">as</span> tbsname <span class="hljs-keyword">from</span> sysibmadm.dba_all_tables <span class="hljs-keyword">where</span> TABLESPACE_NAME=<span class="hljs-string">'CONVERT1'</span><span class="hljs-string">"</span></span><br><span class="line"><span class="hljs-string"></span></span><br><span class="line"><span class="hljs-string">SCHEMA     TABNAME         TBSNAME        </span></span><br><span class="line"><span class="hljs-string">---------- --------------- ---------------</span></span><br><span class="line"><span class="hljs-string">FUNG       CL_SCHED        CONVERT1       </span></span><br><span class="line"><span class="hljs-string">FUNG       EMPLOYEE        CONVERT1       </span></span><br><span class="line"><span class="hljs-string">FUNG       DEPARTMENT      CONVERT1       </span></span><br><span class="line"><span class="hljs-string">FUNG       EMP_PHOTO       CONVERT1       </span></span><br><span class="line"><span class="hljs-string">FUNG       EMP_RESUME      CONVERT1       </span></span><br><span class="line"><span class="hljs-string">FUNG       PROJECT         CONVERT1       </span></span><br><span class="line"><span class="hljs-string">FUNG       PROJACT         CONVERT1       </span></span><br><span class="line"><span class="hljs-string">FUNG       EMPPROJACT      CONVERT1       </span></span><br><span class="line"><span class="hljs-string">FUNG       ACT             CONVERT1       </span></span><br><span class="line"><span class="hljs-string">FUNG       IN_TRAY         CONVERT1       </span></span><br><span class="line"><span class="hljs-string">FUNG       ORG             CONVERT1       </span></span><br><span class="line"><span class="hljs-string">FUNG       STAFF           CONVERT1       </span></span><br><span class="line"><span class="hljs-string">FUNG       SALES           CONVERT1       </span></span><br><span class="line"><span class="hljs-string">FUNG       STAFFG          CONVERT1       </span></span><br><span class="line"><span class="hljs-string">FUNG       ADEFUSR         CONVERT1       </span></span><br><span class="line"><span class="hljs-string">DB2INST1   EMPLOYEE        CONVERT1       </span></span><br><span class="line"><span class="hljs-string">DB2INST1   CL_SCHED        CONVERT1       </span></span><br><span class="line"><span class="hljs-string">DB2INST1   DEPARTMENT      CONVERT1       </span></span><br><span class="line"><span class="hljs-string">DB2INST1   PROJACT         CONVERT1       </span></span><br><span class="line"><span class="hljs-string">DB2INST1   EMPPROJACT      CONVERT1       </span></span><br><span class="line"><span class="hljs-string">DB2INST1   ACT             CONVERT1       </span></span><br><span class="line"><span class="hljs-string">DB2INST1   EMP_PHOTO       CONVERT1       </span></span><br><span class="line"><span class="hljs-string">DB2INST1   EMP_RESUME      CONVERT1       </span></span><br><span class="line"><span class="hljs-string">DB2INST1   PROJECT         CONVERT1       </span></span><br><span class="line"><span class="hljs-string">DB2INST1   IN_TRAY         CONVERT1       </span></span><br><span class="line"><span class="hljs-string">DB2INST1   ORG             CONVERT1       </span></span><br><span class="line"><span class="hljs-string">DB2INST1   STAFF           CONVERT1       </span></span><br><span class="line"><span class="hljs-string">DB2INST1   SALES           CONVERT1       </span></span><br><span class="line"><span class="hljs-string">DB2INST1   STAFFG          CONVERT1       </span></span><br><span class="line"><span class="hljs-string">DB2INST1   ADEFUSR         CONVERT1</span></span><br></pre></td></tr></table></figure>
+<p>There’re two options which can let you extract the table structure.</p>
+<h3 id="Option-A-Extracting-the-whole-schema’s-table-DDl"><a href="#Option-A-Extracting-the-whole-schema’s-table-DDl" class="headerlink" title="Option A: Extracting the whole schema’s table DDl"></a>Option A: Extracting the whole schema’s table DDl</h3><p>From the output, there are only two schemas in my SMS table space, if we have fewer related schemas, this option can be considered.</p>
+<figure class="highlight bash hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br></pre></td><td class="code"><pre><span class="line">[db2inst1@db2srv ~]$ db2look -d testdb -z FUNG -e -o fung_schema.sql</span><br><span class="line">-- No userid was specified, db2look tries to use Environment variable USER</span><br><span class="line">-- USER is: DB2INST1</span><br><span class="line">-- Specified SCHEMA is: FUNG</span><br><span class="line">-- Creating DDL <span class="hljs-keyword">for</span> table(s)</span><br><span class="line"></span><br><span class="line">-- Schema name is ignored <span class="hljs-keyword">for</span> the Federated Section</span><br><span class="line">-- Output is sent to file: fung_schema.sql</span><br><span class="line">[db2inst1@db2srv ~]$ db2look -d testdb -z DB2INST1 -e -o db2inst1_schema.sql</span><br><span class="line">-- No userid was specified, db2look tries to use Environment variable USER</span><br><span class="line">-- USER is: DB2INST1</span><br><span class="line">-- Specified SCHEMA is: DB2INST1</span><br><span class="line">-- Creating DDL <span class="hljs-keyword">for</span> table(s)</span><br><span class="line"></span><br><span class="line">-- Schema name is ignored <span class="hljs-keyword">for</span> the Federated Section</span><br><span class="line">-- Output is sent to file: db2inst1_schema.sql</span><br></pre></td></tr></table></figure>
+<p>Now the table  definition are saved to the output files.</p>
+<h3 id="Option-B-Extracting-the-table-DDL-only-in-the-tablespace"><a href="#Option-B-Extracting-the-table-DDL-only-in-the-tablespace" class="headerlink" title="Option B: Extracting the table DDL only in the tablespace"></a>Option B: Extracting the table DDL only in the tablespace</h3><p>This method would be recommended if we have many schemas reside in the SMS tablespace.</p>
+<figure class="highlight bash hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line"><span class="hljs-comment">#Generating extract DDL statement</span></span><br><span class="line">db2 <span class="hljs-string">"select 'db2look -d testdb -t '|| rtrim(TABSCHEMA) ||'.'||'\"' \</span></span><br><span class="line"><span class="hljs-string">||TABNAME||'\"'|| ' -e' from syscat.tables where TBSPACEID='2'"</span> &gt; db2look.sql</span><br><span class="line"><span class="hljs-comment">#Generating the DDL script</span></span><br><span class="line">./db2look.sql &gt;o.txt</span><br><span class="line"><span class="hljs-comment">#Remove the commit state, otherwise, only the first DDL would be executed</span></span><br><span class="line">sed -i <span class="hljs-string">'/^COMMIT\ WORK/d'</span> o.txt</span><br><span class="line">sed -i <span class="hljs-string">'/^CONNECT\ RESET/d'</span> o.txt</span><br><span class="line">sed -i <span class="hljs-string">'/^TERMINATE/d'</span> o.txt</span><br></pre></td></tr></table></figure>
+<h2 id="2-Exporting-all-the-tables-reside-in-the-tablespace"><a href="#2-Exporting-all-the-tables-reside-in-the-tablespace" class="headerlink" title="2. Exporting all the tables reside in the tablespace"></a>2. Exporting all the tables reside in the tablespace</h2><p>Export the table data into a directory by using db2move, db move will generate two files for each table, so it’s a good idea to put all the files into a separate directory.</p>
+<figure class="highlight bash hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">[db2inst1@db2srv ~]$ mkdir -p /db2backup/db2move; <span class="hljs-built_in">cd</span> /db2backup/db2move/</span><br><span class="line">[db2inst1@db2srv db2move]$ db2move testdb <span class="hljs-built_in">export</span> -ts convert1</span><br></pre></td></tr></table></figure>
+<h2 id="3-Dropping-the-old-tablespace-and-creating-a-new-tablespace"><a href="#3-Dropping-the-old-tablespace-and-creating-a-new-tablespace" class="headerlink" title="3. Dropping the old tablespace and creating a new tablespace"></a>3. Dropping the old tablespace and creating a new tablespace</h2><figure class="highlight bash hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">[db2inst1@db2srv db2move]$ db2 drop tablespace convert1</span><br><span class="line">[db2inst1@db2srv db2move]$ db2 <span class="hljs-string">"create tablespace DMSTBS1 managed by database using \</span></span><br><span class="line"><span class="hljs-string">(file '/db/db2inst1/testdb/db2inst1/NODE0000/TESTDB/T0000005/myfile' 2048, \</span></span><br><span class="line"><span class="hljs-string">file '/db/db2inst1/testdb/db2inst1/NODE0000/TESTDB/T0000005/myfile2' 2048) extentsize 4"</span></span><br></pre></td></tr></table></figure>
+<h2 id="4-Modifying-the-DDL-script-and-creating-the-tables-from-the-DDL-script"><a href="#4-Modifying-the-DDL-script-and-creating-the-tables-from-the-DDL-script" class="headerlink" title="4. Modifying the DDL script and creating the tables from the DDL script"></a>4. Modifying the DDL script and creating the tables from the DDL script</h2><figure class="highlight bash hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">[db2inst1@db2srv ~]$ sed -i <span class="hljs-string">'s/CONVERT1/DMSTBS1/g'</span> fung_schema.sql</span><br><span class="line">[db2inst1@db2srv ~]$ sed -i <span class="hljs-string">'s/CONVERT1/DMSTBS1/g'</span> db2inst1_schema.sql</span><br></pre></td></tr></table></figure>
+<p>Double check the script to ensure there’s no missing anything. If everything is OK, then creating the table into the new tablespace:</p>
+<figure class="highlight bash hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">[db2inst1@db2srv ~]$ db2 connect to testdb</span><br><span class="line">[db2inst1@db2srv ~]$ db2 -tvf fung_schema.sql</span><br><span class="line">[db2inst1@db2srv ~]$ db2 -tvf db2inst1_schema.sql</span><br></pre></td></tr></table></figure>
+<p>Double check to ensure everything is fine, then we can proceed.</p>
+<h2 id="5-Loading-the-data-back-into-the-new-tablespace"><a href="#5-Loading-the-data-back-into-the-new-tablespace" class="headerlink" title="5. Loading the data back into the new tablespace"></a>5. Loading the data back into the new tablespace</h2><figure class="highlight bash hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">[db2inst1@db2srv ~]$ <span class="hljs-built_in">cd</span> /db2backup/db2move/</span><br><span class="line">[db2inst1@db2srv db2move]$ db2move testdb load -l ./</span><br></pre></td></tr></table></figure>
+<p>Compare the output of LOAD.out and EXPORT.out, if the committed rows are exactly equal, then everything is okay.</p>
+<h2 id="6-Setting-the-integrity-for-the-tables"><a href="#6-Setting-the-integrity-for-the-tables" class="headerlink" title="6. Setting the integrity for the tables"></a>6. Setting the integrity for the tables</h2><p>First, using following SQL to query the table status:<br><figure class="highlight sql hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br></pre></td><td class="code"><pre><span class="line"><span class="hljs-keyword">Select</span> <span class="hljs-keyword">substr</span>(tabschema,<span class="hljs-number">1</span>,<span class="hljs-number">8</span>) <span class="hljs-keyword">as</span> <span class="hljs-string">"Qualified Name"</span>,</span><br><span class="line"><span class="hljs-keyword">substr</span>(tabname,<span class="hljs-number">1</span>,<span class="hljs-number">50</span>) <span class="hljs-keyword">as</span> <span class="hljs-string">"Table name"</span>,</span><br><span class="line"><span class="hljs-keyword">CASE</span> <span class="hljs-keyword">type</span></span><br><span class="line"><span class="hljs-keyword">WHEN</span> <span class="hljs-string">'A'</span> <span class="hljs-keyword">THEN</span> <span class="hljs-string">'Alias'</span></span><br><span class="line"><span class="hljs-keyword">WHEN</span> <span class="hljs-string">'H'</span> <span class="hljs-keyword">THEN</span> <span class="hljs-string">'Hierarchy Table'</span></span><br><span class="line"><span class="hljs-keyword">WHEN</span> <span class="hljs-string">'N'</span> <span class="hljs-keyword">THEN</span> <span class="hljs-string">'Nickname'</span></span><br><span class="line"><span class="hljs-keyword">WHEN</span> <span class="hljs-string">'S'</span> <span class="hljs-keyword">THEN</span> <span class="hljs-string">'Summary Table'</span></span><br><span class="line"><span class="hljs-keyword">WHEN</span> <span class="hljs-string">'T'</span> <span class="hljs-keyword">THEN</span> <span class="hljs-string">'Table'</span></span><br><span class="line"><span class="hljs-keyword">WHEN</span> <span class="hljs-string">'U'</span> <span class="hljs-keyword">THEN</span> <span class="hljs-string">'Typed Table'</span></span><br><span class="line"><span class="hljs-keyword">WHEN</span> <span class="hljs-string">'V'</span> <span class="hljs-keyword">THEN</span> <span class="hljs-string">'View'</span></span><br><span class="line"><span class="hljs-keyword">WHEN</span> <span class="hljs-string">'W'</span> <span class="hljs-keyword">THEN</span> <span class="hljs-string">'Typed View'</span></span><br><span class="line"><span class="hljs-keyword">END</span> <span class="hljs-keyword">as</span> <span class="hljs-string">"Table Type"</span>,</span><br><span class="line"><span class="hljs-keyword">CASE</span> <span class="hljs-keyword">status</span></span><br><span class="line"><span class="hljs-keyword">WHEN</span> <span class="hljs-string">'N'</span> <span class="hljs-keyword">THEN</span> <span class="hljs-string">'Normal'</span></span><br><span class="line"><span class="hljs-keyword">WHEN</span> <span class="hljs-string">'C'</span> <span class="hljs-keyword">THEN</span> <span class="hljs-string">'Check Pending'</span></span><br><span class="line"><span class="hljs-keyword">WHEN</span> <span class="hljs-string">'X'</span> <span class="hljs-keyword">THEN</span> <span class="hljs-string">'Inoperative'</span></span><br><span class="line"><span class="hljs-keyword">END</span> <span class="hljs-keyword">as</span> <span class="hljs-string">"Table Status"</span></span><br><span class="line"><span class="hljs-keyword">from</span> syscat.tables;</span><br><span class="line">[db2inst1@db2srv ~]$ db2 -tvf finding_all_table_status.sql |grep -v Normal</span><br><span class="line"></span><br><span class="line">Qualified Name Table name                                         Table Type      Table Status </span><br><span class="line"><span class="hljs-comment">-------------- -------------------------------------------------- --------------- -------------</span></span><br><span class="line">FUNG           DEPARTMENT                                         Table           <span class="hljs-keyword">Check</span> Pending</span><br><span class="line">FUNG           EMPLOYEE                                           <span class="hljs-keyword">Table</span>           <span class="hljs-keyword">Check</span> Pending</span><br><span class="line">FUNG           EMP_PHOTO                                          <span class="hljs-keyword">Table</span>           <span class="hljs-keyword">Check</span> Pending</span><br></pre></td></tr></table></figure></p>
+<p>Generating the <code>set integrity</code> command:<br><figure class="highlight bash hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">[db2inst1@db2srv ~]$ db2 <span class="hljs-string">"select 'set integrity for '|| rtrim(tabschema)||'.'||tabname|| ' \</span></span><br><span class="line"><span class="hljs-string">IMMEDIATE CHECKED;' from syscat.tables where status !='N'"</span>&gt;setint.  sql</span><br><span class="line">[db2inst1@db2srv ~]$ db2 -tvf setint.sql</span><br></pre></td></tr></table></figure></p>
+<p>Some errors are expected, because we separated co-dependency tables to set integrity, which they should be together.</p>
+<figure class="highlight bash hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line"><span class="hljs-built_in">set</span> integrity <span class="hljs-keyword">for</span> FUNG.EMPLOYEE IMMEDIATE CHECKED</span><br><span class="line">DB21034E  The <span class="hljs-built_in">command</span> was processed as an SQL statement because it was not a </span><br><span class="line">valid Command Line Processor <span class="hljs-built_in">command</span>.  During SQL processing it returned:</span><br><span class="line">SQL3608N  Cannot check a dependent table <span class="hljs-string">"FUNG.EMPLOYEE"</span> using the SET </span><br><span class="line">INTEGRITY statement <span class="hljs-keyword">while</span> the parent table or underlying table </span><br><span class="line"><span class="hljs-string">"FUNG.DEPARTMENT"</span> is <span class="hljs-keyword">in</span> the Set Integrity Pending state or <span class="hljs-keyword">if</span> it will be put </span><br><span class="line">into the Set Integrity Pending state by the SET INTEGRITY statement.  </span><br><span class="line">SQLSTATE=428A8</span><br></pre></td></tr></table></figure>
+<p>Execute the <code>set integrity</code> together for the co-dependency tables:<br><figure class="highlight bash hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line">SET INTEGRITY FOR &lt;table1&gt;, &lt;table2&gt; IMMEDIATE CHECKED</span><br><span class="line">[db2inst1@db2srv ~]$ db2 <span class="hljs-built_in">set</span> schema fung</span><br><span class="line">DB20000I  The SQL <span class="hljs-built_in">command</span> completed successfully.</span><br><span class="line">[db2inst1@db2srv ~]$ db2 <span class="hljs-built_in">set</span> integrity <span class="hljs-keyword">for</span> EMPLOYEE,EMP_PHOTO,EMP_RESUME, \</span><br><span class="line">PROJECT,PROJACT,EMPPROJACT,ADEFUSR IMMEDIATE CHECKED</span><br><span class="line">DB20000I  The SQL <span class="hljs-built_in">command</span> completed successfully.</span><br></pre></td></tr></table></figure></p>
+<p>Finally, we’re here, converted the SMS to DMS succefully.</p>
+<p><strong><em>EOF</em></strong></p>
+
+    
+    </div>
+    
+    
+    <div class="columns is-mobile is-multiline article-nav">
+        <span class="column is-12-mobile is-half-desktop  article-nav-prev">
+            
+            <a href="/Python/multiple-version-python-on-the-same-machine.html">Multiple version Python on the same machine</a>
+            
+        </span>
+        <span class="column is-12-mobile is-half-desktop  article-nav-next">
+            
+            <a href="/miscellaneous/git-commands.html">git commands</a>
+            
+        </span>
+    </div>
+    
+</article>
+
+
+
+
+    </div>
+</section>
+    <footer class="footer">
+    <div class="container">
+        <div class="columns content">
+            <div class="column is-narrow has-text-centered">
+                &copy; 2018 Fung Kong&nbsp;
+                Powered by <a href="http://hexo.io/" target="_blank">Hexo</a> & <a
+                        href="http://github.com/ppoffice/hexo-theme-minos">Minos</a>
+            </div>
+            <div class="column is-hidden-mobile"></div>
+
+            
+            
+        </div>
+    </div>
+</footer>
+    <script src="//cdnjs.cloudflare.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
+<script src="//cdnjs.cloudflare.com/ajax/libs/moment.js/2.22.2/moment-with-locales.min.js"></script>
+
+<!-- test if the browser is outdated -->
+<div id="outdated">
+    <h6>Your browser is out-of-date!</h6>
+    <p>Update your browser to view this website correctly. <a id="btnUpdateBrowser" href="http://outdatedbrowser.com/">Update my browser now </a></p>
+    <p class="last"><a href="#" id="btnCloseUpdateBrowser" title="Close">&times;</a></p>
+</div>
+<script src="//cdnjs.cloudflare.com/ajax/libs/outdated-browser/1.1.5/outdatedbrowser.min.js"></script>
+<script>
+    $(document).ready(function () {
+        // plugin function, place inside DOM ready function
+        outdatedBrowser({
+            bgColor: '#f25648',
+            color: '#ffffff',
+            lowerThan: 'flex'
+        })
+    });
+</script>
+
+<script>
+    window.FontAwesomeConfig = {
+        searchPseudoElements: true
+    }
+    moment.locale("en-AU");
+</script>
+
+
+    
+    
+    
+    
+    
+    
+
+    
+
+
+<script src="/js/script.js"></script>
+
+    
+    <div class="searchbox ins-search">
+    <div class="searchbox-mask"></div>
+    <div class="searchbox-container ins-search-container">
+        <div class="searchbox-input-wrapper">
+            <input type="text" class="searchbox-input ins-search-input" placeholder="Type something..." />
+            <span class="searchbox-close ins-close ins-selectable"><i class="fa fa-times-circle"></i></span>
+        </div>
+        <div class="searchbox-result-wrapper ins-section-wrapper">
+            <div class="ins-section-container"></div>
+        </div>
+    </div>
+</div>
+<script>
+    (function (window) {
+        var INSIGHT_CONFIG = {
+            TRANSLATION: {
+                POSTS: 'Posts',
+                PAGES: 'Pages',
+                CATEGORIES: 'Categories',
+                TAGS: 'Tags',
+                UNTITLED: '(Untitled)',
+            },
+            CONTENT_URL: '/content.json',
+        };
+        window.INSIGHT_CONFIG = INSIGHT_CONFIG;
+    })(window);
+</script>
+<script src="/js/insight.js"></script>
+    
+</body>
+</html>

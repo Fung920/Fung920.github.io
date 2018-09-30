@@ -1,0 +1,363 @@
+<!DOCTYPE html>
+<html class="has-navbar-fixed-top">
+<head>
+    <meta charset="utf-8">
+<title>11gr2 RAC Voting Disk及OCR管理 - My Wiki</title>
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+
+<link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/outdated-browser/1.1.5/outdatedbrowser.min.css">
+
+
+
+
+
+
+
+
+
+
+<link rel="icon" href="/images/favicon.ico">
+
+
+<link rel="stylesheet" href="//fonts.googleapis.com/css?family=Ovo|Source+Code+Pro">
+<link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/bulma/0.6.2/css/bulma.min.css">
+
+
+
+<link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/highlight.js/9.12.0/styles/github.min.css">
+
+<link rel="stylesheet" href="/css/style.css">
+
+<script defer src="//use.fontawesome.com/releases/v5.0.8/js/all.js"></script>
+
+
+    
+    
+    
+    
+    
+    
+
+    
+
+
+</head>
+<body>
+    
+<nav class="navbar is-transparent is-fixed-top navbar-main" role="navigation" aria-label="main navigation">
+    <div class="container">
+        <div class="navbar-brand">
+            <a class="navbar-item navbar-logo" href="/">
+                
+                    
+                    My Wiki
+                    
+                
+            </a>
+            <div class="navbar-burger">
+                <span></span>
+                <span></span>
+                <span></span>
+            </div>
+        </div>
+        
+        <div class="navbar-menu navbar-start">
+            
+            <a class="navbar-item "
+               href="/">Home</a>
+            
+            <a class="navbar-item "
+               href="/archives">Archives</a>
+            
+            <a class="navbar-item "
+               href="/about">About</a>
+            
+        </div>
+        
+        <div class="navbar-menu navbar-end">
+            
+            <a class="navbar-item search" title="Search" href="javascript:;">
+                <i class="fas fa-search"></i>
+            </a>
+            
+            
+            
+        </div>
+    </div>
+</nav>
+
+    <section class="section">
+    <div class="container">
+    <article class="article content gallery" itemscope itemprop="blogPost">
+    <h1 class="article-title is-size-3 is-size-4-mobile" itemprop="name">
+        
+            11gr2 RAC Voting Disk及OCR管理
+        
+    </h1>
+    <div class="article-meta columns is-variable is-1 is-multiline is-mobile is-size-7-mobile">
+        <span class="column is-narrow">
+            <time datetime="2013-09-04T04:00:00.000Z" itemprop="datePublished">Sep 4 2013</time>
+        </span>
+        
+        <span class="column is-narrow article-category">
+            <i class="far fa-folder"></i>
+            <a class="article-category-link" href="/categories/oracle/">oracle</a>
+        </span>
+        
+        
+        <span class="column is-narrow">
+            
+            
+            7 minutes read (About 1082 words)
+        </span>
+        
+    </div>
+    <div class="article-entry is-size-6-mobile" itemprop="articleBody">
+    
+         <h1>1.关闭ntp，使用ctss同步两个节点</h1>
+要使用Oracle提供的ctss(Cluster Time Synchronize Service)服务，必须停止使用NTP服务，并且移除NTP配置文件。在Linux中，使用以下操作可达成此目的： 
+<a id="more"></a>
+<figure class="highlight plain hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">#chkconfig ntpd off </span><br><span class="line">#mv /etc/ntp.conf /etc/ntp.conf_bak</span><br></pre></td></tr></table></figure>
+
+ 查询CTSS服务是否为Active： 
+
+<figure class="highlight plain hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">[grid@ora11g:/home/grid]$ crsctl stat res ora.ctssd -t -init</span><br><span class="line">[grid@ora11g:/home/grid]$ crsctl check ctss </span><br><span class="line">CRS-4701: The Cluster Time Synchronization Service is in Active mode. </span><br><span class="line">CRS-4702: Offset (in msec): 0</span><br></pre></td></tr></table></figure>
+
+<h1>2.管理Voting文件</h1>
+<h2>I．查询Voting文件的编号状态及所在磁盘名：</h2>
+<figure class="highlight plain hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line">[grid@ora11g:/home/grid]$ crsctl query css votedisk</span><br><span class="line">##  STATE    File Universal Id                File Name Disk group </span><br><span class="line">--  -----    -----------------                --------- --------- </span><br><span class="line">1. ONLINE   565fecb6ed384fc0bfa5a6d8901e9296 (/dev/oracleasm/disks/CRS1) [OCR] </span><br><span class="line">2. ONLINE   523c79b027b44fbebfee7eaf0f429f54 (/dev/oracleasm/disks/CRS2) [OCR] </span><br><span class="line">3. ONLINE   31590f50dea54f07bf1b4e429bd733f5 (/dev/oracleasm/disks/CRS3) [OCR] </span><br><span class="line">Located 3 voting disk(s).</span><br></pre></td></tr></table></figure>
+
+<h2>II．删除损坏的Voting文件：</h2>
+<pre>
+$crsctl delete css votedisk 31590f50dea54f07bf1b4e429bd733f5
+</pre>
+
+ 然后在原来的存储位置重新添加一个Voting文件： 
+
+<pre>
+$crsctl add css votedisk +OCR
+</pre>
+<h2>III．Voting文件迁移</h2>
+希望将Voting文件从OCR磁盘组迁移至+DATA磁盘组，使用以下操作： 
+
+<pre>
+$crsctl replace votedisk +DATA
+</pre>
+<h2>IV．所有Voting文件损坏的情况</h2>
+首先需要以root用户将Clusterware启动到exclusive模式： 
+
+<pre>
+#crsctl start crs –excl
+</pre>
+
+ 再查询Voting文件状态，显示结果为空或者在STATE字段显示为OFF 
+
+<pre>
+[grid@ora11g:/home/grid]$ crsctl query css votedisk
+</pre>
+
+ 因为Voting Disk存储在ASM磁盘中，通过以下命令可以恢复Voting文件，恢复的Voting文件可以被恢复到以前的磁盘组中，或者其他组： 
+
+<pre>
+$crsctl replace votedisk +OCR
+</pre>
+
+ 替换完再次查询Voting文件的状态，然后用root用户重新启动Clusterware： 
+
+<pre>
+#crsctl stop crs
+#crsctl start crs
+</pre>
+<h1>3.管理OCR文件</h1>
+OCR记录Clusterware及数据库的配置信息。对OCR的管理主要包括备份、恢复、添加、删除及迁移等。
+<h2>I．备份</h2>
+<figure class="highlight plain hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">[root@ora11g:/root]# /u01/app/grid/product/11.2.0.4/bin/ocrconfig -manualbackup</span><br><span class="line"> ora11g     2013/09/04 10:43:57     /u01/app/grid/product/11.2.0.4/cdata/fung/backup_20130904_104357.ocr </span><br><span class="line"> ora11g     2013/09/04 10:29:22     /u01/app/grid/product/11.2.0.4/cdata/fung/backup_20130904_102922.ocr</span><br></pre></td></tr></table></figure>
+
+查看备份结果： 
+
+<figure class="highlight plain hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">[root@ora11g:/root]# /u01/app/grid/product/11.2.0.4/bin/ocrconfig -showbackup</span><br><span class="line">PROT-24: Auto backups for the Oracle Cluster Registry are not available </span><br><span class="line">ora11g     2013/09/04 10:29:22     /u01/app/grid/product/11.2.0.4/cdata/fung/backup_20130904_102922.ocr</span><br></pre></td></tr></table></figure>
+
+<p>OCR文件的备份是一个二进制文件，但是通过ocrdump命令可以查看它的内存：</p> 
+
+ 语法： 
+
+<figure class="highlight plain hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line">#ocrdump -backupfile backup_file_name</span><br><span class="line">[root@ora11g:/root]# /u01/app/grid/product/11.2.0.4/bin/ocrdump -backupfile /u01/app/grid/product/11.2.0.4/cdata/fung/backup_20130904_102922.ocr </span><br><span class="line">[root@ora11g:/root]# ll </span><br><span class="line">total 288 </span><br><span class="line">-rw------- 1 root root   1840 Aug 30 20:55 anaconda-ks.cfg </span><br><span class="line">drwxr-xr-x 2 root root   4096 Aug 30 14:14 Desktop </span><br><span class="line">-rw-r--r-- 1 root root  56109 Aug 30 20:54 install.log </span><br><span class="line">-rw-r--r-- 1 root root      0 Aug 30 19:45 install.log.syslog </span><br><span class="line">-rw------- 1 root root 205176 Sep  4 10:46 OCRDUMPFILE</span><br></pre></td></tr></table></figure>
+
+ 上面OCRDUMPFILE即为此命令产生的文本文件，可以直接vi打开。
+<h2>II．检查OCR文件是否损坏</h2>
+<figure class="highlight plain hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br></pre></td><td class="code"><pre><span class="line">[root@ora11g:/root]# /u01/app/grid/product/11.2.0.4/bin/ocrcheck -config</span><br><span class="line">Oracle Cluster Registry configuration is : </span><br><span class="line">Device/File Name         :       +OCR </span><br><span class="line">[root@ora11g:/root]# /u01/app/grid/product/11.2.0.4/bin/ocrcheck -local </span><br><span class="line">Status of Oracle Local Registry is as follows : </span><br><span class="line">Version                  :          3 </span><br><span class="line">Total space (kbytes)     :     262120 </span><br><span class="line">Used space (kbytes)      :       2532 </span><br><span class="line">Available space (kbytes) :     259588 </span><br><span class="line">ID                       :  180513404 </span><br><span class="line">Device/File Name         : /u01/app/grid/product/11.2.0.4/cdata/ora11g.olr </span><br><span class="line">Device/File integrity check succeeded </span><br><span class="line">Local registry integrity check succeeded </span><br><span class="line">Logical corruption check succeeded</span><br></pre></td></tr></table></figure>
+
+<h2>III．恢复OCR文件</h2>
+以root用户强制停止CRS： 
+
+<pre>
+#crsctl stop crs -f
+</pre>
+以root用户启动crs至exclusive状态： 
+<pre>#crsctl start crs -excl</pre>
+
+ 停止crsd进程： 
+
+<pre>
+#crsctl stop resource ora.crsd -init
+</pre>
+
+ 利用OCR备份文件进行恢复，使用ocrconfig -showbackup命令查找OCR备份文件路径，使用以下命令进行恢复： 
+
+<pre>
+#ocrconfig –restore file_name
+</pre>
+
+ 在此及节点上停止Clusterware运行： 
+
+<pre>
+#crsctl stop crs -f
+</pre>
+
+ 重新在所有节点启动CRS 
+
+<pre>
+#crsctl start crs
+</pre>
+
+ 最后，再次通过ocrcheck验证OCR文件完整性。
+<h2>IV．OCR文件多份存储</h2>
+查找OCR文件存储位置： 
+
+<figure class="highlight plain hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">[root@ora11g:/root]# cat /etc/oracle/ocr.loc</span><br><span class="line">ocrconfig_loc=+OCR </span><br><span class="line">local_only=FALSE</span><br></pre></td></tr></table></figure>
+
+ 在磁盘组+DATA中再创建一个OCR文件： 
+
+<figure class="highlight plain hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line">#ocrconfig -add +DATA</span><br><span class="line">[root@ora11g:/root]# /u01/app/grid/product/11.2.0.4/bin/ocrconfig -add +DATA </span><br><span class="line">[root@ora11g:/root]# cat /etc/oracle/ocr.loc </span><br><span class="line">#Device/file  getting replaced by device +DATA </span><br><span class="line">ocrconfig_loc=+OCR </span><br><span class="line">ocrmirrorconfig_loc=+DATA </span><br><span class="line">local_only=false </span><br><span class="line">[root@ora11g:/root]#</span><br></pre></td></tr></table></figure>
+
+ 删除命令如下： 
+
+<figure class="highlight plain hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line">[root@ora11g:/root]# /u01/app/grid/product/11.2.0.4/bin/ocrconfig -delete +DATA</span><br><span class="line">[root@ora11g:/root]# cat /etc/oracle/ocr.loc </span><br><span class="line">#Device/file +DATA being deleted </span><br><span class="line">ocrconfig_loc=+OCR </span><br><span class="line">local_only=false </span><br><span class="line">[root@ora11g:/root]#</span><br></pre></td></tr></table></figure>
+
+ V．迁移OCR 
+
+ 以下命令把OCR文件从磁盘组DATA迁移到磁盘组DATABASE： 
+
+<pre>#ocrconfig -replace +data -replacement +database</pre>
+
+
+ <b>EOF</b> 
+
+    
+    </div>
+    
+    <div class="columns is-variable is-1 is-multiline is-mobile">
+    
+        <span class="column is-narrow"><a class="tag is-light article-tag" href="/tags/rac/">#rac</a></span>
+    
+    </div>
+    
+    
+    <div class="columns is-mobile is-multiline article-nav">
+        <span class="column is-12-mobile is-half-desktop  article-nav-prev">
+            
+            <a href="/oracle/manage-11gr2-rac-resource.html">11gr2 RAC Resource管理</a>
+            
+        </span>
+        <span class="column is-12-mobile is-half-desktop  article-nav-next">
+            
+            <a href="/oracle/ora-12514-rac.html">ora-12514解决一例</a>
+            
+        </span>
+    </div>
+    
+</article>
+
+
+
+
+    </div>
+</section>
+    <footer class="footer">
+    <div class="container">
+        <div class="columns content">
+            <div class="column is-narrow has-text-centered">
+                &copy; 2018 Kong&nbsp;
+                Powered by <a href="http://hexo.io/" target="_blank">Hexo</a> & <a
+                        href="http://github.com/ppoffice/hexo-theme-minos">Minos</a>
+            </div>
+            <div class="column is-hidden-mobile"></div>
+
+            
+            
+        </div>
+    </div>
+</footer>
+    <script src="//cdnjs.cloudflare.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
+<script src="//cdnjs.cloudflare.com/ajax/libs/moment.js/2.22.2/moment-with-locales.min.js"></script>
+
+<!-- test if the browser is outdated -->
+<div id="outdated">
+    <h6>Your browser is out-of-date!</h6>
+    <p>Update your browser to view this website correctly. <a id="btnUpdateBrowser" href="http://outdatedbrowser.com/">Update my browser now </a></p>
+    <p class="last"><a href="#" id="btnCloseUpdateBrowser" title="Close">&times;</a></p>
+</div>
+<script src="//cdnjs.cloudflare.com/ajax/libs/outdated-browser/1.1.5/outdatedbrowser.min.js"></script>
+<script>
+    $(document).ready(function () {
+        // plugin function, place inside DOM ready function
+        outdatedBrowser({
+            bgColor: '#f25648',
+            color: '#ffffff',
+            lowerThan: 'flex'
+        })
+    });
+</script>
+
+<script>
+    window.FontAwesomeConfig = {
+        searchPseudoElements: true
+    }
+    moment.locale("en-AU");
+</script>
+
+
+    
+    
+    
+    
+    
+    
+
+    
+
+
+<script src="/js/script.js"></script>
+
+    
+    <div class="searchbox ins-search">
+    <div class="searchbox-mask"></div>
+    <div class="searchbox-container ins-search-container">
+        <div class="searchbox-input-wrapper">
+            <input type="text" class="searchbox-input ins-search-input" placeholder="Type something..." />
+            <span class="searchbox-close ins-close ins-selectable"><i class="fa fa-times-circle"></i></span>
+        </div>
+        <div class="searchbox-result-wrapper ins-section-wrapper">
+            <div class="ins-section-container"></div>
+        </div>
+    </div>
+</div>
+<script>
+    (function (window) {
+        var INSIGHT_CONFIG = {
+            TRANSLATION: {
+                POSTS: 'Posts',
+                PAGES: 'Pages',
+                CATEGORIES: 'Categories',
+                TAGS: 'Tags',
+                UNTITLED: '(Untitled)',
+            },
+            CONTENT_URL: '/content.json',
+        };
+        window.INSIGHT_CONFIG = INSIGHT_CONFIG;
+    })(window);
+</script>
+<script src="/js/insight.js"></script>
+    
+</body>
+</html>

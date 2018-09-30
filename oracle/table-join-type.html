@@ -1,0 +1,254 @@
+<!DOCTYPE html>
+<html class="has-navbar-fixed-top">
+<head>
+    <meta charset="utf-8">
+<title>Oracle表连接类型 - My Wiki</title>
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+
+<link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/outdated-browser/1.1.5/outdatedbrowser.min.css">
+
+
+<meta name="description" content="表的内连接，外连接">
+
+
+
+<meta name="keywords" content="Oracle 表连接类型">
+
+
+
+
+
+
+
+<link rel="icon" href="/images/favicon.ico">
+
+
+<link rel="stylesheet" href="//fonts.googleapis.com/css?family=Ovo|Source+Code+Pro">
+<link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/bulma/0.6.2/css/bulma.min.css">
+
+
+
+<link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/highlight.js/9.12.0/styles/github.min.css">
+
+<link rel="stylesheet" href="/css/style.css">
+
+<script defer src="//use.fontawesome.com/releases/v5.0.8/js/all.js"></script>
+
+
+    
+    
+    
+    
+    
+    
+
+    
+
+
+</head>
+<body>
+    
+<nav class="navbar is-transparent is-fixed-top navbar-main" role="navigation" aria-label="main navigation">
+    <div class="container">
+        <div class="navbar-brand">
+            <a class="navbar-item navbar-logo" href="/">
+                
+                    
+                    My Wiki
+                    
+                
+            </a>
+            <div class="navbar-burger">
+                <span></span>
+                <span></span>
+                <span></span>
+            </div>
+        </div>
+        
+        <div class="navbar-menu navbar-start">
+            
+            <a class="navbar-item "
+               href="/">Home</a>
+            
+            <a class="navbar-item "
+               href="/archives">Archives</a>
+            
+            <a class="navbar-item "
+               href="/about">About</a>
+            
+        </div>
+        
+        <div class="navbar-menu navbar-end">
+            
+            <a class="navbar-item search" title="Search" href="javascript:;">
+                <i class="fas fa-search"></i>
+            </a>
+            
+            
+            
+        </div>
+    </div>
+</nav>
+
+    <section class="section">
+    <div class="container">
+    <article class="article content gallery" itemscope itemprop="blogPost">
+    <h1 class="article-title is-size-3 is-size-4-mobile" itemprop="name">
+        
+            Oracle表连接类型
+        
+    </h1>
+    <div class="article-meta columns is-variable is-1 is-multiline is-mobile is-size-7-mobile">
+        <span class="column is-narrow">
+            <time datetime="2014-08-18T01:12:10.000Z" itemprop="datePublished">Aug 17 2014</time>
+        </span>
+        
+        <span class="column is-narrow article-category">
+            <i class="far fa-folder"></i>
+            <a class="article-category-link" href="/categories/oracle/">oracle</a>
+        </span>
+        
+        
+        <span class="column is-narrow">
+            
+            
+            7 minutes read (About 1101 words)
+        </span>
+        
+    </div>
+    <div class="article-entry is-size-6-mobile" itemprop="articleBody">
+    
+        <p>在Oracle优化器中，多表的连接顺序，连接方法的不同，对CBO产生的COST有很大的差异。在优化器解析含表连接的SQL时，它会根据目标SQL的写法来决定表连接的顺序、表连接的方法和单表访问路径来决定此SQL的最终执行计划。<br><a id="more"></a><br>Oracle表之间的连接总的分为内连接(Inner Join)和外连接(Outer Join)，外连接又包含左外连接(Left Outer Join)，右外连接(Right Outer Join)和全外连接(Full Outer Join)。<br><img src="/images/sql_joins.png" alt="SQL JOIN"></p>
+<h3 id="1-内连接"><a href="#1-内连接" class="headerlink" title="1. 内连接"></a>1. 内连接</h3><p>在标准SQL和Oracle中，默认的连接都为Inner Join，因此，在写SQL的时候，Inner Join是不需要明确指出来的。内连接是指多表连接的连接结果只包含那些满足连接条件的记录。<br><figure class="highlight plain hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br></pre></td><td class="code"><pre><span class="line">#创建测试表</span><br><span class="line">FUNG@linora&gt; create table t1 (id number,name varchar2(20));</span><br><span class="line">Table created.</span><br><span class="line">FUNG@linora&gt; create table t2 (id number,job varchar2(10));</span><br><span class="line">Table created.</span><br><span class="line">FUNG@linora&gt; insert into t1 values(1,&apos;fung&apos;);</span><br><span class="line">insert into t1 values(2,&apos;kong&apos;);</span><br><span class="line">insert into t1 values(3,&apos;kyun&apos;);</span><br><span class="line">insert into t1 values(4,&apos;jordan&apos;);</span><br><span class="line">insert into t2 values(1,&apos;dba&apos;);</span><br><span class="line">insert into t2 values(2,&apos;sa&apos;);</span><br><span class="line">insert into t2 values(3,&apos;hr&apos;);</span><br><span class="line">insert into t2 values(4,&apos;dev&apos;);</span><br><span class="line">insert into t2 values(5,&apos;mgr&apos;);</span><br><span class="line">insert into t1 values(6,&apos;pippen&apos;);</span><br><span class="line">commit;</span><br><span class="line">FUNG@linora&gt; select * from t1;</span><br><span class="line">        ID NAME</span><br><span class="line">---------- --------------------</span><br><span class="line">         1 fung</span><br><span class="line">         2 kong</span><br><span class="line">         3 kyun</span><br><span class="line">         4 jordan</span><br><span class="line">         6 pippen</span><br><span class="line">FUNG@linora&gt; select * from t2;</span><br><span class="line">        ID JOB</span><br><span class="line">---------- ----------</span><br><span class="line">         1 dba</span><br><span class="line">         2 sa</span><br><span class="line">         3 hr</span><br><span class="line">         4 dev</span><br><span class="line">         5 mgr</span><br><span class="line">FUNG@linora&gt; select t1.id,t1.name,t2.job from t1,t2 where t1.id=t2.id;</span><br><span class="line">        ID NAME                 JOB</span><br><span class="line">---------- -------------------- ----------</span><br><span class="line">         1 fung                 dba</span><br><span class="line">         2 kong                 sa</span><br><span class="line">         3 kyun                 hr</span><br><span class="line">         4 jordan               dev</span><br></pre></td></tr></table></figure></p>
+<p>上述SQL改写为标准SQL为<br><figure class="highlight plain hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">select t1.id,t1.name,t2.job from t1 join t2 on (t1.id=t2.id);</span><br><span class="line">--或者</span><br><span class="line">select id,t1.name,t2.job from t1</span><br><span class="line">join t2 using (id);</span><br></pre></td></tr></table></figure></p>
+<p>还有一种特殊的JOIN Using叫自然连接(Natural Join)，自然连接的含义是表连接的连接列是表连接的两个表所有的<b>同名列</b>。如<br><figure class="highlight plain hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">select id,t1.name,t2.job</span><br><span class="line">from t1</span><br><span class="line">natural join t2;</span><br></pre></td></tr></table></figure></p>
+<p>在现实中，并不推荐自然连接的写法，因为列名相同，但其含义不一定相同，使用自然连接会导致目标SQL结果出错的风险(包括同名列数据类型不一样也会报错)。</p>
+<h3 id="2-外连接"><a href="#2-外连接" class="headerlink" title="2. 外连接"></a>2. 外连接</h3><p>外连接指表连接的连接结果除了包含完全满足连接条件的外，还包含驱动表中所有不满足连接条件的记录。外连接的SQL写法中，可以忽略outer关键字。</p>
+<h4 id="2-1-左外连接"><a href="#2-1-左外连接" class="headerlink" title="2.1 左外连接"></a>2.1 左外连接</h4><figure class="highlight plain hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line">FUNG@linora&gt; select t1.id,t1.name,t2.job from t1</span><br><span class="line">left outer join t2 on (t1.id=t2.id);</span><br><span class="line">        ID NAME                 JOB</span><br><span class="line">---------- -------------------- ----------</span><br><span class="line">         1 fung                 dba</span><br><span class="line">         2 kong                 sa</span><br><span class="line">         3 kyun                 hr</span><br><span class="line">         4 jordan               dev</span><br><span class="line">         6 pippen</span><br></pre></td></tr></table></figure>
+<p>等价于(Oracle SQL写法)：<br><figure class="highlight plain hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">select t1.id,t1.name,t2.job from t1,t2 where t1.id=t2.id(+);</span><br></pre></td></tr></table></figure></p>
+<p>在上例中，驱动表是位于关键字’left outer join’左边的T1表，因此，返回的结果不仅包含符合连接条件的所有记录，还包含了T1表所有不符合连接条件的记录。Oracle的’+’号写法，是要把’+’号放在被驱动表栏位。对于被驱动表中不符合连接条件的查询记录，以NULL补充(关键字’+’出现在哪个表的连接列后面，就表明哪个表会以NULL来填充那些不满足连接条件并位于该表的查询列)。如果需要查找驱动表符合连接条件外的其他记录，可以在外连接上添加一个where子句，’where t2.id is NULL’。</p>
+<h4 id="2-2-右外连接"><a href="#2-2-右外连接" class="headerlink" title="2.2 右外连接"></a>2.2 右外连接</h4><figure class="highlight plain hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line">FUNG@linora&gt; select t1.id,t1.name,t2.job from t1</span><br><span class="line">right outer join t2 on (t1.id=t2.id);</span><br><span class="line"></span><br><span class="line">        ID NAME                 JOB</span><br><span class="line">---------- -------------------- ----------</span><br><span class="line">         1 fung                 dba</span><br><span class="line">         2 kong                 sa</span><br><span class="line">         3 kyun                 hr</span><br><span class="line">         4 jordan               dev</span><br><span class="line">                                mgr</span><br></pre></td></tr></table></figure>
+<p>等价于(Oracle SQL写法)：<br><figure class="highlight plain hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">select t1.id,t1.name,t2.job from t1,t2 where t1.id(+)=t2.id</span><br></pre></td></tr></table></figure></p>
+<p>对于左外和右外的解释，可以看文章开始的图片，对于两张表内连接，在数学上可以视为两者的交集，左/右外连接，是相对于交集的左/右边而言。</p>
+<h4 id="2-3-全外连接"><a href="#2-3-全外连接" class="headerlink" title="2.3 全外连接"></a>2.3 全外连接</h4><figure class="highlight plain hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line">FUNG@linora&gt; select t1.id,t1.name,t2.job from t1</span><br><span class="line">full outer join t2 on (t1.id=t2.id);</span><br><span class="line">        ID NAME                 JOB</span><br><span class="line">---------- -------------------- ----------</span><br><span class="line">         1 fung                 dba</span><br><span class="line">         2 kong                 sa</span><br><span class="line">         3 kyun                 hr</span><br><span class="line">         4 jordan               dev</span><br><span class="line">                                mgr</span><br><span class="line">         6 pippen</span><br></pre></td></tr></table></figure>
+<p>可以看到，全外连接查询的结果包含了满足连接条件的记录和不满足连接条件的记录(包括T1和T2表)，不满足条件的记录所对应的另外一个表中的查询列会以NULL填充。</p>
+<p>Reference:<br><a href="http://www.dbsnake.net/books" target="_blank" rel="noopener">基于Oracle的SQL优化</a>  </p>
+
+    
+    </div>
+    
+    <div class="columns is-variable is-1 is-multiline is-mobile">
+    
+        <span class="column is-narrow"><a class="tag is-light article-tag" href="/tags/tuning/">#tuning</a></span>
+    
+    </div>
+    
+    
+    <div class="columns is-mobile is-multiline article-nav">
+        <span class="column is-12-mobile is-half-desktop  article-nav-prev">
+            
+            <a href="/oracle/execution-plan.html">如何获得SQL的执行计划</a>
+            
+        </span>
+        <span class="column is-12-mobile is-half-desktop  article-nav-next">
+            
+            <a href="/oracle/manage-pdbs.html">12C之PDB管理</a>
+            
+        </span>
+    </div>
+    
+</article>
+
+
+
+
+    </div>
+</section>
+    <footer class="footer">
+    <div class="container">
+        <div class="columns content">
+            <div class="column is-narrow has-text-centered">
+                &copy; 2018 Kong&nbsp;
+                Powered by <a href="http://hexo.io/" target="_blank">Hexo</a> & <a
+                        href="http://github.com/ppoffice/hexo-theme-minos">Minos</a>
+            </div>
+            <div class="column is-hidden-mobile"></div>
+
+            
+            
+        </div>
+    </div>
+</footer>
+    <script src="//cdnjs.cloudflare.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
+<script src="//cdnjs.cloudflare.com/ajax/libs/moment.js/2.22.2/moment-with-locales.min.js"></script>
+
+<!-- test if the browser is outdated -->
+<div id="outdated">
+    <h6>Your browser is out-of-date!</h6>
+    <p>Update your browser to view this website correctly. <a id="btnUpdateBrowser" href="http://outdatedbrowser.com/">Update my browser now </a></p>
+    <p class="last"><a href="#" id="btnCloseUpdateBrowser" title="Close">&times;</a></p>
+</div>
+<script src="//cdnjs.cloudflare.com/ajax/libs/outdated-browser/1.1.5/outdatedbrowser.min.js"></script>
+<script>
+    $(document).ready(function () {
+        // plugin function, place inside DOM ready function
+        outdatedBrowser({
+            bgColor: '#f25648',
+            color: '#ffffff',
+            lowerThan: 'flex'
+        })
+    });
+</script>
+
+<script>
+    window.FontAwesomeConfig = {
+        searchPseudoElements: true
+    }
+    moment.locale("en-AU");
+</script>
+
+
+    
+    
+    
+    
+    
+    
+
+    
+
+
+<script src="/js/script.js"></script>
+
+    
+    <div class="searchbox ins-search">
+    <div class="searchbox-mask"></div>
+    <div class="searchbox-container ins-search-container">
+        <div class="searchbox-input-wrapper">
+            <input type="text" class="searchbox-input ins-search-input" placeholder="Type something..." />
+            <span class="searchbox-close ins-close ins-selectable"><i class="fa fa-times-circle"></i></span>
+        </div>
+        <div class="searchbox-result-wrapper ins-section-wrapper">
+            <div class="ins-section-container"></div>
+        </div>
+    </div>
+</div>
+<script>
+    (function (window) {
+        var INSIGHT_CONFIG = {
+            TRANSLATION: {
+                POSTS: 'Posts',
+                PAGES: 'Pages',
+                CATEGORIES: 'Categories',
+                TAGS: 'Tags',
+                UNTITLED: '(Untitled)',
+            },
+            CONTENT_URL: '/content.json',
+        };
+        window.INSIGHT_CONFIG = INSIGHT_CONFIG;
+    })(window);
+</script>
+<script src="/js/insight.js"></script>
+    
+</body>
+</html>

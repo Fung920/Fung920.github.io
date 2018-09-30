@@ -1,0 +1,382 @@
+<!DOCTYPE html>
+<html class="has-navbar-fixed-top">
+<head>
+    <meta charset="utf-8">
+<title>Rolling Upgrade RAC from 11g to 12c - My Wiki</title>
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+
+<link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/outdated-browser/1.1.5/outdatedbrowser.min.css">
+
+
+<meta name="description" content="Rolling upgrade RAC from 11g to 12c">
+
+
+
+<meta name="keywords" content="rolling upgrade grid infrastructure">
+
+
+
+
+
+
+
+<link rel="icon" href="/images/favicon.ico">
+
+
+<link rel="stylesheet" href="//fonts.googleapis.com/css?family=Ovo|Source+Code+Pro">
+<link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/bulma/0.6.2/css/bulma.min.css">
+
+
+
+<link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/highlight.js/9.12.0/styles/github.min.css">
+
+<link rel="stylesheet" href="/css/style.css">
+
+<script defer src="//use.fontawesome.com/releases/v5.0.8/js/all.js"></script>
+
+
+    
+    
+    
+    
+    
+    
+
+    
+
+
+</head>
+<body>
+    
+<nav class="navbar is-transparent is-fixed-top navbar-main" role="navigation" aria-label="main navigation">
+    <div class="container">
+        <div class="navbar-brand">
+            <a class="navbar-item navbar-logo" href="/">
+                
+                    
+                    My Wiki
+                    
+                
+            </a>
+            <div class="navbar-burger">
+                <span></span>
+                <span></span>
+                <span></span>
+            </div>
+        </div>
+        
+        <div class="navbar-menu navbar-start">
+            
+            <a class="navbar-item "
+               href="/">Home</a>
+            
+            <a class="navbar-item "
+               href="/archives">Archives</a>
+            
+            <a class="navbar-item "
+               href="/about">About</a>
+            
+        </div>
+        
+        <div class="navbar-menu navbar-end">
+            
+            <a class="navbar-item search" title="Search" href="javascript:;">
+                <i class="fas fa-search"></i>
+            </a>
+            
+            
+            
+        </div>
+    </div>
+</nav>
+
+    <section class="section">
+    <div class="container">
+    <article class="article content gallery" itemscope itemprop="blogPost">
+    <h1 class="article-title is-size-3 is-size-4-mobile" itemprop="name">
+        
+            Rolling Upgrade RAC from 11g to 12c
+        
+    </h1>
+    <div class="article-meta columns is-variable is-1 is-multiline is-mobile is-size-7-mobile">
+        <span class="column is-narrow">
+            <time datetime="2016-04-21T18:32:22.000Z" itemprop="datePublished">Apr 21 2016</time>
+        </span>
+        
+        <span class="column is-narrow article-category">
+            <i class="far fa-folder"></i>
+            <a class="article-category-link" href="/categories/oracle/">oracle</a>
+        </span>
+        
+        
+        <span class="column is-narrow">
+            
+            
+            26 minutes read (About 3944 words)
+        </span>
+        
+    </div>
+    <div class="article-entry is-size-6-mobile" itemprop="articleBody">
+    
+        <p>What I mean rolling is Grid Infrastructure upgrade by rolling, but RDBMS still need outage. To minimize the downtime, and I think upgrade with rolling is more easier than non-rolling, so use rolling upgrade GI is advisable. At the end of this post, I will try to reverse the whole process, that is downgrade RDBMS and GI to before version.<br><a id="more"></a><br>I already have a two-node 11gr2 RAC installed in my VM machine, and I’ll perform a out-of-place upgrade for GI and RDBMS. Out-of-place upgrade can let you rollback or downgrade more easier.    </p>
+<p>New directories have been created as below. </p>
+<figure class="highlight bash hljs"><figcaption><span>[Below infomation should be the same on both nodes]</span></figcaption><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br></pre></td><td class="code"><pre><span class="line">[root@node1 ~]<span class="hljs-comment"># mkdir -p /u02 </span></span><br><span class="line">[root@node1 ~]<span class="hljs-comment"># chown -R grid:oinstall /u02</span></span><br><span class="line">[grid@node1:/home/grid]$ cp .bash_profile .bash_profile_11g </span><br><span class="line">[grid@node1:/home/grid]$ sed -i <span class="hljs-string">'s/u01/u02/g'</span> .bash_profile</span><br><span class="line">[grid@node1:/home/grid]$ <span class="hljs-built_in">echo</span> <span class="hljs-variable">$ORACLE_BASE</span></span><br><span class="line">/u02/app/12.1.0</span><br><span class="line">[grid@node1:/home/grid]$ <span class="hljs-built_in">echo</span> <span class="hljs-variable">$ORACLE_HOME</span></span><br><span class="line">/u02/app/grid/12.1.0</span><br><span class="line">[grid@node1:/home/grid]$ mkdir -p <span class="hljs-variable">$ORACLE_BASE</span> <span class="hljs-variable">$ORACLE_HOME</span></span><br><span class="line">[grid@node1:/home/grid]$ chmod -R 775 /u02 </span><br><span class="line">[oracle@node1:/home/oracle]$ cp .bash_profile .bash_profile_11g</span><br><span class="line">[oracle@node1:/home/oracle]$ <span class="hljs-built_in">echo</span> <span class="hljs-variable">$ORACLE_HOME</span></span><br><span class="line">/u02/app/oracle/product/12.1.0/db1</span><br><span class="line">[oracle@node1:/home/oracle]$ <span class="hljs-built_in">echo</span> <span class="hljs-variable">$ORACLE_BASE</span></span><br><span class="line">/u02/app/oracle</span><br><span class="line">[oracle@node1:/home/oracle]$ mkdir -p <span class="hljs-variable">$ORACLE_HOME</span></span><br></pre></td></tr></table></figure>
+<p>Whenever upgrade a system, remember that upgrade is a high risk operation, backup is always essential, backup the whole database, the GI and RDBMS home, the configuration files, and so on.  Below backup actions is recommended. </p>
+<ul>
+<li><p>GI and RDBMS home</p>
+</li>
+<li><p>A manually physical OCR/OLR backup</p>
+</li>
+<li><p>Full database backup </p>
+</li>
+</ul>
+<h3 id="1-Some-restrictions-of-rolling-upgrade-GI"><a href="#1-Some-restrictions-of-rolling-upgrade-GI" class="headerlink" title="1. Some restrictions of rolling upgrade GI"></a>1. Some restrictions of rolling upgrade GI</h3><ul>
+<li>Not support for block devices or RAW devices </li>
+</ul>
+<p>If the OCR and voting disks is located on raw or block devices, need to migrate them to ASM before upgrade. </p>
+<p>Below table is the compatibility matrix of clusterware which can be upgrade to 12c directly.</p>
+<center>Table 1-1 </center>
+
+<table>
+<thead>
+<tr>
+<th>Oracle version</th>
+<th>Compatibility</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Oracle 10.1.0.5</td>
+<td>Direct upgrade possible</td>
+</tr>
+<tr>
+<td>Oracle 10.2.0.3</td>
+<td>Direct upgrade possible</td>
+</tr>
+<tr>
+<td>Oracle 11.1.0.6</td>
+<td>Direct upgrade possible</td>
+</tr>
+<tr>
+<td>oracle 11.2.0.2</td>
+<td>Direct upgrade possible: patch set 11.2.0.2.3 (PSU 3) or later must be applied</td>
+</tr>
+</tbody>
+</table>
+<h3 id="2-Pre-upgrade-tasks"><a href="#2-Pre-upgrade-tasks" class="headerlink" title="2. Pre-upgrade tasks"></a>2. Pre-upgrade tasks</h3><p>Verify node readiness by running pre-upgrade check script under the source code directory:</p>
+<figure class="highlight bash hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">[grid@node1:/worktmp/grid]$ ./runcluvfy.sh stage -pre crsinst -upgrade -rolling \</span><br><span class="line">-src_crshome /u01/app/11gr2/grid -dest_crshome /u02/app/12.1.0/grid \</span><br><span class="line">-dest_version 12.1.0.2.0 -fixup -verbose</span><br></pre></td></tr></table></figure>
+<p>Fix violations until the verify script pass. </p>
+<h3 id="3-Performing-rolling-upgrade-GI-by-response-file"><a href="#3-Performing-rolling-upgrade-GI-by-response-file" class="headerlink" title="3. Performing rolling upgrade GI by response file"></a>3. Performing rolling upgrade GI by response file</h3><p>Before perform upgrade, the GI environment parameters need to unset or set to new one, I have copied a old profile as .bash_profile_11g, and create a new profile .bash_profile, changed the new parameters direct to 12c. </p>
+<h4 id="3-1-Configure-the-upgrade-GI-response-file"><a href="#3-1-Configure-the-upgrade-GI-response-file" class="headerlink" title="3.1 Configure the upgrade GI response file"></a>3.1 Configure the upgrade GI response file</h4><figure class="highlight bash hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br></pre></td><td class="code"><pre><span class="line">[grid@node1:/home/grid]$ cat gi.rsp </span><br><span class="line">oracle.install.responseFileVersion=/oracle/install/rspfmt_crsinstall_response_schema_v12.1.0</span><br><span class="line">ORACLE_HOSTNAME=node1.</span><br><span class="line">INVENTORY_LOCATION=/u02/app/oraInventory</span><br><span class="line">SELECTED_LANGUAGES=en</span><br><span class="line">oracle.install.option=UPGRADE</span><br><span class="line">ORACLE_BASE=/u02/app/12.1.0</span><br><span class="line">ORACLE_HOME=/u02/app/grid/12.1.0</span><br><span class="line">oracle.install.asm.OSDBA=asmdba</span><br><span class="line">oracle.install.asm.OSOPER=</span><br><span class="line">oracle.install.asm.OSASM=asmadmin</span><br><span class="line">oracle.install.crs.config.gpnp.scanName=</span><br><span class="line">oracle.install.crs.config.gpnp.scanPort=  </span><br><span class="line">oracle.install.crs.config.ClusterType=STANDARD</span><br><span class="line">oracle.install.crs.config.clusterName=racdb</span><br><span class="line">oracle.install.crs.config.gpnp.configureGNS=<span class="hljs-literal">false</span></span><br><span class="line">oracle.install.crs.config.autoConfigureClusterNodeVIP=<span class="hljs-literal">true</span></span><br><span class="line">oracle.install.crs.config.gpnp.gnsOption=CREATE_NEW_GNS</span><br><span class="line">oracle.install.crs.config.gpnp.gnsClientDataFile=</span><br><span class="line">oracle.install.crs.config.gpnp.gnsSubDomain=</span><br><span class="line">oracle.install.crs.config.gpnp.gnsVIPAddress=</span><br><span class="line">oracle.install.crs.config.clusterNodes=node1:,node2:</span><br><span class="line">oracle.install.crs.config.networkInterfaceList=</span><br><span class="line">oracle.install.crs.config.storageOption=LOCAL_ASM_STORAGE</span><br><span class="line">oracle.install.crs.config.sharedFileSystemStorage.votingDiskLocations=</span><br><span class="line">oracle.install.crs.config.sharedFileSystemStorage.votingDiskRedundancy=NORMAL</span><br><span class="line">oracle.install.crs.config.sharedFileSystemStorage.ocrLocations=</span><br><span class="line">oracle.install.crs.config.sharedFileSystemStorage.ocrRedundancy=NORMAL               	</span><br><span class="line">oracle.install.crs.config.useIPMI=<span class="hljs-literal">false</span></span><br><span class="line">oracle.install.crs.config.ipmi.bmcUsername=</span><br><span class="line">oracle.install.crs.config.ipmi.bmcPassword=</span><br><span class="line">oracle.install.asm.SYSASMPassword=</span><br><span class="line">oracle.install.asm.diskGroup.name=CRS</span><br><span class="line">oracle.install.asm.diskGroup.redundancy=</span><br><span class="line">oracle.install.asm.diskGroup.AUSize=1</span><br><span class="line">oracle.install.asm.diskGroup.disks=</span><br><span class="line">oracle.install.asm.diskGroup.diskDiscoveryString=</span><br><span class="line">oracle.install.asm.monitorPassword=</span><br><span class="line">oracle.install.asm.ClientDataFile=</span><br><span class="line">oracle.install.crs.config.ignoreDownNodes=<span class="hljs-literal">false</span>		<span class="hljs-comment">#if force upgrade enable, turn this to true</span></span><br><span class="line">oracle.install.config.managementOption=NONE</span><br><span class="line">oracle.install.config.omsHost=</span><br><span class="line">oracle.install.config.omsPort=0</span><br><span class="line">oracle.install.config.emAdminUser=</span><br><span class="line">oracle.install.config.emAdminPassword=</span><br></pre></td></tr></table></figure>
+<h4 id="3-2-Execute-the-runInstaller-to-upgrade-the-GI"><a href="#3-2-Execute-the-runInstaller-to-upgrade-the-GI" class="headerlink" title="3.2 Execute the runInstaller to upgrade the GI"></a>3.2 Execute the runInstaller to upgrade the GI</h4><p>GI tools or commands cannot be run until the post root script is executed.<br><figure class="highlight bash hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br></pre></td><td class="code"><pre><span class="line">[grid@node1:/worktmp/grid]$ ./runInstaller -ignorePrereq -silent -force -responseFile ~/gi.rsp </span><br><span class="line">As a root user, execute the following script(s):</span><br><span class="line">	1. /u02/app/grid/12.1.0/rootupgrade.sh</span><br><span class="line"></span><br><span class="line">Execute /u02/app/grid/12.1.0/rootupgrade.sh on the following nodes: </span><br><span class="line">[node1, node2]</span><br><span class="line"></span><br><span class="line">Run the script on the <span class="hljs-built_in">local</span> node first. After successful completion, you can start the script <span class="hljs-keyword">in</span> parallel on all other nodes, </span><br><span class="line">except a node you designate as the last node. When all the nodes except the last node are <span class="hljs-keyword">done</span> successfully, </span><br><span class="line">run the script on the last node.</span><br><span class="line"></span><br><span class="line">Successfully Setup Software.</span><br><span class="line">As install user, execute the following script to complete the configuration.</span><br><span class="line">	1. /u02/app/grid/12.1.0/cfgtoollogs/configToolAllCommands RESPONSE_FILE=&lt;response_file&gt;</span><br><span class="line"></span><br><span class="line"> 	Note:</span><br><span class="line">	1. This script must be run on the same host from <span class="hljs-built_in">where</span> installer was run. </span><br><span class="line">	2. This script needs a small password properties file <span class="hljs-keyword">for</span> configuration assistants that require passwords (refer to install guide documentation).</span><br></pre></td></tr></table></figure></p>
+<h4 id="3-3-Execute-the-post-script"><a href="#3-3-Execute-the-post-script" class="headerlink" title="3.3 Execute the post-script"></a>3.3 Execute the post-script</h4><p>During the post script execution, the database services still remain online, but only one node can serve as normal, another node is out of service at that time. The details will show in the output logs. </p>
+<figure class="highlight bash hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line">[root@node1 ~]<span class="hljs-comment"># /u02/app/grid/12.1.0/rootupgrade.sh</span></span><br><span class="line">[root@node2 ~]<span class="hljs-comment"># /u02/app/grid/12.1.0/rootupgrade.sh</span></span><br><span class="line"><span class="hljs-comment">#after execute the script on node1, the activeversion is 11.2, </span></span><br><span class="line"><span class="hljs-comment">#but the softwareversion is 12.1 now</span></span><br><span class="line">[grid@node1:/home/grid]$ crsctl query crs softwareversion</span><br><span class="line">Oracle Clusterware version on node [node1] is [12.1.0.2.0]</span><br><span class="line">[grid@node1:/home/grid]$ crsctl query crs activeversion</span><br><span class="line">Oracle Clusterware active version on the cluster is [11.2.0.4.0]</span><br></pre></td></tr></table></figure>
+<p>You can find “2016/04/19 20:07:19 CLSRSC-482: Running command: ‘/u02/app/grid/12.1.0/bin/crsctl set crs activeversion’” in log file at last node to specify the script will set the activeversion in the last node. </p>
+<figure class="highlight bash hljs"><figcaption><span>[when last node root script finished]</span></figcaption><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">[grid@node2:/home/grid]$ crsctl query crs softwareversion</span><br><span class="line">Oracle Clusterware version on node [node2] is [12.1.0.2.0]</span><br><span class="line">[grid@node2:/home/grid]$ crsctl query crs activeversion</span><br><span class="line">Oracle Clusterware active version on the cluster is [12.1.0.2.0]</span><br></pre></td></tr></table></figure>
+<p>Following script is executed by GRID user, only in the upgrade node:</p>
+<figure class="highlight bash hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">[grid@node1:/home/grid]$ <span class="hljs-built_in">cd</span> <span class="hljs-variable">$ORACLE_HOME</span>/cfgtoollogs </span><br><span class="line">[grid@node1:/u02/app/grid/12.1.0/cfgtoollogs]$ touch cfgrsp.properties </span><br><span class="line">[grid@node1:/u02/app/grid/12.1.0/cfgtoollogs]$ vi cfgrsp.properties </span><br><span class="line">[grid@node1:/u02/app/grid/12.1.0/cfgtoollogs]$ chmod 600 cfgrsp.properties </span><br><span class="line">[grid@node1:/u02/app/grid/12.1.0/cfgtoollogs]$ ./configToolAllCommands RESPONSE_FILE=./cfgrsp.properties</span><br></pre></td></tr></table></figure>
+<p>The GI status after upgrade:</p>
+<figure class="highlight bash hljs"><figcaption><span>[the GI status after upgrade]</span></figcaption><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br></pre></td><td class="code"><pre><span class="line">[grid@node1:/home/grid]$ crsctl <span class="hljs-built_in">stat</span> res -t</span><br><span class="line">--------------------------------------------------------------------------------</span><br><span class="line">Name           Target  State        Server                   State details       </span><br><span class="line">--------------------------------------------------------------------------------</span><br><span class="line">Local Resources</span><br><span class="line">--------------------------------------------------------------------------------</span><br><span class="line">ora.CRS.dg</span><br><span class="line">               ONLINE  ONLINE       node1                    STABLE</span><br><span class="line">               ONLINE  ONLINE       node2                    STABLE</span><br><span class="line">ora.DATA.dg</span><br><span class="line">               ONLINE  ONLINE       node1                    STABLE</span><br><span class="line">               ONLINE  ONLINE       node2                    STABLE</span><br><span class="line">ora.FRA.dg</span><br><span class="line">               ONLINE  ONLINE       node1                    STABLE</span><br><span class="line">               ONLINE  ONLINE       node2                    STABLE</span><br><span class="line">ora.LISTENER.lsnr</span><br><span class="line">               ONLINE  ONLINE       node1                    STABLE</span><br><span class="line">               ONLINE  ONLINE       node2                    STABLE</span><br><span class="line">ora.asm</span><br><span class="line">               ONLINE  ONLINE       node1                    Started,STABLE</span><br><span class="line">               ONLINE  ONLINE       node2                    Started,STABLE</span><br><span class="line">ora.net1.network</span><br><span class="line">               ONLINE  ONLINE       node1                    STABLE</span><br><span class="line">               ONLINE  ONLINE       node2                    STABLE</span><br><span class="line">ora.ons</span><br><span class="line">               ONLINE  ONLINE       node1                    STABLE</span><br><span class="line">               ONLINE  ONLINE       node2                    STABLE</span><br><span class="line">--------------------------------------------------------------------------------</span><br><span class="line">Cluster Resources</span><br><span class="line">--------------------------------------------------------------------------------</span><br><span class="line">ora.LISTENER_SCAN1.lsnr</span><br><span class="line">      1        ONLINE  ONLINE       node2                    STABLE</span><br><span class="line">ora.LISTENER_SCAN2.lsnr</span><br><span class="line">      1        ONLINE  ONLINE       node1                    STABLE</span><br><span class="line">ora.LISTENER_SCAN3.lsnr</span><br><span class="line">      1        ONLINE  ONLINE       node1                    STABLE</span><br><span class="line">ora.MGMTLSNR</span><br><span class="line">      1        ONLINE  ONLINE       node1                    169.254.2.91 10.10.1</span><br><span class="line">                                                             0.101,STABLE</span><br><span class="line">ora.cvu</span><br><span class="line">      1        ONLINE  ONLINE       node2                    STABLE</span><br><span class="line">ora.mgmtdb</span><br><span class="line">      1        ONLINE  ONLINE       node1                    Open,STABLE</span><br><span class="line">ora.node1.vip</span><br><span class="line">      1        ONLINE  ONLINE       node1                    STABLE</span><br><span class="line">ora.node2.vip</span><br><span class="line">      1        ONLINE  ONLINE       node2                    STABLE</span><br><span class="line">ora.oc4j</span><br><span class="line">      1        ONLINE  ONLINE       node2                    STABLE</span><br><span class="line">ora.racdb.db</span><br><span class="line">      1        ONLINE  ONLINE       node1                    Open,STABLE</span><br><span class="line">      2        ONLINE  ONLINE       node2                    Open,STABLE</span><br><span class="line">ora.scan1.vip</span><br><span class="line">      1        ONLINE  ONLINE       node2                    STABLE</span><br><span class="line">ora.scan2.vip</span><br><span class="line">      1        ONLINE  ONLINE       node1                    STABLE</span><br><span class="line">ora.scan3.vip</span><br><span class="line">      1        ONLINE  ONLINE       node1                    STABLE</span><br><span class="line">--------------------------------------------------------------------------------</span><br></pre></td></tr></table></figure>
+<p>The ASM diskgroup status:</p>
+<figure class="highlight sql hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><span class="line">SQL&gt; col name for a10</span><br><span class="line">col COMPATIBILITY for a15</span><br><span class="line">col DATABASE_COMPATIBILITY for a15</span><br><span class="line"><span class="hljs-keyword">select</span> <span class="hljs-keyword">name</span>,<span class="hljs-keyword">type</span>,state,total_mb,free_mb,<span class="hljs-keyword">COMPATIBILITY</span>, DATABASE_COMPATIBILITY <span class="hljs-keyword">from</span> gv$asm_diskgroup;</span><br><span class="line"></span><br><span class="line">NAME	   TYPE   STATE 	TOTAL_MB    FREE_MB COMPATIBILITY   DATABASE_COMPAT</span><br><span class="line"><span class="hljs-comment">---------- ------ ----------- ---------- ---------- --------------- ---------------</span></span><br><span class="line">FRA	   EXTERN MOUNTED	   20480      20332 11.2.0.0.0	    10.1.0.0.0</span><br><span class="line">DATA	   EXTERN MOUNTED	   30720      28756 11.2.0.0.0	    10.1.0.0.0</span><br><span class="line">CRS	   NORMAL MOUNTED	   24576      15430 11.2.0.0.0	    10.1.0.0.0</span><br><span class="line">FRA	   EXTERN MOUNTED	   20480      20332 11.2.0.0.0	    10.1.0.0.0</span><br><span class="line">DATA	   EXTERN MOUNTED	   30720      28756 11.2.0.0.0	    10.1.0.0.0</span><br><span class="line">CRS	   NORMAL MOUNTED	   24576      15430 11.2.0.0.0	    10.1.0.0.0</span><br></pre></td></tr></table></figure>
+<h3 id="4-Upgrade-GI-force-when-some-nodes-were-inactive"><a href="#4-Upgrade-GI-force-when-some-nodes-were-inactive" class="headerlink" title="4. Upgrade GI force when some nodes were inactive"></a>4. Upgrade GI force when some nodes were inactive</h3><p>When some of the nodes in the cluster are inaccessible, perform a forced upgrade is available. Execute <code>rootupgrade</code> script by root user with force option. </p>
+<figure class="highlight bash hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="hljs-variable">$GRID_HOME</span>/rootupgrade -force</span><br></pre></td></tr></table></figure>
+<p>When the inaccessible nodes become active after a forced upgrade, execute the following command in the first node to let the inaccessible node join the cluster. </p>
+<figure class="highlight bash hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="hljs-variable">$GRID_HOME</span>/crs/install/rootcrs.pl -join -existNode node1 upgrade_node node2</span><br></pre></td></tr></table></figure>
+<h3 id="5-Performing-upgrade-RDBMS"><a href="#5-Performing-upgrade-RDBMS" class="headerlink" title="5. Performing upgrade RDBMS"></a>5. Performing upgrade RDBMS</h3><p>Although RDBMS can upgrade directly, but it’s recommended install a new RDBMS binary code and then perform a upgrade command. </p>
+<h4 id="5-1-RDBMS-software-installation"><a href="#5-1-RDBMS-software-installation" class="headerlink" title="5.1 RDBMS software installation"></a>5.1 RDBMS software installation</h4><p>RDBMS installation response file : </p>
+<figure class="highlight plain hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br></pre></td><td class="code"><pre><span class="line">[oracle@node1.:/home/oracle]$ cat db.rsp |grep -v ^# |grep -v ^$</span><br><span class="line">oracle.install.responseFileVersion=/oracle/install/rspfmt_dbinstall_response_schema_v12.1.0</span><br><span class="line">oracle.install.option=INSTALL_DB_SWONLY</span><br><span class="line">ORACLE_HOSTNAME=node1.</span><br><span class="line">UNIX_GROUP_NAME=oinstall</span><br><span class="line">INVENTORY_LOCATION=/u01/app/oraInventory</span><br><span class="line">SELECTED_LANGUAGES=en</span><br><span class="line">ORACLE_HOME=/u02/app/oracle/product/12.1.0/db1</span><br><span class="line">ORACLE_BASE=/u02/app/oracle</span><br><span class="line">oracle.install.db.InstallEdition=EE</span><br><span class="line">oracle.install.db.DBA_GROUP=dba</span><br><span class="line">oracle.install.db.OPER_GROUP=</span><br><span class="line">oracle.install.db.BACKUPDBA_GROUP=dba</span><br><span class="line">oracle.install.db.DGDBA_GROUP=dba</span><br><span class="line">oracle.install.db.KMDBA_GROUP=dba</span><br><span class="line">oracle.install.db.rac.configurationType=</span><br><span class="line">oracle.install.db.CLUSTER_NODES=node1,node2</span><br><span class="line">oracle.install.db.isRACOneInstall=false</span><br><span class="line">oracle.install.db.racOneServiceName=</span><br><span class="line">oracle.install.db.rac.serverpoolName=</span><br><span class="line">oracle.install.db.rac.serverpoolCardinality=0</span><br><span class="line">oracle.install.db.config.starterdb.type=GENERAL_PURPOSE</span><br><span class="line">oracle.install.db.config.starterdb.globalDBName=</span><br><span class="line">oracle.install.db.config.starterdb.SID=</span><br><span class="line">oracle.install.db.ConfigureAsContainerDB=false</span><br><span class="line">oracle.install.db.config.PDBName=</span><br><span class="line">oracle.install.db.config.starterdb.characterSet=</span><br><span class="line">oracle.install.db.config.starterdb.memoryOption=false</span><br><span class="line">oracle.install.db.config.starterdb.memoryLimit=</span><br><span class="line">oracle.install.db.config.starterdb.installExampleSchemas=false</span><br><span class="line">oracle.install.db.config.starterdb.password.ALL=</span><br><span class="line">oracle.install.db.config.starterdb.password.SYS=</span><br><span class="line">oracle.install.db.config.starterdb.password.SYSTEM=</span><br><span class="line">oracle.install.db.config.starterdb.password.DBSNMP=</span><br><span class="line">oracle.install.db.config.starterdb.password.PDBADMIN=</span><br><span class="line">oracle.install.db.config.starterdb.managementOption=DEFAULT</span><br><span class="line">oracle.install.db.config.starterdb.omsHost=</span><br><span class="line">oracle.install.db.config.starterdb.omsPort=0</span><br><span class="line">oracle.install.db.config.starterdb.emAdminUser=</span><br><span class="line">oracle.install.db.config.starterdb.emAdminPassword=</span><br><span class="line">oracle.install.db.config.starterdb.enableRecovery=false</span><br><span class="line">oracle.install.db.config.starterdb.storageType=</span><br><span class="line">oracle.install.db.config.starterdb.fileSystemStorage.dataLocation=</span><br><span class="line">oracle.install.db.config.starterdb.fileSystemStorage.recoveryLocation=</span><br><span class="line">oracle.install.db.config.asm.diskGroup=</span><br><span class="line">oracle.install.db.config.asm.ASMSNMPPassword=</span><br><span class="line">MYORACLESUPPORT_USERNAME=</span><br><span class="line">MYORACLESUPPORT_PASSWORD=</span><br><span class="line">SECURITY_UPDATES_VIA_MYORACLESUPPORT=false</span><br><span class="line">DECLINE_SECURITY_UPDATES=true</span><br><span class="line">PROXY_HOST=</span><br><span class="line">PROXY_PORT=</span><br><span class="line">PROXY_USER=</span><br><span class="line">PROXY_PWD=</span><br><span class="line">COLLECTOR_SUPPORTHUB_URL=</span><br></pre></td></tr></table></figure>
+<p>Install RDBMS with above response file in silent mode: </p>
+<figure class="highlight plain hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line">[oracle@node1:/worktmp/database]$ ./runInstaller -silent -responseFile /home/oracle/db.rsp -ignorePrereq -ignoreSysPreReqs -ignoreDiskWarning</span><br><span class="line">The installation of Oracle Database 12c was successful.</span><br><span class="line">Please check &apos;/u01/app/oraInventory/logs/silentInstall2016-04-20_08-58-39PM.log&apos; for more details.</span><br><span class="line">As a root user, execute the following script(s):</span><br><span class="line">	1. /u02/app/oracle/product/12.1.0/db1/root.sh</span><br><span class="line">Execute /u02/app/oracle/product/12.1.0/db1/root.sh on the following nodes: </span><br><span class="line">[node1, node2]</span><br></pre></td></tr></table></figure>
+<p>Execute root script as root user. </p>
+<figure class="highlight plain hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">[root@node1 ~]# /u02/app/oracle/product/12.1.0/db1/root.sh</span><br><span class="line">[root@node2 ~]# /u02/app/oracle/product/12.1.0/db1/root.sh</span><br></pre></td></tr></table></figure>
+<h4 id="5-2-Pre-upgrade-tasks"><a href="#5-2-Pre-upgrade-tasks" class="headerlink" title="5.2 Pre-upgrade tasks"></a>5.2 Pre-upgrade tasks</h4><figure class="highlight bash hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line">SQL&gt; @/u02/app/oracle/product/12.1.0/db1/rdbms/admin/preupgrd.sql </span><br><span class="line">ACTIONS REQUIRED:</span><br><span class="line">1. Review results of the pre-upgrade checks:</span><br><span class="line"> /u01/app/oracle/cfgtoollogs/racdb/preupgrade/preupgrade.log</span><br><span class="line">2. Execute <span class="hljs-keyword">in</span> the SOURCE environment BEFORE upgrade:</span><br><span class="line"> /u01/app/oracle/cfgtoollogs/racdb/preupgrade/preupgrade_fixups.sql</span><br><span class="line">3. Execute <span class="hljs-keyword">in</span> the NEW environment AFTER upgrade:</span><br><span class="line"> /u01/app/oracle/cfgtoollogs/racdb/preupgrade/postupgrade_fixups.sql</span><br></pre></td></tr></table></figure>
+<p>Fix warnings and errors in the preupgrade.log, then execute the preupgrade_fixups.sql </p>
+<figure class="highlight bash hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">SQL&gt; @/u01/app/oracle/cfgtoollogs/racdb/preupgrade/preupgrade_fixups.sql</span><br></pre></td></tr></table></figure>
+<h4 id="5-3-Performing-upgrade-database"><a href="#5-3-Performing-upgrade-database" class="headerlink" title="5.3 Performing upgrade database"></a>5.3 Performing upgrade database</h4><p>Before perform upgrade, it’s important to copy the database password file to new $ORACLE_HOME/dbs. </p>
+<figure class="highlight bash hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">[oracle@node1:/home/oracle]$ cp -p <span class="hljs-variable">$ORACLE_HOME</span>/dbs/orapwracdb1 /u02/app/oracle/product/12.1.0/db1/dbs/</span><br><span class="line">[oracle@node2:/home/oracle]$ cp -p <span class="hljs-variable">$ORACLE_HOME</span>/dbs/orapwracdb2 /u02/app/oracle/product/12.1.0/db1/dbs/</span><br></pre></td></tr></table></figure>
+<p>Disable archival is also advisable, for avoiding excessive archive logs generation during upgrade. </p>
+<figure class="highlight plain hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">[oracle@node1:/home/oracle]$ srvctl stop database -d racdb -o immediate</span><br><span class="line">[oracle@node1:/home/oracle]$ sqlplus &quot;/as sysdba&quot;</span><br><span class="line">SQL&gt; startup mount</span><br><span class="line">SQL&gt; alter database noarchivelog;</span><br><span class="line">SQL&gt; shutdown immediate</span><br></pre></td></tr></table></figure>
+<p>Create a legacy init file to local from spfile, modify <code>cluster_database</code> to false, do some necessary modify. I modified the ORACLE_BASE to /u02, the adump to /u02, created the adump directory, and deleted the <code>remote_listener</code>.</p>
+<figure class="highlight plain hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">SQL&gt; create pfile=&apos;/home/oracle/init.ora&apos; from spfile;</span><br></pre></td></tr></table></figure>
+<p>Now, SET the new ORACLE variables to 12c, and add the following entry to /etc/oratab in both nodes:</p>
+<figure class="highlight plain hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line">[oracle@node1:/home/oracle]$ . .bash_profile</span><br><span class="line">[oracle@node1:/home/oracle]$ echo $ORACLE_HOME </span><br><span class="line">/u02/app/oracle/product/12.1.0/db1</span><br><span class="line">[oracle@node1:/home/oracle]$ which sqlplus</span><br><span class="line">/u02/app/oracle/product/12.1.0/db1/bin/sqlplus</span><br><span class="line">[root@node2 ~]# tail -2 /etc/oratab </span><br><span class="line">#racdb:/u01/app/oracle/product/11gr2:N		# line added by Agent</span><br><span class="line">racdb:/u02/app/oracle/product/12.1.0/db1:N</span><br></pre></td></tr></table></figure>
+<p>Exectue startup upgrade now: </p>
+<figure class="highlight plain hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">[oracle@node1:/home/oracle]$ sqlplus &quot;/as sysdba&quot;</span><br><span class="line">SQL&gt; startup upgrade pfile=&apos;/home/oracle/init.ora&apos;;</span><br></pre></td></tr></table></figure>
+<p>But when I upgrade by manually, the ASM diskgroup cannot be mounted as encounterred “permission denied” errors. </p>
+<figure class="highlight bash hljs"><figcaption><span>[Fix permission denied error of ASM disk]</span></figcaption><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line">[grid@node1:/home/grid]$ <span class="hljs-built_in">cd</span> <span class="hljs-variable">$ORACLE_HOME</span>/bin</span><br><span class="line">[grid@node1:/u02/app/grid/12.1.0/bin]$ ll /u01/app/oracle/product/11gr2/bin/oracle</span><br><span class="line">-rwsr<span class="hljs-_">-s</span>--x 1 oracle asmadmin 239626641 Apr 20 17:15 /u01/app/oracle/product/11gr2/bin/oracle</span><br><span class="line">[grid@node1:/u02/app/grid/12.1.0/bin]$ ll /u02/app/oracle/product/12.1.0/db1/bin/oracle</span><br><span class="line">-rwsr<span class="hljs-_">-s</span>--x 1 oracle oinstall 323762228 Apr 20 21:06 /u02/app/oracle/product/12.1.0/db1/bin/oracle</span><br><span class="line"><span class="hljs-comment">#change the group of 12c's bin/oracle to asmadmin in both nodes</span></span><br><span class="line">[grid@node1.:/u02/app/grid/12.1.0/bin]$ ./setasmgidwrap o=/u02/app/oracle/product/12.1.0/db1/bin/oracle</span><br><span class="line">[grid@node2.:/home/grid]$ <span class="hljs-built_in">cd</span> <span class="hljs-variable">$ORACLE_HOME</span>/bin</span><br><span class="line">[grid@node2.:/u02/app/grid/12.1.0/bin]$ ./setasmgidwrap o=/u02/app/oracle/product/12.1.0/db1/bin/oracle</span><br></pre></td></tr></table></figure>
+<p>After changed the oracle binary attributes, the upgrade works now: </p>
+<figure class="highlight hljs"><figcaption><span>[Execute upgrade again]</span></figcaption><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line">SQL&gt; startup upgrade pfile='/home/oracle/init.ora';</span><br><span class="line">ORACLE instance started.</span><br><span class="line">Total System Global Area 2483027968 bytes</span><br><span class="line">Fixed Size		    2927432 bytes</span><br><span class="line">Variable Size		  721421496 bytes</span><br><span class="line">Database Buffers	 1744830464 bytes</span><br><span class="line">Redo Buffers		   13848576 bytes</span><br><span class="line">Database mounted.</span><br><span class="line">Database opened.</span><br><span class="line">SQL&gt;</span><br></pre></td></tr></table></figure>
+<p>Execute upgrade utility:</p>
+<figure class="highlight bash hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">[oracle@node1:/home/oracle]$ <span class="hljs-built_in">cd</span> <span class="hljs-variable">$ORACLE_HOME</span>/rdbms/admin</span><br><span class="line">[oracle@node1:/u02/app/oracle/product/12.1.0/db1/rdbms/admin]$ </span><br><span class="line">[oracle@node1:/u02/app/oracle/product/12.1.0/db1/rdbms/admin]$ <span class="hljs-variable">$ORACLE_HOME</span>/perl/bin/perl catctl.pl -n 4 -l /tmp catupgrd.sql</span><br></pre></td></tr></table></figure>
+<h4 id="5-4-Post-upgrade-tasks"><a href="#5-4-Post-upgrade-tasks" class="headerlink" title="5.4 Post-upgrade tasks"></a>5.4 Post-upgrade tasks</h4><p>Database will automatically shutdown once the previous command successfully completes. Then I need to perform some tasks to enable CLUSTER_DATABASE, enable ARCHIVE etc.: </p>
+<figure class="highlight plain hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line">#modify cluster_database to true, uncommet the remote_listener in the init file</span><br><span class="line">SQL&gt; startup mount pfile=&apos;/home/oracle/init.ora&apos;;</span><br><span class="line">SQL&gt; ALTER DATABASE ARCHIVELOG;</span><br><span class="line">SQL&gt; SHUTDOWN IMMEDIATE;</span><br><span class="line">SQL&gt; STARTUP pfile=&apos;/home/oracle/init.ora&apos;;</span><br><span class="line">SQL&gt; create spfile=&apos;+DATA/RACDB/spfileracdb.ora&apos; from pfile=&apos;/home/oracle/init.ora&apos;;</span><br><span class="line">#add following entries to $ORACLE_HOME/dbs/initracdb1(2).ora to both nodes</span><br><span class="line">SPFILE=&apos;+DATA/racdb/spfileracdb.ora&apos;</span><br></pre></td></tr></table></figure>
+<p>Executing compile scripts:</p>
+<figure class="highlight plain hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line">SQL&gt; execute dbms_stats.gather_fixed_objects_stats;</span><br><span class="line">SQL&gt; @?/rdbms/admin/utlrp.sql 		--recomiples all invalid objects on the database</span><br><span class="line">SQL&gt; @?/rdbms/admin/utluiobj.sql	--verfies the validity of all packages/classes on the database</span><br><span class="line">SQL&gt; @?/rdbms/admin/catuppst.sql</span><br><span class="line">SQL&gt; @?/rdbms/admin/utlu121s.sql	--displays database upgrade summary</span><br><span class="line">SQL&gt; SHUTDOWN IMMEDIATE;</span><br></pre></td></tr></table></figure>
+<p>Upgrade the database version in OCR by using the following command:</p>
+<figure class="highlight plain hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">[oracle@node1:/home/oracle]$ srvctl upgrade database -d racdb -o /u02/app/oracle/product/12.1.0/db1</span><br><span class="line">[oracle@node1:/home/oracle]$ srvctl start database -d racdb -o open</span><br></pre></td></tr></table></figure>
+<p>Run postupgrade_fixups.sql script</p>
+<figure class="highlight plain hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">SQL&gt; @/u01/app/oracle/cfgtoollogs/racdb/preupgrade/postupgrade_fixups.sql</span><br></pre></td></tr></table></figure>
+<p>Adjust the compatibility of ASM diskgroup’s attribute “compatible.asm” and “compatible.rdbms” to 12.1 if necessary, for example, convert non-CDB to PDB, it’s necessary to update these values to 12.1. For the convenience of downgrade, this step will be omitted.</p>
+<figure class="highlight sql hljs"><figcaption><span>[Executed under with GRID user] </span></figcaption><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"><span class="hljs-keyword">ALTER</span> <span class="hljs-keyword">DISKGROUP</span> <span class="hljs-keyword">data</span> <span class="hljs-keyword">SET</span> <span class="hljs-keyword">ATTRIBUTE</span> <span class="hljs-string">'compatible.asm'</span> = <span class="hljs-string">'12.1'</span>;</span><br><span class="line"><span class="hljs-keyword">ALTER</span> <span class="hljs-keyword">DISKGROUP</span> <span class="hljs-keyword">data</span> <span class="hljs-keyword">SET</span> <span class="hljs-keyword">ATTRIBUTE</span> <span class="hljs-string">'compatible.rdbms'</span> = <span class="hljs-string">'12.1'</span>,</span><br></pre></td></tr></table></figure>
+<p>Upgrade the TIMEZONE file, this can refer to previous post <a href="/upgrade-single-database-to-12c.html">Upgrade Single Database to 12c</a>.   </p>
+<p>Confirm the tnsnames file and  the listener file in the new Oracle 12c home are correct, if necessary, copy them from 11g oracle home. </p>
+<h4 id="5-5-Detach-11g-grid-and-rdbms-home"><a href="#5-5-Detach-11g-grid-and-rdbms-home" class="headerlink" title="5.5 Detach 11g grid and rdbms home"></a>5.5 Detach 11g grid and rdbms home</h4><p>This step is optional, or if the new 12c is stable for a long time, you need to deinstall the 11G software to save space, you can detach the relative home, and then deinstall them. </p>
+<ul>
+<li>Detach 11g grid home in node1 and node2 </li>
+</ul>
+<figure class="highlight bash hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">[grid@node1:/home/grid]$ /u01/app/11gr2/grid/oui/bin/runInstaller -silent \</span><br><span class="line">-detachHome -invPtrLoc /etc/oraInst.loc ORACLE_HOME=<span class="hljs-string">"/u01/app/11gr2/grid"</span> \</span><br><span class="line">ORACLE_HOME_NAME=<span class="hljs-string">"Ora11g_gridinfrahome1"</span> CLUSTER_NODES=<span class="hljs-string">"&#123;node1,node2&#125;"</span> -<span class="hljs-built_in">local</span></span><br></pre></td></tr></table></figure>
+<ul>
+<li>Detach 11g rdbms home in node1 and node2 </li>
+</ul>
+<figure class="highlight plain hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">[oracle@node1:/home/oracle]$ /u01/app/oracle/product/11gr2/oui/bin/runInstaller \</span><br><span class="line">-silent -detachHome -invPtrLoc /etc/oraInst.loc \</span><br><span class="line">ORACLE_HOME=&quot;/u01/app/oracle/product/11gr2&quot; \</span><br><span class="line">ORACLE_HOME_NAME=&quot;OraDb11g_home1&quot; CLUSTER_NODES=&quot;&#123;node1,node2&#125;&quot; -local</span><br></pre></td></tr></table></figure>
+<ul>
+<li>Verify the detach result </li>
+</ul>
+<figure class="highlight plain hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">$GRID_HOME/OPatch/opatch lsinventory -oh $OLD_GRID_HOME</span><br><span class="line">$ORACLE_HOME/OPatch/opatch lsinventory -oh $OLD_ORACLE_HOME</span><br></pre></td></tr></table></figure>
+<h3 id="6-Downgrade-RDBMS"><a href="#6-Downgrade-RDBMS" class="headerlink" title="6. Downgrade RDBMS"></a>6. Downgrade RDBMS</h3><p>Disable the CLUSTER_DATABASE initialization parameter by editing the legacy init file, and stop the database as follows:</p>
+<figure class="highlight plain hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line">SQL&gt; create pfile=&apos;/home/oracle/init.ora&apos; from spfile;</span><br><span class="line">[oracle@node1:/home/oracle]$ srvctl stop database -d racdb</span><br><span class="line">#Modify init file to meet the downgrade requirements</span><br><span class="line">SQL&gt; startup downgrade pfile=&apos;/home/oracle/init.ora&apos;;</span><br><span class="line">SQL&gt; SPOOL /tmp/dbdowngrade.log</span><br><span class="line">SQL&gt; @?/rdbms/admin/catdwgrd.sql</span><br></pre></td></tr></table></figure>
+<p>The catdwgrd.sql script under the Oracle 12c /rdbms/admin home downgrades the 12c Database components to the previous release. If encounter any ORA issues during the course of downgrade, fix the issue and rerun the downgrade script once again.   </p>
+<p>After complete this script, shutdown the database, and set the ORACLE variables to 11g’s:</p>
+<figure class="highlight plain hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line">SQL&gt; shutdown immediate</span><br><span class="line">[oracle@node1:/home/oracle]$. .bash_profile_11g</span><br><span class="line">[oracle@node1:/home/oracle]$ which sqlplus</span><br><span class="line">/u01/app/oracle/product/11gr2/bin/sqlplus</span><br><span class="line">#Startup in upgrade mode to reload the 11g components by running 11g ORACLE_HOME catrelod.sql</span><br><span class="line">SQL&gt; startup upgrade pfile=&apos;/home/oracle/init.ora&apos;</span><br><span class="line">SQL&gt; spool /tmp/dbdowngrade.log</span><br><span class="line">SQL&gt; @?/rdbms/admin/catrelod.sql</span><br></pre></td></tr></table></figure>
+<p>If you previously installed a recent version of the time zone file and used the DBMS_DST PL/SQL package to upgrade TIMESTAMP WITH TIME ZONE data to that version, then install the same version of the time zone file in the release to which you are downgrading. Or you will get the following errors. </p>
+<figure class="highlight plain hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">SELECT TO_NUMBER(&apos;MUST_BE_SAME_TIMEZONE_FILE_VERSION&apos;)</span><br><span class="line">ERROR at line 1:</span><br><span class="line">ORA-01722: invalid number</span><br></pre></td></tr></table></figure>
+<p>Try to copy the 12c timezone file to 11g, and re-run the catrelod.sql. </p>
+<figure class="highlight plain hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line">#confirm current tz file</span><br><span class="line">SQL&gt; select * from  V$TIMEZONE_FILE;</span><br><span class="line">#copy the 12c timezone file to 11g</span><br><span class="line">[oracle@node1:/home/oracle]$ cp /u02/app/oracle/product/12.1.0/db1/oracore/zoneinfo/timezone_18.dat \</span><br><span class="line">$ORACLE_HOME/oracore/zoneinfo/</span><br><span class="line">[oracle@node1:/home/oracle]$ cp /u02/app/oracle/product/12.1.0/db1/oracore/zoneinfo/timezlrg_18.dat \</span><br><span class="line">$ORACLE_HOME/oracore/zoneinfo/</span><br></pre></td></tr></table></figure>
+<p>Enable the CLUSTER_DATABASE by edit the init file, create a spfile from pfile, and then startup the database, recompile all invalid objects:</p>
+<figure class="highlight plain hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">#Edit init.ora file to enable CLUSTER_DATABASE=true</span><br><span class="line">SQL&gt; create spfile=&apos;+DATA/RACDB/spfileracdb.ora&apos; from pfile=&apos;/home/oracle/init.ora&apos;;</span><br><span class="line">SQL&gt; shutdown immediate</span><br><span class="line">SQL&gt; startup </span><br><span class="line">SQL&gt; @?/rdbms/admin/utlrp.sql</span><br></pre></td></tr></table></figure>
+<p>Downgrade the database version in OCR using srvctl in 12c oracle database home:</p>
+<figure class="highlight plain hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">[oracle@node1:/home/oracle]$ /u02/app/oracle/product/12.1.0/db1/bin/srvctl downgrade \</span><br><span class="line">database -d racdb -o /u01/app/oracle/product/11gr2 -t 11.2.0.4.0</span><br></pre></td></tr></table></figure>
+<p>Verify the downgrade result:</p>
+<figure class="highlight plain hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br></pre></td><td class="code"><pre><span class="line">[oracle@node1.oraclema.com:/home/oracle]$ srvctl config database -d racdb -a </span><br><span class="line">Database unique name: racdb</span><br><span class="line">Database name: racdb</span><br><span class="line">Oracle home: /u01/app/oracle/product/11gr2</span><br><span class="line">Oracle user: oracle</span><br><span class="line">Spfile: +DATA/RACDB/spfileracdb.ora</span><br><span class="line">Domain: </span><br><span class="line">Start options: open</span><br><span class="line">Stop options: immediate</span><br><span class="line">Database role: PRIMARY</span><br><span class="line">Management policy: AUTOMATIC</span><br><span class="line">Server pools: racdb</span><br><span class="line">Database instances: racdb1,racdb2</span><br><span class="line">Disk Groups: DATA</span><br><span class="line">Mount point paths: </span><br><span class="line">Services: </span><br><span class="line">Type: RAC</span><br><span class="line">Database is enabled</span><br><span class="line">Database is administrator managed</span><br><span class="line">#Verify the database components</span><br><span class="line">SQL&gt; set pagesize 9999</span><br><span class="line">set line 200</span><br><span class="line">col comp_name for a50</span><br><span class="line">col version for a15    </span><br><span class="line">col status for a10</span><br><span class="line">select comp_name,version,status from dba_registry;</span><br><span class="line">COMP_NAME					   VERSION	   STATUS</span><br><span class="line">-------------------------------------------------- --------------- ----------</span><br><span class="line">OWB						   11.2.0.4.0	   VALID</span><br><span class="line">Oracle Application Express			   3.2.1.00.12	   VALID</span><br><span class="line">Spatial 					   11.2.0.4.0	   VALID</span><br><span class="line">Oracle Multimedia				   11.2.0.4.0	   VALID</span><br><span class="line">Oracle XML Database				   11.2.0.4.0	   VALID</span><br><span class="line">Oracle Text					   11.2.0.4.0	   VALID</span><br><span class="line">Oracle Workspace Manager			   11.2.0.4.0	   VALID</span><br><span class="line">Oracle Database Catalog Views			   11.2.0.4.0	   VALID</span><br><span class="line">Oracle Database Packages and Types		   11.2.0.4.0	   VALID</span><br><span class="line">JServer JAVA Virtual Machine			   11.2.0.4.0	   VALID</span><br><span class="line">Oracle XDK					   11.2.0.4.0	   VALID</span><br><span class="line">Oracle Database Java Packages			   11.2.0.4.0	   VALID</span><br><span class="line">OLAP Analytic Workspace 			   11.2.0.4.0	   VALID</span><br><span class="line">Oracle OLAP API 				   11.2.0.4.0	   VALID</span><br><span class="line">Oracle Real Application Clusters		   11.2.0.4.0	   VALID</span><br></pre></td></tr></table></figure>
+<p>Shutdown the database, and startup by using srvctl tools in 11g oracle database home: </p>
+<figure class="highlight plain hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">SQL&gt; shutdown immediate</span><br><span class="line">[oracle@node1:/home/oracle]$ srvctl start database -d racdb -o open</span><br></pre></td></tr></table></figure>
+<h3 id="7-Downgrade-GI"><a href="#7-Downgrade-GI" class="headerlink" title="7. Downgrade GI"></a>7. Downgrade GI</h3><p>For downgrade 12c GI, run new 12c <code>$GI_HOME/crs/install/rootcrs.sh -downgrade</code> with root user at all nodes one by one, after all nodes successfully executing preceding command, back to the first node, run <code>$GI_HOME/crs/install/rootcrs.sh -downgrade -lastnode</code>.  The <code>-force</code> option can be used when a failed upgrade happened. Run this command from a directory that has write permissions for the Oracle Grid Infrastructure installation user.</p>
+<figure class="highlight bash hljs"><figcaption><span>[This process will downgrade the OCR and set to the previous release]</span></figcaption><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line"><span class="hljs-comment">#At node1</span></span><br><span class="line">[root@node1 ~]<span class="hljs-comment"># cd /home/grid</span></span><br><span class="line">[root@node1 ~]<span class="hljs-comment"># /u02/app/grid/12.1.0/crs/install/rootcrs.sh -downgrade</span></span><br><span class="line"><span class="hljs-comment">#At node2</span></span><br><span class="line">[root@node2 ~]<span class="hljs-comment"># cd /home/grid</span></span><br><span class="line">[root@node2 ~]<span class="hljs-comment"># /u02/app/grid/12.1.0/crs/install/rootcrs.sh -downgrade </span></span><br><span class="line"><span class="hljs-comment">#At node1</span></span><br><span class="line">[root@node1 ~]<span class="hljs-comment"># cd /home/grid</span></span><br><span class="line">[root@node1 ~]<span class="hljs-comment"># /u02/app/grid/12.1.0/crs/install/rootcrs.sh -downgrade -lastnode</span></span><br></pre></td></tr></table></figure>
+<p>Running the following script on the nodes where the preceding rootcrs.sh has run successfully, this script must be run as GI user, and from 12c oracle GI home:  </p>
+<figure class="highlight bash hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">[grid@node1:/home/grid]$ /u02/app/grid/12.1.0/oui/bin/runInstaller -nowait -waitforcompletion \</span><br><span class="line">-ignoreSysPrereqs -updateNodeList -silent CRS=<span class="hljs-literal">false</span> ORACLE_HOME=/u02/app/grid/12.1.0</span><br><span class="line">[grid@node2:/home/grid]$ /u02/app/grid/12.1.0/oui/bin/runInstaller -nowait -waitforcompletion \</span><br><span class="line">-ignoreSysPrereqs -updateNodeList -silent CRS=<span class="hljs-literal">false</span> ORACLE_HOME=/u02/app/grid/12.1.0</span><br></pre></td></tr></table></figure>
+<p>After successfully preceding commands, as the root user, bring up the previous release cluster stack using the following command on each node in the cluster:</p>
+<figure class="highlight plain hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">[root@node1 grid]# /u01/app/11gr2/grid/bin/crsctl start crs</span><br><span class="line">[root@node2 grid]# /u01/app/11gr2/grid/bin/crsctl start crs</span><br></pre></td></tr></table></figure>
+<p>####Below script can be used to delete the installation environment directly </p>
+<figure class="highlight bash hljs"><figcaption><span>[Please do not do this in production]</span></figcaption><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br></pre></td><td class="code"><pre><span class="line">rm -rf /etc/oraInst.loc /etc/oratab /etc/ohasd</span><br><span class="line">rm -rf /tmp/.oracle /var/tmp/.oracle</span><br><span class="line">rm -rf /etc/oracle /opt/ORCLfmap/</span><br><span class="line">rm -rf /etc/rc.d/init.d/ohasd</span><br><span class="line">rm -rf /var/lock/subsys/ohasd</span><br><span class="line">rm -rf /usr/<span class="hljs-built_in">local</span>/bin/coraenv</span><br><span class="line">rm -rf /usr/<span class="hljs-built_in">local</span>/bin/dbhome</span><br><span class="line">rm -rf /usr/<span class="hljs-built_in">local</span>/bin/oraenv</span><br><span class="line">rm -f /etc/init.d/init.cssd</span><br><span class="line">rm -f /etc/init.d/init.crs</span><br><span class="line">rm -f /etc/init.d/init.crsd</span><br><span class="line">rm -f /etc/init.d/init.evmd</span><br><span class="line">rm -rf /tmp/ora* /tmp/CVU* /tmp/Ora*</span><br><span class="line">rm -rf /u01/app/*</span><br><span class="line">rm -rf /u02/app/*</span><br><span class="line">rm -f /etc/init.d/init.ohasd</span><br><span class="line">dd <span class="hljs-keyword">if</span>=/dev/zero of=/dev/sdb bs=4096 count=1</span><br><span class="line">dd <span class="hljs-keyword">if</span>=/dev/zero of=/dev/sdc bs=4096 count=1</span><br><span class="line">dd <span class="hljs-keyword">if</span>=/dev/zero of=/dev/sdd bs=4096 count=1</span><br><span class="line">dd <span class="hljs-keyword">if</span>=/dev/zero of=/dev/sde bs=4096 count=1</span><br><span class="line">dd <span class="hljs-keyword">if</span>=/dev/zero of=/dev/sdf bs=4096 count=1</span><br><span class="line">chown -R grid:oinstall /u01 /u02</span><br><span class="line">chmod -R 775 /u01 /u02</span><br></pre></td></tr></table></figure>
+<p>Reference:<br><a href="https://docs.oracle.com/database/121/CWLIN/procstop.htm#CWLIN10001" target="_blank" rel="noopener">How to Upgrade to Oracle Grid Infrastructure 12c Release 1</a></p>
+<p><br><b>EOF</b></p>
+
+    
+    </div>
+    
+    <div class="columns is-variable is-1 is-multiline is-mobile">
+    
+        <span class="column is-narrow"><a class="tag is-light article-tag" href="/tags/upgrade-12c/">#upgrade, 12c</a></span>
+    
+    </div>
+    
+    
+    <div class="columns is-mobile is-multiline article-nav">
+        <span class="column is-12-mobile is-half-desktop  article-nav-prev">
+            
+            <a href="/oracle/ogg-rman-initial-load-sample.html">OGG RMAN Initial Load sample</a>
+            
+        </span>
+        <span class="column is-12-mobile is-half-desktop  article-nav-next">
+            
+            <a href="/linux/setup-dns-server-in-rhel6.html">setup DNS server in RHEL6</a>
+            
+        </span>
+    </div>
+    
+</article>
+
+
+
+
+    </div>
+</section>
+    <footer class="footer">
+    <div class="container">
+        <div class="columns content">
+            <div class="column is-narrow has-text-centered">
+                &copy; 2018 Fung Kong&nbsp;
+                Powered by <a href="http://hexo.io/" target="_blank">Hexo</a> & <a
+                        href="http://github.com/ppoffice/hexo-theme-minos">Minos</a>
+            </div>
+            <div class="column is-hidden-mobile"></div>
+
+            
+            
+        </div>
+    </div>
+</footer>
+    <script src="//cdnjs.cloudflare.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
+<script src="//cdnjs.cloudflare.com/ajax/libs/moment.js/2.22.2/moment-with-locales.min.js"></script>
+
+<!-- test if the browser is outdated -->
+<div id="outdated">
+    <h6>Your browser is out-of-date!</h6>
+    <p>Update your browser to view this website correctly. <a id="btnUpdateBrowser" href="http://outdatedbrowser.com/">Update my browser now </a></p>
+    <p class="last"><a href="#" id="btnCloseUpdateBrowser" title="Close">&times;</a></p>
+</div>
+<script src="//cdnjs.cloudflare.com/ajax/libs/outdated-browser/1.1.5/outdatedbrowser.min.js"></script>
+<script>
+    $(document).ready(function () {
+        // plugin function, place inside DOM ready function
+        outdatedBrowser({
+            bgColor: '#f25648',
+            color: '#ffffff',
+            lowerThan: 'flex'
+        })
+    });
+</script>
+
+<script>
+    window.FontAwesomeConfig = {
+        searchPseudoElements: true
+    }
+    moment.locale("en-AU");
+</script>
+
+
+    
+    
+    
+    
+    
+    
+
+    
+
+
+<script src="/js/script.js"></script>
+
+    
+    <div class="searchbox ins-search">
+    <div class="searchbox-mask"></div>
+    <div class="searchbox-container ins-search-container">
+        <div class="searchbox-input-wrapper">
+            <input type="text" class="searchbox-input ins-search-input" placeholder="Type something..." />
+            <span class="searchbox-close ins-close ins-selectable"><i class="fa fa-times-circle"></i></span>
+        </div>
+        <div class="searchbox-result-wrapper ins-section-wrapper">
+            <div class="ins-section-container"></div>
+        </div>
+    </div>
+</div>
+<script>
+    (function (window) {
+        var INSIGHT_CONFIG = {
+            TRANSLATION: {
+                POSTS: 'Posts',
+                PAGES: 'Pages',
+                CATEGORIES: 'Categories',
+                TAGS: 'Tags',
+                UNTITLED: '(Untitled)',
+            },
+            CONTENT_URL: '/content.json',
+        };
+        window.INSIGHT_CONFIG = INSIGHT_CONFIG;
+    })(window);
+</script>
+<script src="/js/insight.js"></script>
+    
+</body>
+</html>

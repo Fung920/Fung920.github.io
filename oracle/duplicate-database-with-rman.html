@@ -1,0 +1,386 @@
+<!DOCTYPE html>
+<html class="has-navbar-fixed-top">
+<head>
+    <meta charset="utf-8">
+<title>Duplicate Database With RMAN - My Wiki</title>
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+
+<link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/outdated-browser/1.1.5/outdatedbrowser.min.css">
+
+
+<meta name="description" content="duplicate database onto different machine by using rman,RMAN复制数据库">
+
+
+
+<meta name="keywords" content="duplicate, rman">
+
+
+
+
+
+
+
+<link rel="icon" href="/images/favicon.ico">
+
+
+<link rel="stylesheet" href="//fonts.googleapis.com/css?family=Ovo|Source+Code+Pro">
+<link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/bulma/0.6.2/css/bulma.min.css">
+
+
+
+<link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/highlight.js/9.12.0/styles/github.min.css">
+
+<link rel="stylesheet" href="/css/style.css">
+
+<script defer src="//use.fontawesome.com/releases/v5.0.8/js/all.js"></script>
+
+
+    
+    
+    
+    
+    
+    
+
+    
+
+
+</head>
+<body>
+    
+<nav class="navbar is-transparent is-fixed-top navbar-main" role="navigation" aria-label="main navigation">
+    <div class="container">
+        <div class="navbar-brand">
+            <a class="navbar-item navbar-logo" href="/">
+                
+                    
+                    My Wiki
+                    
+                
+            </a>
+            <div class="navbar-burger">
+                <span></span>
+                <span></span>
+                <span></span>
+            </div>
+        </div>
+        
+        <div class="navbar-menu navbar-start">
+            
+            <a class="navbar-item "
+               href="/">Home</a>
+            
+            <a class="navbar-item "
+               href="/archives">Archives</a>
+            
+            <a class="navbar-item "
+               href="/about">About</a>
+            
+        </div>
+        
+        <div class="navbar-menu navbar-end">
+            
+            <a class="navbar-item search" title="Search" href="javascript:;">
+                <i class="fas fa-search"></i>
+            </a>
+            
+            
+            
+        </div>
+    </div>
+</nav>
+
+    <section class="section">
+    <div class="container">
+    <article class="article content gallery" itemscope itemprop="blogPost">
+    <h1 class="article-title is-size-3 is-size-4-mobile" itemprop="name">
+        
+            Duplicate Database With RMAN
+        
+    </h1>
+    <div class="article-meta columns is-variable is-1 is-multiline is-mobile is-size-7-mobile">
+        <span class="column is-narrow">
+            <time datetime="2014-05-23T14:02:38.000Z" itemprop="datePublished">May 23 2014</time>
+        </span>
+        
+        <span class="column is-narrow article-category">
+            <i class="far fa-folder"></i>
+            <a class="article-category-link" href="/categories/oracle/">oracle</a>
+        </span>
+        
+        
+        <span class="column is-narrow">
+            
+            
+            19 minutes read (About 2805 words)
+        </span>
+        
+    </div>
+    <div class="article-entry is-size-6-mobile" itemprop="articleBody">
+    
+        <meta http-equiv="Content-Type" content="text/html; charset=utf-8"> 
+在DBA日常维护中，有时会接到开发人员要求部署一个跟生产环境相同的数据库，这个时候可以用到rman的Duplicate功能直接将目标数据库复制过来。本文以异机复制为例，简单阐述Duplicate的用法。
+<a id="more"></a>
+<h3>1.首先在duplicate端创建密码文件</h3>
+跟异机恢复一样，在duplicate节点只需要安装相同版本的数据库软件，而不需要单独建库。
+<figure class="highlight plain hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">[ora11g@:/home/oracle]$ export ORACLE_SID=dup</span><br><span class="line">[ora11g@:/home/oracle]$ orapwd file=$ORACLE_HOME/dbs/orapw$ORACLE_SID password=oracle entries=5 force=y</span><br></pre></td></tr></table></figure>
+
+<h3>2.duplicate端静态注册监听</h3>
+duplicate端因为没有实例，需要静态注册监听。同时在tnsnames.ora中添加两个库的tns。
+<figure class="highlight plain hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br></pre></td><td class="code"><pre><span class="line">SID_LIST_LISTENER =  </span><br><span class="line">  (SID_LIST =  </span><br><span class="line">    (SID_DESC =  </span><br><span class="line">      (SID_NAME = PLSExtProc)  </span><br><span class="line">      (ORACLE_HOME = /oracle/app/oracle/product/11.2.0/db_1)  </span><br><span class="line">      (PROGRAM = extproc)  </span><br><span class="line">    )  </span><br><span class="line">    (SID_DESC =  </span><br><span class="line">      (SID_NAME = dup)  </span><br><span class="line">      (ORACLE_HOME = /oracle/app/oracle/product/11.2.0/db_1)  </span><br><span class="line">      (GLOBAL_DBNAME=dup)  </span><br><span class="line">    )  </span><br><span class="line">  )</span><br><span class="line">[ora11g@:/oracle]$ lsnrctl start</span><br><span class="line">[ora11g@:/home/ora11g]$ lsnrctl service</span><br><span class="line"></span><br><span class="line">LSNRCTL for IBM/AIX RISC System/6000: Version 11.2.0.3.0 - Production on 23-MAY-2014 17:33:57</span><br><span class="line"></span><br><span class="line">Copyright (c) 1991, 2011, Oracle.  All rights reserved.</span><br><span class="line"></span><br><span class="line">Connecting to (DESCRIPTION=(ADDRESS=(PROTOCOL=TCP)(HOST=oratest)(PORT=1521)))</span><br><span class="line">Services Summary...</span><br><span class="line">Service &quot;PLSExtProc&quot; has 1 instance(s).</span><br><span class="line">  Instance &quot;PLSExtProc&quot;, status UNKNOWN, has 1 handler(s) for this service...</span><br><span class="line">    Handler(s):</span><br><span class="line">      &quot;DEDICATED&quot; established:0 refused:0</span><br><span class="line">         LOCAL SERVER</span><br><span class="line">Service &quot;dup&quot; has 1 instance(s).</span><br><span class="line">  Instance &quot;dup&quot;, status UNKNOWN, has 1 handler(s) for this service...</span><br><span class="line">    Handler(s):</span><br><span class="line">      &quot;DEDICATED&quot; established:0 refused:0</span><br><span class="line">         LOCAL SERVER</span><br><span class="line">The command completed successfully</span><br></pre></td></tr></table></figure>
+
+<h3>3.创建初始化文件</h3>
+如果是duplicate到本地的，需要在init文件上添加如下参数，以免数据文件路径冲突。注意其他文件的路径要先创建好。
+<figure class="highlight plain hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">DB_FILE_NAME_CONVERT=(/original/path,/duplicate/path)</span><br><span class="line">LOG_FILE_NAME_CONVERT=(/original/path,/duplicate/path)</span><br></pre></td></tr></table></figure>
+
+将dup数据库以创建的pfile启动至nomount状态。这个dup数据库将会是此次duplicate中rman的<code>auxiliary instance</code>。
+<figure class="highlight plain hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line">SQL&gt; startup nomount</span><br><span class="line">ORACLE instance started.</span><br><span class="line"></span><br><span class="line">Total System Global Area 1570009088 bytes</span><br><span class="line">Fixed Size                  2221840 bytes</span><br><span class="line">Variable Size             973080816 bytes</span><br><span class="line">Database Buffers          587202560 bytes</span><br><span class="line">Redo Buffers                7503872 bytes</span><br></pre></td></tr></table></figure>
+
+<h3>4.利用rman进行Active duplicate</h3>
+使用rman工具，以dup实例作为辅助实例连接至目标数据库。duplicate的主要工作是在辅助实例完成，如restore database，recover database等。
+<figure class="highlight plain hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line">[ora11g@:/home/ora11g]$ rman target sys/oracle@orcl auxiliary sys/oracle@dup</span><br><span class="line">Recovery Manager: Release 11.2.0.3.0 - Production on Fri May 23 18:09:04 2014</span><br><span class="line"></span><br><span class="line">Copyright (c) 1982, 2011, Oracle and/or its affiliates.  All rights reserved.</span><br><span class="line"></span><br><span class="line">connected to target database: ORCL (DBID=1375890310)</span><br><span class="line">connected to auxiliary database: DUP (not mounted)</span><br></pre></td></tr></table></figure>
+
+此时可用以下命令进行复制：
+<figure class="highlight plain hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">DUPLICATE TARGET DATABASE TO DUP;</span><br><span class="line">DUPLICATE TARGET DATABASE TO DUP UNTIL TIME ‘SYSDATA-4’; </span><br><span class="line">--Duplicate database to target’s state 4 days ago.</span><br></pre></td></tr></table></figure>
+
+上述指令是要通过备份去复制，下面这个指令是直接复制Active Database。这个功能是11g以后新增加的，可以利用这个功能创建DataGuard。两者的区别在于，rman备份产生的数据量要小，因为rman只备份含有数据的block，而Active模式则是整个数据文件copy过来，因此，使用Active模式复制，速度要慢很多。
+<figure class="highlight plain hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br></pre></td><td class="code"><pre><span class="line">[ora11g@:/home/oracle]$ rman target sys/oracle@orcl \</span><br><span class="line">auxiliary sys/oracle@dup msglog=/oracle/dup_`date &apos;+%Y%m%d%H%M&apos;`.log&lt;&lt;EOF</span><br><span class="line">run&#123;</span><br><span class="line">allocate channel c1 type disk;</span><br><span class="line">allocate auxiliary channel ch1 TYPE disk;</span><br><span class="line">#set until time &quot;to_date(&apos;2014/05/23 12:00:00&apos;,&apos;YYYY/MM/DD HH24:MI:SS&apos;)&quot;;</span><br><span class="line">set newname for datafile 1  to &apos;/oracle/oradata/dup/system01.dbf&apos;;</span><br><span class="line">#or CONFIGURE AUXNAME FOR DATAFILE 1 to &apos;/oracle/oradata/dup/system01.dbf&apos;;</span><br><span class="line">set newname for datafile 2  to &apos;/oracle/oradata/dup/undotbs01.dbf&apos;;</span><br><span class="line">set newname for datafile 3  to &apos;/oracle/oradata/dup/sysaux01.dbf&apos;;</span><br><span class="line">set newname for datafile 4  to &apos;/oracle/oradata/dup/users01.dbf&apos;;</span><br><span class="line">set newname for datafile 5  to &apos;/oracle/oradata/dup/fung01.dbf&apos;;</span><br><span class="line">set newname for tempfile 1  to &apos;/oracle/oradata/dup/temp01.dbf&apos;;</span><br><span class="line">#/*SKIP TABLESPACE tools*/ skip read only tablespace</span><br><span class="line">DUPLICATE TARGET DATABASE TO DUP FROM ACTIVE DATABASE</span><br><span class="line">LOGFILE</span><br><span class="line">GROUP 1 (&apos;/oracle/oradata/dup/redo01a.log&apos;,</span><br><span class="line">        &apos;/oracle/oradata/dup/redo01b.log&apos;) size 10240k reuse,</span><br><span class="line">GROUP 2 (&apos;/oracle/oradata/dup/redo02a.log&apos;,</span><br><span class="line">         &apos;/oracle/oradata/dup/redo02b.log&apos;) size 10240k reuse,</span><br><span class="line">GROUP 3 (&apos;/oracle/oradata/dup/redo03a.log&apos;,</span><br><span class="line">         &apos;/oracle/oradata/dup/redo03b.log&apos;) size 10240k reuse;</span><br><span class="line">switch datafile all;</span><br><span class="line">switch tempfile all;</span><br><span class="line">&#125;</span><br><span class="line">exit;</span><br><span class="line">EOF</span><br></pre></td></tr></table></figure>
+
+如果dup存储目录跟目标数据库一致，则使用nofilenamecheck即可，当然，这只能在不同的机器上实现。
+<figure class="highlight plain hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line">run&#123;</span><br><span class="line">allocate auxiliary channel ch1 DEVICE TYPE disk;</span><br><span class="line">DUPLICATE TARGET DATABASE TO dupdb</span><br><span class="line"> 	 # specify client-side parameter file (on same host as RMAN executable) for</span><br><span class="line"> 	 # auxiliary instance if necessary</span><br><span class="line"> 	PFILE = /dup/oracle/dbs/initDUPDB.ora</span><br><span class="line">  	NOFILENAMECHECK;</span><br><span class="line">  	&#125;</span><br></pre></td></tr></table></figure>
+
+在我的环境中，遇到了一个bug <a href="https://support.oracle.com/epmos/faces/DocumentDisplay?id=1552916.1" target="_blank" rel="noopener">[ID 1552916.1]</a>，添加debug参数可解决，这个bug也只是在Active duplicate的时候触发的。
+<figure class="highlight plain hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br></pre></td><td class="code"><pre><span class="line">[ora11g@:/home/oracle]$ rman target sys/oracle@orcl debug trace=rman.trc \</span><br><span class="line">auxiliary sys/oracle@dup msglog=/oracle/dup_`date &apos;+%Y%m%d%H%M&apos;`.log&lt;&lt;EOF</span><br><span class="line">run&#123;</span><br><span class="line">allocate channel c1 type disk;</span><br><span class="line">allocate auxiliary channel ch1 TYPE disk;</span><br><span class="line">#set until time &quot;to_date(&apos;2014/05/23 12:00:00&apos;,&apos;YYYY/MM/DD HH24:MI:SS&apos;)&quot;;</span><br><span class="line">set newname for datafile 1  to &apos;/oracle/oradata/dup/system01.dbf&apos;;</span><br><span class="line">#or CONFIGURE AUXNAME FOR DATAFILE 1 to &apos;/oracle/oradata/dup/system01.dbf&apos;;</span><br><span class="line">set newname for datafile 2  to &apos;/oracle/oradata/dup/undotbs01.dbf&apos;;</span><br><span class="line">set newname for datafile 3  to &apos;/oracle/oradata/dup/sysaux01.dbf&apos;;</span><br><span class="line">set newname for datafile 4  to &apos;/oracle/oradata/dup/users01.dbf&apos;;</span><br><span class="line">set newname for datafile 5  to &apos;/oracle/oradata/dup/fung01.dbf&apos;;</span><br><span class="line">set newname for tempfile 1  to &apos;/oracle/oradata/dup/temp01.dbf&apos;;</span><br><span class="line">#/*SKIP TABLESPACE tools*/ skip read only tablespace</span><br><span class="line">DUPLICATE TARGET DATABASE TO DUP FROM ACTIVE DATABASE</span><br><span class="line">LOGFILE</span><br><span class="line">GROUP 1 (&apos;/oracle/oradata/dup/redo01a.log&apos;,</span><br><span class="line">        &apos;/oracle/oradata/dup/redo01b.log&apos;) size 10240k reuse,</span><br><span class="line">GROUP 2 (&apos;/oracle/oradata/dup/redo02a.log&apos;,</span><br><span class="line">         &apos;/oracle/oradata/dup/redo02b.log&apos;) size 10240k reuse,</span><br><span class="line">GROUP 3 (&apos;/oracle/oradata/dup/redo03a.log&apos;,</span><br><span class="line">         &apos;/oracle/oradata/dup/redo03b.log&apos;) size 10240k reuse;</span><br><span class="line">switch datafile all;</span><br><span class="line">switch tempfile all;</span><br><span class="line">&#125;</span><br><span class="line">exit;</span><br><span class="line">EOF</span><br></pre></td></tr></table></figure>
+
+有关时间的输出：
+<figure class="highlight plain hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br></pre></td><td class="code"><pre><span class="line">Recovery Manager: Release 11.2.0.3.0 - Production on Fri May 23 19:30:52 2014</span><br><span class="line"></span><br><span class="line">Copyright (c) 1982, 2011, Oracle and/or its affiliates.  All rights reserved.</span><br><span class="line"></span><br><span class="line">RMAN-06005: connected to target database: ORCL (DBID=1375890310)</span><br><span class="line">RMAN-06549: connected to auxiliary database: DUP (not mounted)</span><br><span class="line"></span><br><span class="line">RMAN&gt; 2&gt; 3&gt; 4&gt; 5&gt; 6&gt; 7&gt; 8&gt; 9&gt; 10&gt; 11&gt; 12&gt; 13&gt; 14&gt; 15&gt; 16&gt; 17&gt; 18&gt; 19&gt; 20&gt; 21&gt; 22&gt; 23&gt; </span><br><span class="line">RMAN-06009: using target database control file instead of recovery catalog</span><br><span class="line">...</span><br><span class="line">RMAN-06400: database opened</span><br><span class="line">RMAN-03091: Finished Duplicate Db at 2014-05-23 19:58:04</span><br><span class="line"></span><br><span class="line"></span><br><span class="line">RMAN-08031: released channel: c1</span><br><span class="line">RMAN-08031: released channel: ch1</span><br></pre></td></tr></table></figure>
+
+经历了近30分钟。
+<h3>5. 使用备份进行duplicate</h3>
+在目标数据库进行rman备份，并且将备份集传输到dup目录。由于没有控制文件，因此，备份集存放路径要跟原来的一样。<br>
+源库查询scn：
+<figure class="highlight plain hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br></pre></td><td class="code"><pre><span class="line">RMAN&gt; list backup of archivelog all;</span><br><span class="line"></span><br><span class="line"></span><br><span class="line">List of Backup Sets</span><br><span class="line">===================</span><br><span class="line">BS Key  Size       Device Type Elapsed Time Completion Time    </span><br><span class="line">------- ---------- ----------- ------------ -------------------</span><br><span class="line">19      490.00K    DISK        00:00:00     2014-06-29 09:52:03</span><br><span class="line">        BP Key: 19   Status: AVAILABLE  Compressed: NO  Tag: TAG20140629T095201</span><br><span class="line">        Piece Name: /oracle/backup/arch_16pc1ua3_1_1_20140629_ORCL</span><br><span class="line"></span><br><span class="line">  List of Archived Logs in backup set 19</span><br><span class="line">  Thrd Seq     Low SCN    Low Time            Next SCN   Next Time</span><br><span class="line">  ---- ------- ---------- ------------------- ---------- ---------</span><br><span class="line">  1    37      376337     2014-06-29 09:00:56 376374     2014-06-29 09:01:38</span><br><span class="line">  1    38      376374     2014-06-29 09:01:38 377772     2014-06-29 09:35:42</span><br><span class="line">  1    39      377772     2014-06-29 09:35:42 378694     2014-06-29 09:51:46</span><br><span class="line">  1    40      378694     2014-06-29 09:51:46 378719     2014-06-29 09:51:59</span><br><span class="line">  1    41      378719     2014-06-29 09:51:59 378728     2014-06-29 09:51:59</span><br><span class="line">  1    42      378728     2014-06-29 09:51:59 378737     2014-06-29 09:52:01</span><br><span class="line">  1    43      378737     2014-06-29 09:52:01 378745     2014-06-29 09:52:01</span><br></pre></td></tr></table></figure>
+
+恢复的时候选取378745这个scn。
+<figure class="highlight plain hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br></pre></td><td class="code"><pre><span class="line">[ora11g@:/home/oracle]$ rman target sys/oracle@orcl \</span><br><span class="line">auxiliary sys/oracle@dup msglog=/oracle/dup_`date &apos;+%Y%m%d%H%M&apos;`.log&lt;&lt;EOF</span><br><span class="line">run&#123;</span><br><span class="line">allocate channel c1 type disk;</span><br><span class="line">allocate auxiliary channel ch1 TYPE disk;</span><br><span class="line">set until scn 378745;</span><br><span class="line">set newname for datafile 1  to &apos;/oracle/oradata/dup/system01.dbf&apos;;</span><br><span class="line">#or CONFIGURE AUXNAME FOR DATAFILE 1 to &apos;/oracle/oradata/dup/system01.dbf&apos;;</span><br><span class="line">set newname for datafile 2  to &apos;/oracle/oradata/dup/undotbs01.dbf&apos;;</span><br><span class="line">set newname for datafile 3  to &apos;/oracle/oradata/dup/sysaux01.dbf&apos;;</span><br><span class="line">set newname for datafile 4  to &apos;/oracle/oradata/dup/users01.dbf&apos;;</span><br><span class="line">set newname for datafile 5  to &apos;/oracle/oradata/dup/fung01.dbf&apos;;</span><br><span class="line">set newname for tempfile 1  to &apos;/oracle/oradata/dup/temp01.dbf&apos;;</span><br><span class="line">#/*SKIP TABLESPACE tools*/ skip read only tablespace</span><br><span class="line">DUPLICATE TARGET DATABASE TO DUP</span><br><span class="line">LOGFILE</span><br><span class="line">GROUP 1 (&apos;/oracle/oradata/dup/redo01a.log&apos;,</span><br><span class="line">        &apos;/oracle/oradata/dup/redo01b.log&apos;) size 10240k reuse,</span><br><span class="line">GROUP 2 (&apos;/oracle/oradata/dup/redo02a.log&apos;,</span><br><span class="line">         &apos;/oracle/oradata/dup/redo02b.log&apos;) size 10240k reuse,</span><br><span class="line">GROUP 3 (&apos;/oracle/oradata/dup/redo03a.log&apos;,</span><br><span class="line">         &apos;/oracle/oradata/dup/redo03b.log&apos;) size 10240k reuse;</span><br><span class="line">switch datafile all;</span><br><span class="line">switch tempfile all;</span><br><span class="line">&#125;</span><br><span class="line">exit;</span><br><span class="line">EOF</span><br></pre></td></tr></table></figure>
+
+恢复时间：
+<figure class="highlight plain hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br></pre></td><td class="code"><pre><span class="line">Recovery Manager: Release 11.2.0.3.0 - Production on Fri May 23 20:23:42 2014</span><br><span class="line"></span><br><span class="line">Copyright (c) 1982, 2011, Oracle and/or its affiliates.  All rights reserved.</span><br><span class="line"></span><br><span class="line">connected to target database: ORCL (DBID=1375890310)</span><br><span class="line">connected to auxiliary database: DUP (not mounted)</span><br><span class="line"></span><br><span class="line">RMAN&gt; 2&gt; 3&gt; 4&gt; 5&gt; 6&gt; 7&gt; 8&gt; 9&gt; 10&gt; 11&gt; 12&gt; 13&gt; 14&gt; 15&gt; 16&gt; 17&gt; 18&gt; 19&gt; 20&gt; 21&gt; 22&gt; 23&gt; </span><br><span class="line">using target database control file instead of recovery catalog</span><br><span class="line">...</span><br><span class="line">Starting restore at 2014-05-23 20:24:01</span><br><span class="line"></span><br><span class="line">channel ch1: starting datafile backup set restore</span><br><span class="line">channel ch1: restoring control file</span><br><span class="line">channel ch1: reading from backup piece /oracle/backup/bk_34_1_12pc1u9q_1_1_20140629_ORCL</span><br><span class="line">channel ch1: piece handle=/oracle/backup/bk_34_1_12pc1u9q_1_1_20140629_ORCL tag=HOT_DB_BK_LEVEL0</span><br><span class="line">channel ch1: restored backup piece 1</span><br><span class="line">channel ch1: restore complete, elapsed time: 00:00:01</span><br><span class="line">output file name=/oracle/oradata/dup/control01.ctl</span><br><span class="line">output file name=/oracle/oradata/dup/control02.ctl</span><br><span class="line">Finished restore at 2014-05-23 20:24:02</span><br><span class="line">...</span><br><span class="line">Starting restore at 2014-05-23 20:24:07</span><br><span class="line"></span><br><span class="line">channel ch1: starting datafile backup set restore</span><br><span class="line">channel ch1: specifying datafile(s) to restore from backup set</span><br><span class="line">channel ch1: restoring datafile 00002 to /oracle/oradata/dup/undotbs01.dbf</span><br><span class="line">channel ch1: restoring datafile 00003 to /oracle/oradata/dup/sysaux01.dbf</span><br><span class="line">channel ch1: reading from backup piece /oracle/backup/bk_33_1_11pc1u9j_1_1_20140629_ORCL</span><br><span class="line">channel ch1: piece handle=/oracle/backup/bk_33_1_11pc1u9j_1_1_20140629_ORCL tag=HOT_DB_BK_LEVEL0</span><br><span class="line">channel ch1: restored backup piece 1</span><br><span class="line">channel ch1: restore complete, elapsed time: 00:00:15</span><br><span class="line">channel ch1: starting datafile backup set restore</span><br><span class="line">channel ch1: specifying datafile(s) to restore from backup set</span><br><span class="line">channel ch1: restoring datafile 00001 to /oracle/oradata/dup/system01.dbf</span><br><span class="line">channel ch1: restoring datafile 00004 to /oracle/oradata/dup/users01.dbf</span><br><span class="line">channel ch1: restoring datafile 00005 to /oracle/oradata/dup/fung01.dbf</span><br><span class="line">channel ch1: reading from backup piece /oracle/backup/bk_32_1_10pc1u9j_1_1_20140629_ORCL</span><br><span class="line">channel ch1: piece handle=/oracle/backup/bk_32_1_10pc1u9j_1_1_20140629_ORCL tag=HOT_DB_BK_LEVEL0</span><br><span class="line">channel ch1: restored backup piece 1</span><br><span class="line">channel ch1: restore complete, elapsed time: 00:00:25</span><br><span class="line">Finished restore at 2014-05-23 20:24:48</span><br><span class="line">...</span><br><span class="line">database opened</span><br><span class="line">Finished Duplicate Db at 2014-05-23 20:25:20</span><br><span class="line">SQL&gt; select dbid,name,open_mode,activation#,created from v$database;</span><br><span class="line"></span><br><span class="line">      DBID NAME      OPEN_MODE            ACTIVATION# CREATED</span><br><span class="line">---------- --------- -------------------- ----------- -------------------</span><br><span class="line"> 219153832 DUP       READ WRITE             219158696 2014-05-23 20:25:12</span><br></pre></td></tr></table></figure>
+
+在同等条件下，基于备份的duplicate只需要3分钟左右，而Active的duplicate则需要30分钟。
+<h3>6. 总结</h3>
+对于日志文件及数据文件的重命名方式，如果在spfile中同时指定<code>LOGFILE</code>和<code>LOG_FILE_NAME_CONVERT</code>，rman会使用<code>LOGFILE</code>。如果两者都不指定，那么，rman使用源数据库相同的路径。  
+<center>Table 1-1 Order of Precedence for Redo Log Filename Creation</center>
+<style type="text/css">
+.tg  {border-collapse:collapse;border-spacing:0;border-color:#999;}
+.tg td{font-family:Arial, sans-serif;font-size:14px;padding:10px 5px;border-style:solid;border-width:1px;overflow:hidden;word-break:normal;border-color:#999;color:#444;background-color:#F7FDFA;}
+.tg th{font-family:Arial, sans-serif;font-size:14px;font-weight:normal;padding:10px 5px;border-style:solid;border-width:1px;overflow:hidden;word-break:normal;border-color:#999;color:#fff;background-color:#26ADE4;}
+</style>
+<table class="tg">
+  <tr>
+    <th class="tg-031e">Order</th>
+    <th class="tg-031e">Method</th>
+    <th class="tg-031e">Result</th>
+  </tr>
+  <tr>
+    <td class="tg-031e">1</td>
+    <td class="tg-031e">Specify the <code>LOGFILE</code> clause of DUPLICATE command.</td>
+    <td class="tg-031e">Creates redo logs as specified.</td>
+  </tr>
+  <tr>
+    <td class="tg-031e">2</td>
+    <td class="tg-031e">Set <code>LOG_FILE_NAME_CONVERT</code> initialization parameter.</td>
+    <td class="tg-031e">Transforms target filenames, for example, from log_* to duplog_*. Note that you can specify multiple conversion pairs. This parameter allows the redo log to exist as long as the size matches, because it uses the REUSE parameter when creating the logs.</td>
+  </tr>
+  <tr>
+    <td class="tg-031e">3</td>
+    <td class="tg-031e">Do none of the preceding steps.</td>
+    <td class="tg-031e">Makes the duplicate filenames the same as the target filenames. You must specify the NOFILENAMECHECK option when using this method and the duplicate database should be in a different host.</td>
+  </tr>
+</table>
+<center>Table 1-2 Order of Precedence for Datafile Filename Creation</center>
+<style type="text/css">
+.tg  {border-collapse:collapse;border-spacing:0;border-color:#999;}
+.tg td{font-family:Arial, sans-serif;font-size:14px;padding:10px 5px;border-style:solid;border-width:1px;overflow:hidden;word-break:normal;border-color:#999;color:#444;background-color:#F7FDFA;}
+.tg th{font-family:Arial, sans-serif;font-size:14px;font-weight:normal;padding:10px 5px;border-style:solid;border-width:1px;overflow:hidden;word-break:normal;border-color:#999;color:#fff;background-color:#26ADE4;}
+</style>
+<table class="tg">
+  <tr>
+    <th class="tg-031e">Order</th>
+    <th class="tg-031e">Method</th>
+    <th class="tg-031e">Result</th>
+  </tr>
+  <tr>
+    <td class="tg-031e">1</td>
+    <td class="tg-031e">Issue <code>SET NEWNAME</code> command.</td>
+    <td class="tg-031e">Creates new datafile filenames. You must reissue this command each time you rename files.</td>
+  </tr>
+  <tr>
+    <td class="tg-031e">2</td>
+    <td class="tg-031e">Issue <code>CONFIGURE AUXNAME</code> command.</td>
+    <td class="tg-031e">Creates new datafile filenames. This setting stays in effect until disabled with a <code>CONFIGURE AUXNAME ... CLEAR</code> command.</td>
+  </tr>
+  <tr>
+    <td class="tg-031e">3</td>
+    <td class="tg-031e">Set <code>DB_FILE_NAME_CONVERT</code> initialization parameter.</td>
+    <td class="tg-031e">Transforms target filenames, for example, from /oracle/ to /dup/oracle/. Note that you can specify multiple conversion pairs. You can use this parameter for those files not renamed with either <code>SET NEWNAME</code> and <code>CONFIGURE AUXNAME</code>.</td>
+  </tr>
+  <tr>
+    <td class="tg-031e">4</td>
+    <td class="tg-031e">Do none of the preceding steps.,Reuses the target filenames.</td>
+    <td class="tg-031e">You must specify the <code>NOFILENAMECHECK</code> option when using this method and the duplicate database should be in a different host.</td>
+  </tr>
+</table>
+以上优先顺序决定了rman命名日志文件及数据文件的方法。如果你使用了以上所有的方法，那么rman只会使用到<code>SET NEWNAME</code>，如果同时使用<code>CONFIGURE AUXNAME</code>和<code>DB_FILE_NAME_CONVERT</code>，rman会以<code>CONFIGURE AUXNAME</code>优先。如果不使用以上所有的方法，rman将会使用跟源数据库一致的命名。
+<h3>7. 其他</h3>
+对于set newname可用如下语句进行转换，之后再用vi或者其他工具进行路径的替换。
+<figure class="highlight plain hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">select &apos;set newname for tempfile  &apos;||file_id||&apos; to &apos;&apos;&apos;||&apos;+DATA&apos;||&apos;&apos;&apos;;&apos; from dba_temp_files;</span><br><span class="line">select &apos;set newname for datafile &apos;||file# || &apos; to &apos; ||&apos;&apos;&apos;&apos;|| name ||&apos;&apos;&apos;;&apos; from v$datafile</span><br></pre></td></tr></table></figure>
+
+<h3>8. 补充</h3>
+active database duplication是11g新特性，在之前的版本中，对于duplicate动作都是要基于RMAN备份，而11g以后的版本提供了active database duplication，即不用源数据库的备份可以直接在线duplicate，包括DataGuard的创建。duplicate的数据库具有不同的DBID，如果使用catalog database，那么dup库和源库是可以在同一个catalog DB注册的。在duplicate过程中，可以去除一些表空间，如只读表空间。
+<h4>8.1 Renaming Files in a Duplicate Database</h4>
+11g还提供了<code>parameter_value_convert</code>参数，这个参数可以让DBA跳过手动创建密码文件和SPFILE的过程，通过指定SPFILE和set命令及parameter_value_convert参数结合，自动完成spfile的创建。在这之前，auxiliary instance只需要从pfile启动，且pfile内容仅仅包含DB_NAME即可。如：
+<figure class="highlight plain hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">DUPLICATE target DATABASE TO DUP FROM ACTIVE DATABASE</span><br><span class="line">DB_FILE_NAME_CONVERT &apos;/oracle/oradata/orcl/&apos;,&apos;/dup/&apos;</span><br><span class="line">SPFILE </span><br><span class="line">PARAMETER_VALUE_CONVERT &apos;/oracle/oradata/orcl/&apos;,&apos;/dup/&apos;</span><br><span class="line">SET LOG_FILE_NAME_CONVERT &apos;/oracle/oradata/orcl/&apos;,&apos;/dup/&apos;;</span><br></pre></td></tr></table></figure>
+
+这些命令很方便就能帮你设置好spfile，同时，在正常的alter system set...scope=spfile中，你能都将相关的参数添加到duplicate里面去。对于ADR目录，PARAMETER_VALUE_CONVERT会当相应的ADR目录创建需要转换的目录，但对于数据文件和日志文件不能使用PARAMETER_VALUE_CONVERT参数进行转换。
+<figure class="highlight plain hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line">[oracle@linora:/home/oracle]$ rman target sys/oracle@linora \</span><br><span class="line">&gt; auxiliary sys/oracle@dup</span><br><span class="line">RMAN&gt; DUPLICATE target DATABASE TO dup FROM ACTIVE DATABASE</span><br><span class="line">2&gt; SPFILE</span><br><span class="line">3&gt; PARAMETER_VALUE_CONVERT &apos;/oradata/datafile/linora/&apos;,&apos;/dup/&apos;</span><br><span class="line">4&gt; SET SGA_MAX_SIZE = &apos;500M&apos;</span><br><span class="line">5&gt; SET SGA_TARGET = &apos;500M&apos;</span><br><span class="line">6&gt; SET LOG_FILE_NAME_CONVERT=&apos;/oradata/datafile/linora/&apos;,&apos;/dup/&apos;</span><br><span class="line">7&gt; DB_FILE_NAME_CONVERT=&apos;/oradata/datafile/linora/&apos;,&apos;/dup/&apos;;</span><br></pre></td></tr></table></figure>
+
+在输出脚本中，可以看到duplicate一开始会先执行clone spfile的动作，后续的set命令是通过alter system set...scope=spfile去执行的。SPFILE子句表示在打开数据库之前还原和修改SPFILE。
+<figure class="highlight plain hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br></pre></td><td class="code"><pre><span class="line">contents of Memory Script:</span><br><span class="line">&#123;</span><br><span class="line">   backup as copy reuse</span><br><span class="line">   targetfile  &apos;/u01/app/oracle/product/11gr2/dbs/spfilelinora.ora&apos; auxiliary format </span><br><span class="line"> &apos;/u01/app/oracle/product/11gr2/dbs/spfiledup.ora&apos;   ;</span><br><span class="line">   sql clone &quot;alter system set spfile= &apos;&apos;/u01/app/oracle/product/11gr2/dbs/spfiledup.ora&apos;&apos;&quot;;</span><br><span class="line">&#125;</span><br><span class="line">...</span><br><span class="line">sql statement: alter system set  db_name =  &apos;&apos;DUP&apos;&apos; comment= &apos;&apos;duplicate&apos;&apos; scope=spfile</span><br><span class="line">sql statement: alter system set  control_files =  &apos;&apos;/dup/control01.ctl&apos;&apos;, &apos;&apos;/dup/control02.ctl&apos;&apos; comment= &apos;&apos;&apos;&apos; scope=spfile</span><br><span class="line">sql statement: alter system set  SGA_MAX_SIZE =  250M comment= &apos;&apos;&apos;&apos; scope=spfile</span><br><span class="line">sql statement: alter system set  SGA_TARGET =  250M comment= &apos;&apos;&apos;&apos; scope=spfile</span><br><span class="line">sql statement: alter system set  log_archive_dest_1 =  &apos;&apos;LOCATION=/dup/arch/&apos;&apos; comment= &apos;&apos;&apos;&apos; scope=spfile</span><br><span class="line">sql statement: alter system set  LOG_FILE_NAME_CONVERT =  &apos;&apos;/oradata/datafile/linora/&apos;&apos;, &apos;&apos;/dup/&apos;&apos; comment= &apos;&apos;&apos;&apos; scope=spfile</span><br></pre></td></tr></table></figure>
+
+使用SPFILE创建Active Standby，多加一个db_unique_name参数即可。
+<figure class="highlight plain hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line">DUPLICATE TARGET DATABASE FOR STANDBY FROM ACTIVE DATABASE</span><br><span class="line">SPFILE</span><br><span class="line">PARAMETER_VALUE_CONVERT &apos;/oradata/datafile/linora/&apos;,&apos;/dup/&apos;</span><br><span class="line">SET &quot;DB_UNIQUE_NAME&quot;=&quot;stdby&quot;</span><br><span class="line">SET SGA_MAX_SIZE = &apos;250M&apos;</span><br><span class="line">SET SGA_TARGET = &apos;250M&apos;</span><br><span class="line">SET log_archive_dest_1 = &apos;LOCATION=/dup/arch/&apos;</span><br><span class="line">SET LOG_FILE_NAME_CONVERT=&apos;/oradata/datafile/linora/&apos;,&apos;/dup/&apos;</span><br><span class="line">DB_FILE_NAME_CONVERT=&apos;/oradata/datafile/linora/&apos;,&apos;/dup/&apos;;</span><br></pre></td></tr></table></figure>
+
+<h4>8.2 Backup-base and active database duplication</h4>
+<h5>backup-base</h5>
+<li>如果不是使用远程Client操作auxiliary instance，或者不是使用active duplication，则auxiliary instance可以不需要密码文件</li>
+<li>源数据库可以是CLOSED或者OPEN状态</li>
+<li>源端和dup端操作系统版本需一致，但32bit和64bit认为是一致，只是从32bit到64bit duplicate完成后需要执行@?/rdbms/admin/utlrp.sql脚本</li>
+<li>如果在duplicate database中指定password file子句，会将源端密码文件copy至dup端，且会强行覆盖dup原有密码文件</li>
+<h5>active database duplication</h5>
+<li>源端和dup端都需要在Oracle NET中注册，意味着rman连接auxiliary instance必须使用net service name </li>
+<li>源端数据库必须为open或者mounted状态</li>
+<li>如果源端为mounted状态，那么在关闭前一定是干净的关闭</li>
+<li>源端如果为open状态，那么，一定要运行在archivelog模式下</li>
+
+More details in:  
+<a href="http://docs.oracle.com/cd/E11882_01/backup.112/e10642/toc.htm" target="_blank" rel="noopener">Oracle® Database Backup and Recovery User's Guide 11g Release 2 (11.2)</a>
+
+    
+    </div>
+    
+    <div class="columns is-variable is-1 is-multiline is-mobile">
+    
+        <span class="column is-narrow"><a class="tag is-light article-tag" href="/tags/rman/">#rman</a></span>
+    
+    </div>
+    
+    
+    <div class="columns is-mobile is-multiline article-nav">
+        <span class="column is-12-mobile is-half-desktop  article-nav-prev">
+            
+            <a href="/oracle/configure-dataguard-in-rac.html">RAC DataGuard配置</a>
+            
+        </span>
+        <span class="column is-12-mobile is-half-desktop  article-nav-next">
+            
+            <a href="/oracle/change-database-name-in-oracle.html">Oracle修改数据库名称</a>
+            
+        </span>
+    </div>
+    
+</article>
+
+
+
+
+    </div>
+</section>
+    <footer class="footer">
+    <div class="container">
+        <div class="columns content">
+            <div class="column is-narrow has-text-centered">
+                &copy; 2018 Kong&nbsp;
+                Powered by <a href="http://hexo.io/" target="_blank">Hexo</a> & <a
+                        href="http://github.com/ppoffice/hexo-theme-minos">Minos</a>
+            </div>
+            <div class="column is-hidden-mobile"></div>
+
+            
+            
+        </div>
+    </div>
+</footer>
+    <script src="//cdnjs.cloudflare.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
+<script src="//cdnjs.cloudflare.com/ajax/libs/moment.js/2.22.2/moment-with-locales.min.js"></script>
+
+<!-- test if the browser is outdated -->
+<div id="outdated">
+    <h6>Your browser is out-of-date!</h6>
+    <p>Update your browser to view this website correctly. <a id="btnUpdateBrowser" href="http://outdatedbrowser.com/">Update my browser now </a></p>
+    <p class="last"><a href="#" id="btnCloseUpdateBrowser" title="Close">&times;</a></p>
+</div>
+<script src="//cdnjs.cloudflare.com/ajax/libs/outdated-browser/1.1.5/outdatedbrowser.min.js"></script>
+<script>
+    $(document).ready(function () {
+        // plugin function, place inside DOM ready function
+        outdatedBrowser({
+            bgColor: '#f25648',
+            color: '#ffffff',
+            lowerThan: 'flex'
+        })
+    });
+</script>
+
+<script>
+    window.FontAwesomeConfig = {
+        searchPseudoElements: true
+    }
+    moment.locale("en-AU");
+</script>
+
+
+    
+    
+    
+    
+    
+    
+
+    
+
+
+<script src="/js/script.js"></script>
+
+    
+    <div class="searchbox ins-search">
+    <div class="searchbox-mask"></div>
+    <div class="searchbox-container ins-search-container">
+        <div class="searchbox-input-wrapper">
+            <input type="text" class="searchbox-input ins-search-input" placeholder="Type something..." />
+            <span class="searchbox-close ins-close ins-selectable"><i class="fa fa-times-circle"></i></span>
+        </div>
+        <div class="searchbox-result-wrapper ins-section-wrapper">
+            <div class="ins-section-container"></div>
+        </div>
+    </div>
+</div>
+<script>
+    (function (window) {
+        var INSIGHT_CONFIG = {
+            TRANSLATION: {
+                POSTS: 'Posts',
+                PAGES: 'Pages',
+                CATEGORIES: 'Categories',
+                TAGS: 'Tags',
+                UNTITLED: '(Untitled)',
+            },
+            CONTENT_URL: '/content.json',
+        };
+        window.INSIGHT_CONFIG = INSIGHT_CONFIG;
+    })(window);
+</script>
+<script src="/js/insight.js"></script>
+    
+</body>
+</html>

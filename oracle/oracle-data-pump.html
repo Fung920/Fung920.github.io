@@ -1,0 +1,270 @@
+<!DOCTYPE html>
+<html class="has-navbar-fixed-top">
+<head>
+    <meta charset="utf-8">
+<title>Oracle Data Pump - My Wiki</title>
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+
+<link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/outdated-browser/1.1.5/outdatedbrowser.min.css">
+
+
+<meta name="description" content="oracle data pump utilities">
+
+
+
+<meta name="keywords" content="oracle data pump">
+
+
+
+
+
+
+
+<link rel="icon" href="/images/favicon.ico">
+
+
+<link rel="stylesheet" href="//fonts.googleapis.com/css?family=Ovo|Source+Code+Pro">
+<link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/bulma/0.6.2/css/bulma.min.css">
+
+
+
+<link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/highlight.js/9.12.0/styles/github.min.css">
+
+<link rel="stylesheet" href="/css/style.css">
+
+<script defer src="//use.fontawesome.com/releases/v5.0.8/js/all.js"></script>
+
+
+    
+    
+    
+    
+    
+    
+
+    
+
+
+</head>
+<body>
+    
+<nav class="navbar is-transparent is-fixed-top navbar-main" role="navigation" aria-label="main navigation">
+    <div class="container">
+        <div class="navbar-brand">
+            <a class="navbar-item navbar-logo" href="/">
+                
+                    
+                    My Wiki
+                    
+                
+            </a>
+            <div class="navbar-burger">
+                <span></span>
+                <span></span>
+                <span></span>
+            </div>
+        </div>
+        
+        <div class="navbar-menu navbar-start">
+            
+            <a class="navbar-item "
+               href="/">Home</a>
+            
+            <a class="navbar-item "
+               href="/archives">Archives</a>
+            
+            <a class="navbar-item "
+               href="/about">About</a>
+            
+        </div>
+        
+        <div class="navbar-menu navbar-end">
+            
+            <a class="navbar-item search" title="Search" href="javascript:;">
+                <i class="fas fa-search"></i>
+            </a>
+            
+            
+            
+        </div>
+    </div>
+</nav>
+
+    <section class="section">
+    <div class="container">
+    <article class="article content gallery" itemscope itemprop="blogPost">
+    <h1 class="article-title is-size-3 is-size-4-mobile" itemprop="name">
+        
+            Oracle Data Pump
+        
+    </h1>
+    <div class="article-meta columns is-variable is-1 is-multiline is-mobile is-size-7-mobile">
+        <span class="column is-narrow">
+            <time datetime="2014-05-20T15:14:35.000Z" itemprop="datePublished">May 20 2014</time>
+        </span>
+        
+        <span class="column is-narrow article-category">
+            <i class="far fa-folder"></i>
+            <a class="article-category-link" href="/categories/oracle/">oracle</a>
+        </span>
+        
+        
+        <span class="column is-narrow">
+            
+            
+            15 minutes read (About 2248 words)
+        </span>
+        
+    </div>
+    <div class="article-entry is-size-6-mobile" itemprop="articleBody">
+    
+        <p></p><h3>1. Basic</h3><br>Oracle Data Pump是10g以后用于数据逻辑导入导出的加强工具，加强是相对于<code>exp</code>跟<code>imp</code>而言。经常用于逻辑备份及数据库迁移方面，本文就经常用到的方法做一个小的总结。不同于exp/imp，data pump使用的时候要先创建一个目录用于存放dump文件。<br><a id="more"></a><br><figure class="highlight plain hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">[oracle@:/oracle]$ ls -lt</span><br><span class="line">total 2580304</span><br><span class="line">drwxr-xr-x    3 oracle   oinstall        256 May 20 14:08 oradata</span><br><span class="line">drwxr-xr-x    2 oracle   oinstall        256 May 20 14:07 arch</span><br><span class="line">drwxr-xr-x    2 oracle   oinstall        256 May 20 14:07 expdir</span><br></pre></td></tr></table></figure><p></p>
+<p>10g默认的目录如下：<br><figure class="highlight plain hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line">SQL&gt; col OWNER for a10</span><br><span class="line">SQL&gt; col DIRECTORY_NAME for a20</span><br><span class="line">SQL&gt; col DIRECTORY_PATH for a50</span><br><span class="line">SQL&gt; set linesize 200</span><br><span class="line">SQL&gt; select * from dba_directories;</span><br><span class="line"></span><br><span class="line">OWNER      DIRECTORY_NAME       DIRECTORY_PATH</span><br><span class="line">---------- -------------------- --------------------------------------------------</span><br><span class="line">SYS        DATA_PUMP_DIR        /oracle/app/oracle/product/10gr2/rdbms/log/</span><br></pre></td></tr></table></figure></p>
+<p>创建一个新的目录，并赋予Public的权限，这样，凡是有<code>exdpd</code>权限的用户均可读写此目录。<br><figure class="highlight plain hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><span class="line">SQL&gt; create directory expdir as &apos;/oracle/expdir&apos;;</span><br><span class="line"></span><br><span class="line">Directory created.</span><br><span class="line">SQL&gt; grant read,write on directory expdir to public;</span><br><span class="line"></span><br><span class="line">Grant succeeded.</span><br><span class="line"></span><br><span class="line">SQL&gt; select * from dba_directories;</span><br><span class="line"></span><br><span class="line">OWNER      DIRECTORY_NAME       DIRECTORY_PATH</span><br><span class="line">---------- -------------------- --------------------------------------------------</span><br><span class="line">SYS        DATA_PUMP_DIR        /oracle/app/oracle/product/10gr2/rdbms/log/</span><br><span class="line">SYS        EXPDIR               /oracle/expdir</span><br></pre></td></tr></table></figure></p>
+<p>Data Pump是基于server端的，因此，目录也只能是基于server端。目录创建好，就可以进行导入导出动作了。<br>Data Pump可基于表、用户、数据库等方式的导入导出。</p>
+<p></p><h4>1.1 Tables</h4><br><figure class="highlight plain hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br></pre></td><td class="code"><pre><span class="line">[oracle@:/home/oracle]$ expdp fung/oracle@oratest tables=object directory=expdir dumpfile=fung.object.dmp logfile=fung.object.log</span><br><span class="line"></span><br><span class="line">Export: Release 10.2.0.1.0 - 64bit Production on Tuesday, 20 May, 2014 14:52:16</span><br><span class="line"></span><br><span class="line">Copyright (c) 2003, 2005, Oracle.  All rights reserved.</span><br><span class="line"></span><br><span class="line">Connected to: Oracle Database 10g Enterprise Edition Release 10.2.0.1.0 - 64bit Production</span><br><span class="line">With the Partitioning, OLAP and Data Mining options</span><br><span class="line">Starting &quot;FUNG&quot;.&quot;SYS_EXPORT_TABLE_01&quot;:  fung/********@oratest tables=object directory=expdir dumpfile=fung.object.dmp logfile=fung.object.log </span><br><span class="line">Estimate in progress using BLOCKS method...</span><br><span class="line">Processing object type TABLE_EXPORT/TABLE/TABLE_DATA</span><br><span class="line">Total estimation using BLOCKS method: 32 MB</span><br><span class="line">Processing object type TABLE_EXPORT/TABLE/TABLE</span><br><span class="line">. . exported &quot;FUNG&quot;.&quot;OBJECT&quot;                             26.63 MB  315008 rows</span><br><span class="line">Master table &quot;FUNG&quot;.&quot;SYS_EXPORT_TABLE_01&quot; successfully loaded/unloaded</span><br><span class="line">******************************************************************************</span><br><span class="line">Dump file set for FUNG.SYS_EXPORT_TABLE_01 is:</span><br><span class="line">  /oracle/expdir/fung.object.dmp</span><br><span class="line">Job &quot;FUNG&quot;.&quot;SYS_EXPORT_TABLE_01&quot; successfully completed at 14:52:26</span><br><span class="line"></span><br><span class="line">[oracle@:/home/oracle]$ impdp fung/oracle@oratest tables=object directory=expdir dumpfile=fung.object.dmp logfile=imp.object.log</span><br><span class="line"></span><br><span class="line">Import: Release 10.2.0.1.0 - 64bit Production on Tuesday, 20 May, 2014 14:54:35</span><br><span class="line"></span><br><span class="line">Copyright (c) 2003, 2005, Oracle.  All rights reserved.</span><br><span class="line"></span><br><span class="line">Connected to: Oracle Database 10g Enterprise Edition Release 10.2.0.1.0 - 64bit Production</span><br><span class="line">With the Partitioning, OLAP and Data Mining options</span><br><span class="line">Master table &quot;FUNG&quot;.&quot;SYS_IMPORT_TABLE_01&quot; successfully loaded/unloaded</span><br><span class="line">Starting &quot;FUNG&quot;.&quot;SYS_IMPORT_TABLE_01&quot;:  fung/********@oratest tables=object directory=expdir dumpfile=fung.object.dmp logfile=imp.object.log </span><br><span class="line">Processing object type TABLE_EXPORT/TABLE/TABLE</span><br><span class="line">Processing object type TABLE_EXPORT/TABLE/TABLE_DATA</span><br><span class="line">. . imported &quot;FUNG&quot;.&quot;OBJECT&quot;                             26.63 MB  315008 rows</span><br><span class="line">Job &quot;FUNG&quot;.&quot;SYS_IMPORT_TABLE_01&quot; successfully completed at 14:54:40</span><br></pre></td></tr></table></figure><p></p>
+<p></p><h4>1.2 Schemas</h4><br><figure class="highlight plain hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br></pre></td><td class="code"><pre><span class="line">[oracle@:/home/oracle]$ expdp system/oracle schemas=fung directory=expdir dumpfile=fung.dmp logfile=fung.exp.log</span><br><span class="line"></span><br><span class="line">Export: Release 10.2.0.1.0 - 64bit Production on Tuesday, 20 May, 2014 18:00:39</span><br><span class="line"></span><br><span class="line">Copyright (c) 2003, 2005, Oracle.  All rights reserved.</span><br><span class="line"></span><br><span class="line">Connected to: Oracle Database 10g Enterprise Edition Release 10.2.0.1.0 - 64bit Production</span><br><span class="line">With the Partitioning, OLAP and Data Mining options</span><br><span class="line">Starting &quot;SYSTEM&quot;.&quot;SYS_EXPORT_SCHEMA_01&quot;:  system/******** schemas=fung directory=expdir dumpfile=fung.dmp logfile=fung.exp.log </span><br><span class="line">Estimate in progress using BLOCKS method...</span><br><span class="line">Processing object type SCHEMA_EXPORT/TABLE/TABLE_DATA</span><br><span class="line">Total estimation using BLOCKS method: 32 MB</span><br><span class="line">Processing object type SCHEMA_EXPORT/USER</span><br><span class="line">Processing object type SCHEMA_EXPORT/SYSTEM_GRANT</span><br><span class="line">Processing object type SCHEMA_EXPORT/ROLE_GRANT</span><br><span class="line">Processing object type SCHEMA_EXPORT/DEFAULT_ROLE</span><br><span class="line">Processing object type SCHEMA_EXPORT/TABLESPACE_QUOTA</span><br><span class="line">Processing object type SCHEMA_EXPORT/PRE_SCHEMA/PROCACT_SCHEMA</span><br><span class="line">Processing object type SCHEMA_EXPORT/TABLE/TABLE</span><br><span class="line">. . exported &quot;FUNG&quot;.&quot;OBJECT&quot;                             26.63 MB  315008 rows</span><br><span class="line">Master table &quot;SYSTEM&quot;.&quot;SYS_EXPORT_SCHEMA_01&quot; successfully loaded/unloaded</span><br><span class="line">******************************************************************************</span><br><span class="line">Dump file set for SYSTEM.SYS_EXPORT_SCHEMA_01 is:</span><br><span class="line">  /oracle/expdir/fung.dmp</span><br><span class="line">Job &quot;SYSTEM&quot;.&quot;SYS_EXPORT_SCHEMA_01&quot; successfully completed at 18:00:49</span><br><span class="line"></span><br><span class="line">[oracle@:/home/oracle]$ impdp system/oracle@orcl schemas=fung directory=expdir dumpfile=oratest.dmp</span><br><span class="line"></span><br><span class="line">Import: Release 10.2.0.1.0 - 64bit Production on Tuesday, 20 May, 2014 17:49:57</span><br><span class="line"></span><br><span class="line">Copyright (c) 2003, 2005, Oracle.  All rights reserved.</span><br><span class="line"></span><br><span class="line">Connected to: Oracle Database 11g Enterprise Edition Release 11.2.0.3.0 - 64bit Production</span><br><span class="line">With the Partitioning, OLAP, Data Mining and Real Application Testing options</span><br><span class="line">Master table &quot;SYSTEM&quot;.&quot;SYS_IMPORT_SCHEMA_01&quot; successfully loaded/unloaded</span><br><span class="line">Starting &quot;SYSTEM&quot;.&quot;SYS_IMPORT_SCHEMA_01&quot;:  system/********@orcl schemas=fung directory=expdir dumpfile=oratest.dmp </span><br><span class="line">Processing object type DATABASE_EXPORT/SCHEMA/USER</span><br><span class="line">Processing object type DATABASE_EXPORT/SCHEMA/GRANT/SYSTEM_GRANT</span><br><span class="line">Processing object type DATABASE_EXPORT/SCHEMA/ROLE_GRANT</span><br><span class="line">Processing object type DATABASE_EXPORT/SCHEMA/DEFAULT_ROLE</span><br><span class="line">Processing object type DATABASE_EXPORT/SCHEMA/TABLESPACE_QUOTA</span><br><span class="line">Processing object type DATABASE_EXPORT/SCHEMA/PROCACT_SCHEMA</span><br><span class="line">Processing object type DATABASE_EXPORT/SCHEMA/TABLE/TABLE</span><br><span class="line">Processing object type DATABASE_EXPORT/SCHEMA/TABLE/TABLE_DATA</span><br><span class="line">. . imported &quot;FUNG&quot;.&quot;OBJECT&quot;                             26.63 MB  315008 rows</span><br><span class="line">Job &quot;SYSTEM&quot;.&quot;SYS_IMPORT_SCHEMA_01&quot; successfully completed at 04:46:29</span><br></pre></td></tr></table></figure><p></p>
+<p></p><h4>1.3 Database</h4><br><figure class="highlight plain hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">[oracle@:/home/oracle]$ expdp system/oracle full=y directory=expdir dumpfile=oratest01.dmp</span><br><span class="line">[oracle@:/home/oracle]$ impdp system/oracle@orcl full=y directory=expdir dumpfile=oratest.dmp</span><br></pre></td></tr></table></figure><p></p>
+<p></p><h3>2. Advanced Options</h3><p></p>
+<p></p><h4>2.1 exclude/include</h4><br>使用<code>exclude</code>及<code>include</code>参数排除/加入某些表、用户等。<br>语法：<br><figure class="highlight plain hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">EXCLUDE = object_type[:name_clause] [, ...]</span><br><span class="line">INCLUDE = object_type[:name_clause] [, ...]</span><br></pre></td></tr></table></figure><p></p>
+<p>#####示例1<br><figure class="highlight plain hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">expdp hr/hr DIRECTORY=dpump_dir1 DUMPFILE=hr_exclude.dmp EXCLUDE=VIEW,PACKAGE, FUNCTION</span><br></pre></td></tr></table></figure></p>
+<p>#####示例2<br>全库导出，排除系统自带用户。<br><figure class="highlight plain hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><span class="line">[oracle@:/home/oracle]$ expdp system/oracle full=y directory=expdir \</span><br><span class="line">&gt; EXCLUDE=SCHEMA:&quot;IN (&apos;OUTLN&apos;,&apos;DBSNMP&apos;,&apos;DIP&apos;)&quot; \</span><br><span class="line">&gt; EXCLUDE=SCHEMA:&quot;LIKE &apos;%SYS%&apos;&quot; dumpfile=oratest.dmp</span><br><span class="line"></span><br><span class="line">Export: Release 10.2.0.1.0 - 64bit Production on Tuesday, 20 May, 2014 18:11:12</span><br><span class="line"></span><br><span class="line">Copyright (c) 2003, 2005, Oracle.  All rights reserved.</span><br><span class="line"></span><br><span class="line">Connected to: Oracle Database 10g Enterprise Edition Release 10.2.0.1.0 - 64bit Production</span><br><span class="line">With the Partitioning, OLAP and Data Mining options</span><br><span class="line">ORA-39001: invalid argument value</span><br><span class="line">ORA-39071: Value for EXCLUDE is badly formed.</span><br><span class="line">ORA-00936: missing expression</span><br></pre></td></tr></table></figure></p>
+<p>出现这个错误，需要加上转义字符：<br><figure class="highlight plain hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br></pre></td><td class="code"><pre><span class="line">[oracle@:/home/oracle]$ expdp system/oracle full=y directory=expdir \</span><br><span class="line">&gt; EXCLUDE=SCHEMA:\&quot;IN \(\&apos;OUTLN\&apos;,\&apos;DBSNMP\&apos;,\&apos;DIP\&apos;\)\&quot; \</span><br><span class="line">&gt; EXCLUDE=SCHEMA:\&quot;LIKE \&apos;\%SYS\%\&apos;\&quot; dumpfile=oratest.dmp</span><br><span class="line"></span><br><span class="line">Export: Release 10.2.0.1.0 - 64bit Production on Tuesday, 20 May, 2014 18:12:35</span><br><span class="line"></span><br><span class="line">Copyright (c) 2003, 2005, Oracle.  All rights reserved.</span><br><span class="line"></span><br><span class="line">Connected to: Oracle Database 10g Enterprise Edition Release 10.2.0.1.0 - 64bit Production</span><br><span class="line">With the Partitioning, OLAP and Data Mining options</span><br><span class="line">Starting &quot;SYSTEM&quot;.&quot;SYS_EXPORT_FULL_01&quot;:  system/******** full=y directory=expdir EXCLUDE=SCHEMA:&quot;IN (&apos;OUTLN&apos;,&apos;DBSNMP&apos;,&apos;DIP&apos;)&quot; EXCLUDE=SCHEMA:&quot;LIKE &apos;%SYS%&apos;&quot; dumpfile=oratest.dmp </span><br><span class="line">Estimate in progress using BLOCKS method...</span><br><span class="line">Processing object type DATABASE_EXPORT/SCHEMA/TABLE/TABLE_DATA</span><br><span class="line">Total estimation using BLOCKS method: 32 MB</span><br><span class="line">Processing object type DATABASE_EXPORT/TABLESPACE</span><br><span class="line">Processing object type DATABASE_EXPORT/SYS_USER/USER</span><br><span class="line">Processing object type DATABASE_EXPORT/SCHEMA/USER</span><br><span class="line">Processing object type DATABASE_EXPORT/ROLE</span><br><span class="line">Processing object type DATABASE_EXPORT/GRANT/SYSTEM_GRANT/PROC_SYSTEM_GRANT</span><br><span class="line">Processing object type DATABASE_EXPORT/SCHEMA/GRANT/SYSTEM_GRANT</span><br><span class="line">Processing object type DATABASE_EXPORT/SCHEMA/ROLE_GRANT</span><br><span class="line">Processing object type DATABASE_EXPORT/SCHEMA/DEFAULT_ROLE</span><br><span class="line">Processing object type DATABASE_EXPORT/SCHEMA/TABLESPACE_QUOTA</span><br><span class="line">Processing object type DATABASE_EXPORT/RESOURCE_COST</span><br><span class="line">Processing object type DATABASE_EXPORT/TRUSTED_DB_LINK</span><br><span class="line">Processing object type DATABASE_EXPORT/DIRECTORY/DIRECTORY</span><br><span class="line">Processing object type DATABASE_EXPORT/DIRECTORY/GRANT/OWNER_GRANT/OBJECT_GRANT</span><br><span class="line">Processing object type DATABASE_EXPORT/CONTEXT</span><br><span class="line">Processing object type DATABASE_EXPORT/SYSTEM_PROCOBJACT/PRE_SYSTEM_ACTIONS/PROCACT_SYSTEM</span><br><span class="line">Processing object type DATABASE_EXPORT/SYSTEM_PROCOBJACT/POST_SYSTEM_ACTIONS/PROCACT_SYSTEM</span><br><span class="line">Processing object type DATABASE_EXPORT/SCHEMA/PROCACT_SCHEMA</span><br><span class="line">Processing object type DATABASE_EXPORT/SCHEMA/TABLE/TABLE</span><br><span class="line">Processing object type DATABASE_EXPORT/SCHEMA/POST_SCHEMA/PROCACT_SCHEMA</span><br><span class="line">. . exported &quot;FUNG&quot;.&quot;OBJECT&quot;                             26.63 MB  315008 rows</span><br><span class="line">Master table &quot;SYSTEM&quot;.&quot;SYS_EXPORT_FULL_01&quot; successfully loaded/unloaded</span><br><span class="line">******************************************************************************</span><br><span class="line">Dump file set for SYSTEM.SYS_EXPORT_FULL_01 is:</span><br><span class="line">  /oracle/expdir/oratest.dmp</span><br><span class="line">Job &quot;SYSTEM&quot;.&quot;SYS_EXPORT_FULL_01&quot; successfully completed at 18:12:45</span><br></pre></td></tr></table></figure></p>
+<p></p><h4>2.2 NETWORK_LINK</h4><br>由于data pump是基于server端的，因此，所有的导入导出都是存储在server上。如果需要将远程数据库dump到本地来，必须要使用<code>network_link</code>参数。使用<code>network_link</code>要先创建dblink。<br><figure class="highlight plain hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line">SQL&gt; create public database link &quot;orcl&quot;</span><br><span class="line">  2  connect to system</span><br><span class="line">  3  identified by &quot;oracle&quot;</span><br><span class="line">  4  using &apos;orcl&apos;;</span><br><span class="line"></span><br><span class="line">Database link created.</span><br><span class="line">[oracle@:/home/oracle]$ expdp system/oracle directory=expdir network_link=orcl dumpfile=netdmp.dmp</span><br><span class="line">[oracle@:/home/oracle]$ impdp system/oracle directory=expdir schemas=fung network_link=orcl remap_schema=fung:kong</span><br></pre></td></tr></table></figure><p></p>
+<p>注意，使用<code>network_link</code>导入的时候，可以不产生dump文件，而直接导入目标数据库。</p>
+<p></p><h3>3. Miscellaneous </h3><p></p>
+<p></p><h4>3.1 基于scn或者timestamp导入导出</h4><br><figure class="highlight plain hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br></pre></td><td class="code"><pre><span class="line">#查询scn或者timestamp</span><br><span class="line">SQL&gt; SELECT current_scn FROM v$database;</span><br><span class="line"></span><br><span class="line">CURRENT_SCN</span><br><span class="line">-----------</span><br><span class="line">     256822</span><br><span class="line"></span><br><span class="line">SQL&gt; SELECT DBMS_FLASHBACK.get_system_change_number FROM dual;</span><br><span class="line"></span><br><span class="line">GET_SYSTEM_CHANGE_NUMBER</span><br><span class="line">------------------------</span><br><span class="line">                  256824</span><br><span class="line"></span><br><span class="line">SQL&gt; SELECT TIMESTAMP_TO_SCN(SYSTIMESTAMP) FROM dual;</span><br><span class="line"></span><br><span class="line">TIMESTAMP_TO_SCN(SYSTIMESTAMP)</span><br><span class="line">------------------------------</span><br><span class="line">                        2</span><br><span class="line">SQL&gt; SELECT SCN_TO_TIMESTAMP(256826) FROM dual;</span><br><span class="line"></span><br><span class="line">SCN_TO_TIMESTAMP(256826)</span><br><span class="line">---------------------------------------------------------------------------</span><br><span class="line">20-MAY-14 06.56.14.000000000 PM</span><br></pre></td></tr></table></figure><p></p>
+<p>过段时间，删除某些行。执行导出。<br><figure class="highlight plain hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br></pre></td><td class="code"><pre><span class="line">SQL&gt; delete fung.object where rownum=1;</span><br><span class="line"></span><br><span class="line">1 row deleted.</span><br><span class="line"></span><br><span class="line">SQL&gt; commit;</span><br><span class="line"></span><br><span class="line">Commit complete.</span><br><span class="line"></span><br><span class="line">SQL&gt; select count(*) from object;</span><br><span class="line"></span><br><span class="line">  COUNT(*)</span><br><span class="line">----------</span><br><span class="line">    315007</span><br><span class="line"></span><br><span class="line">SQL&gt; SELECT TIMESTAMP_TO_SCN(SYSTIMESTAMP) FROM dual;</span><br><span class="line"></span><br><span class="line">TIMESTAMP_TO_SCN(SYSTIMESTAMP)</span><br><span class="line">------------------------------</span><br><span class="line">                        260057</span><br><span class="line">[oracle@:/oracle/expdir]$ expdp system/oracle full=y directory=expdir dumpfile=full.emp flashback_scn=256826</span><br></pre></td></tr></table></figure></p>
+<p>删除表，执行导入，发现数据回复到表删除一行前的状态。<br><figure class="highlight plain hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br></pre></td><td class="code"><pre><span class="line">SQL&gt; drop table fung.object;</span><br><span class="line"></span><br><span class="line">Table dropped.</span><br><span class="line">[oracle@:/oracle/expdir]$ impdp system/oracle directory=expdir dumpfile=full.emp schemas=fung</span><br><span class="line"></span><br><span class="line">Import: Release 10.2.0.1.0 - 64bit Production on Tuesday, 20 May, 2014 19:13:20</span><br><span class="line"></span><br><span class="line">Copyright (c) 2003, 2005, Oracle.  All rights reserved.</span><br><span class="line"></span><br><span class="line">Connected to: Oracle Database 10g Enterprise Edition Release 10.2.0.1.0 - 64bit Production</span><br><span class="line">With the Partitioning, OLAP and Data Mining options</span><br><span class="line">Master table &quot;SYSTEM&quot;.&quot;SYS_IMPORT_SCHEMA_01&quot; successfully loaded/unloaded</span><br><span class="line">Starting &quot;SYSTEM&quot;.&quot;SYS_IMPORT_SCHEMA_01&quot;:  system/******** directory=expdir dumpfile=full.emp schemas=fung </span><br><span class="line">Processing object type DATABASE_EXPORT/SCHEMA/USER</span><br><span class="line">ORA-31684: Object type USER:&quot;FUNG&quot; already exists</span><br><span class="line">Processing object type DATABASE_EXPORT/SCHEMA/GRANT/SYSTEM_GRANT</span><br><span class="line">Processing object type DATABASE_EXPORT/SCHEMA/ROLE_GRANT</span><br><span class="line">Processing object type DATABASE_EXPORT/SCHEMA/DEFAULT_ROLE</span><br><span class="line">Processing object type DATABASE_EXPORT/SCHEMA/TABLESPACE_QUOTA</span><br><span class="line">Processing object type DATABASE_EXPORT/SCHEMA/PROCACT_SCHEMA</span><br><span class="line">Processing object type DATABASE_EXPORT/SCHEMA/TABLE/TABLE</span><br><span class="line">Processing object type DATABASE_EXPORT/SCHEMA/TABLE/TABLE_DATA</span><br><span class="line">. . imported &quot;FUNG&quot;.&quot;OBJECT&quot;                             26.63 MB  315008 rows</span><br><span class="line">Job &quot;SYSTEM&quot;.&quot;SYS_IMPORT_SCHEMA_01&quot; completed with 1 error(s) at 19:13:25</span><br><span class="line">SQL&gt; select count(*) from fung.object;</span><br><span class="line"></span><br><span class="line">  COUNT(*)</span><br><span class="line">----------</span><br><span class="line">    315008</span><br></pre></td></tr></table></figure></p>
+<p></p><h4>3.2 dump file中导出DDL语句</h4><br>对于任意一个dump文件，<code>impdp</code>中，可用<code>sqlfile</code>将dump文件中的DDL语句单独导出到一个文本文件中。<code>sqlfile</code>参数是取代了<code>imp</code>中的<code>indexfile</code>参数。<br><figure class="highlight plain hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">impdp system/oracle schemas=fung directory=expdir sqlfile=fung.sql dumpfile=fung.dmp</span><br></pre></td></tr></table></figure><p></p>
+<p></p><h3>4. wrap-up</h3><p></p>
+<ol>
+<li>不同版本导入导出，需遵循一个原则：低版本导出，高版本导入。  </li>
+<li>在10.2.0.1版本中，不支持network_link导入导出11g，跟compatible参数有关，带确认。  </li>
+<li>全库导出/导入时，由于可能存在目标端数据库文件存储跟源端不一致，因此有可能导致表空间无法创建，对象无法创建的现象。在做全库导出时，排除掉系统用户，这样可以降低EM出错的概率，全库导入时，先创建表空间，再指定业务用户导入。  </li>
+<li>data pump支持后台运行，如果导入导出过程中，不小心按掉ctrl+c，可以执行<code>expdp status</code>查看状态，并且删除job。  </li>
+<li>expdp脚本<figure class="highlight bash hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line"><span class="hljs-meta">#!/bin/sh</span></span><br><span class="line"><span class="hljs-built_in">export</span> HOME=/home/oracle</span><br><span class="line">. <span class="hljs-variable">$HOME</span>/.profile</span><br><span class="line"><span class="hljs-built_in">export</span> DATE=`date <span class="hljs-string">'+%Y%m%d%H%M'</span>`</span><br><span class="line"><span class="hljs-built_in">export</span> DMPFILE=<span class="hljs-variable">$ORACLE_SID</span>`date <span class="hljs-string">'+%Y%m%d%H%M'</span>`_%U.dmp</span><br><span class="line"><span class="hljs-built_in">export</span> LOGFILE=<span class="hljs-variable">$ORACLE_SID</span>`date <span class="hljs-string">'+%Y%m%d%H%M'</span>`.<span class="hljs-built_in">log</span></span><br><span class="line"><span class="hljs-built_in">export</span> EXPDIR=expdir</span><br><span class="line">expdp system/oracle@linora schemas=fung,summer filesize=8192M \</span><br><span class="line">directory=<span class="hljs-variable">$EXPDIR</span> dumpfile=<span class="hljs-variable">$DMPFILE</span> logfile=<span class="hljs-variable">$LOGFILE</span> parallel=2</span><br><span class="line"><span class="hljs-built_in">exit</span> 0</span><br></pre></td></tr></table></figure>
+</li>
+</ol>
+<h3 id="5-补充data-pump参数文件使用"><a href="#5-补充data-pump参数文件使用" class="headerlink" title="5.补充data pump参数文件使用"></a>5.补充data pump参数文件使用</h3><figure class="highlight plain hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line">SCHEMAS=HR</span><br><span class="line">DUMPFILE=expinclude.dmp</span><br><span class="line">DIRECTORY=dpump_dir1</span><br><span class="line">LOGFILE=expinclude.log</span><br><span class="line">INCLUDE=TABLE:&quot;IN (&apos;EMPLOYEES&apos;, &apos;DEPARTMENTS&apos;)&quot;</span><br><span class="line">INCLUDE=PROCEDURE</span><br><span class="line">INCLUDE=INDEX:&quot;LIKE &apos;EMP%&apos;&quot;</span><br></pre></td></tr></table></figure>
+<p>以上为名为hr.par的参数文件，以下为用法<br><figure class="highlight plain hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">expdp hr/hr parfile=hr.par</span><br></pre></td></tr></table></figure></p>
+<p>Reference:<br><a href="https://docs.oracle.com/cd/B19306_01/server.102/b14215/dp_export.htm#i1007837" target="_blank" rel="noopener">https://docs.oracle.com/cd/B19306_01/server.102/b14215/dp_export.htm#i1007837</a> </p>
+
+    
+    </div>
+    
+    <div class="columns is-variable is-1 is-multiline is-mobile">
+    
+        <span class="column is-narrow"><a class="tag is-light article-tag" href="/tags/datapump/">#datapump</a></span>
+    
+    </div>
+    
+    
+    <div class="columns is-mobile is-multiline article-nav">
+        <span class="column is-12-mobile is-half-desktop  article-nav-prev">
+            
+            <a href="/oracle/change-database-name-in-oracle.html">Oracle修改数据库名称</a>
+            
+        </span>
+        <span class="column is-12-mobile is-half-desktop  article-nav-next">
+            
+            <a href="/linux/find-command.html">Linux Find Command</a>
+            
+        </span>
+    </div>
+    
+</article>
+
+
+
+
+    </div>
+</section>
+    <footer class="footer">
+    <div class="container">
+        <div class="columns content">
+            <div class="column is-narrow has-text-centered">
+                &copy; 2018 Kong&nbsp;
+                Powered by <a href="http://hexo.io/" target="_blank">Hexo</a> & <a
+                        href="http://github.com/ppoffice/hexo-theme-minos">Minos</a>
+            </div>
+            <div class="column is-hidden-mobile"></div>
+
+            
+            
+        </div>
+    </div>
+</footer>
+    <script src="//cdnjs.cloudflare.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
+<script src="//cdnjs.cloudflare.com/ajax/libs/moment.js/2.22.2/moment-with-locales.min.js"></script>
+
+<!-- test if the browser is outdated -->
+<div id="outdated">
+    <h6>Your browser is out-of-date!</h6>
+    <p>Update your browser to view this website correctly. <a id="btnUpdateBrowser" href="http://outdatedbrowser.com/">Update my browser now </a></p>
+    <p class="last"><a href="#" id="btnCloseUpdateBrowser" title="Close">&times;</a></p>
+</div>
+<script src="//cdnjs.cloudflare.com/ajax/libs/outdated-browser/1.1.5/outdatedbrowser.min.js"></script>
+<script>
+    $(document).ready(function () {
+        // plugin function, place inside DOM ready function
+        outdatedBrowser({
+            bgColor: '#f25648',
+            color: '#ffffff',
+            lowerThan: 'flex'
+        })
+    });
+</script>
+
+<script>
+    window.FontAwesomeConfig = {
+        searchPseudoElements: true
+    }
+    moment.locale("en-AU");
+</script>
+
+
+    
+    
+    
+    
+    
+    
+
+    
+
+
+<script src="/js/script.js"></script>
+
+    
+    <div class="searchbox ins-search">
+    <div class="searchbox-mask"></div>
+    <div class="searchbox-container ins-search-container">
+        <div class="searchbox-input-wrapper">
+            <input type="text" class="searchbox-input ins-search-input" placeholder="Type something..." />
+            <span class="searchbox-close ins-close ins-selectable"><i class="fa fa-times-circle"></i></span>
+        </div>
+        <div class="searchbox-result-wrapper ins-section-wrapper">
+            <div class="ins-section-container"></div>
+        </div>
+    </div>
+</div>
+<script>
+    (function (window) {
+        var INSIGHT_CONFIG = {
+            TRANSLATION: {
+                POSTS: 'Posts',
+                PAGES: 'Pages',
+                CATEGORIES: 'Categories',
+                TAGS: 'Tags',
+                UNTITLED: '(Untitled)',
+            },
+            CONTENT_URL: '/content.json',
+        };
+        window.INSIGHT_CONFIG = INSIGHT_CONFIG;
+    })(window);
+</script>
+<script src="/js/insight.js"></script>
+    
+</body>
+</html>

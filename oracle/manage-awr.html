@@ -1,0 +1,258 @@
+<!DOCTYPE html>
+<html class="has-navbar-fixed-top">
+<head>
+    <meta charset="utf-8">
+<title>管理AWR快照 - My Wiki</title>
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+
+<link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/outdated-browser/1.1.5/outdatedbrowser.min.css">
+
+
+<meta name="description" content="how to manage Automatic Workload Repository">
+
+
+
+<meta name="keywords" content="awr">
+
+
+
+
+
+
+
+<link rel="icon" href="/images/favicon.ico">
+
+
+<link rel="stylesheet" href="//fonts.googleapis.com/css?family=Ovo|Source+Code+Pro">
+<link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/bulma/0.6.2/css/bulma.min.css">
+
+
+
+<link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/highlight.js/9.12.0/styles/github.min.css">
+
+<link rel="stylesheet" href="/css/style.css">
+
+<script defer src="//use.fontawesome.com/releases/v5.0.8/js/all.js"></script>
+
+
+    
+    
+    
+    
+    
+    
+
+    
+
+
+</head>
+<body>
+    
+<nav class="navbar is-transparent is-fixed-top navbar-main" role="navigation" aria-label="main navigation">
+    <div class="container">
+        <div class="navbar-brand">
+            <a class="navbar-item navbar-logo" href="/">
+                
+                    
+                    My Wiki
+                    
+                
+            </a>
+            <div class="navbar-burger">
+                <span></span>
+                <span></span>
+                <span></span>
+            </div>
+        </div>
+        
+        <div class="navbar-menu navbar-start">
+            
+            <a class="navbar-item "
+               href="/">Home</a>
+            
+            <a class="navbar-item "
+               href="/archives">Archives</a>
+            
+            <a class="navbar-item "
+               href="/about">About</a>
+            
+        </div>
+        
+        <div class="navbar-menu navbar-end">
+            
+            <a class="navbar-item search" title="Search" href="javascript:;">
+                <i class="fas fa-search"></i>
+            </a>
+            
+            
+            
+        </div>
+    </div>
+</nav>
+
+    <section class="section">
+    <div class="container">
+    <article class="article content gallery" itemscope itemprop="blogPost">
+    <h1 class="article-title is-size-3 is-size-4-mobile" itemprop="name">
+        
+            管理AWR快照
+        
+    </h1>
+    <div class="article-meta columns is-variable is-1 is-multiline is-mobile is-size-7-mobile">
+        <span class="column is-narrow">
+            <time datetime="2014-07-17T14:52:12.000Z" itemprop="datePublished">Jul 17 2014</time>
+        </span>
+        
+        <span class="column is-narrow article-category">
+            <i class="far fa-folder"></i>
+            <a class="article-category-link" href="/categories/oracle/">oracle</a>
+        </span>
+        
+        
+        <span class="column is-narrow">
+            
+            
+            8 minutes read (About 1188 words)
+        </span>
+        
+    </div>
+    <div class="article-entry is-size-6-mobile" itemprop="articleBody">
+    
+        <p></p><h3>1.管理快照</h3><br>Oracle默认每小时生成一次快照，11g中，默认保存时间为8天，而在10g中，默认保存时间为7天。Oracle提供了一个<code>DBMS_WORKLOAD_REPOSITORY</code>包用于管理快照，包括创建删除修改快照，但必须要有DBA权限才能进行调用。<br><a id="more"></a><p></p>
+<h5 id="查看当前快照设定"><a href="#查看当前快照设定" class="headerlink" title="查看当前快照设定"></a>查看当前快照设定</h5><figure class="highlight plain hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line">SYS@linora&gt; col SNAP_INTERVAL for a20</span><br><span class="line">SYS@linora&gt; col RETENTION for a20</span><br><span class="line">SYS@linora&gt; select * from dba_hist_wr_control;</span><br><span class="line"></span><br><span class="line">      DBID SNAP_INTERVAL        RETENTION            TOPNSQL</span><br><span class="line">---------- -------------------- -------------------- ----------</span><br><span class="line">3385851293 +00000 01:00:00.0    +00008 00:00:00.0    DEFAULT</span><br></pre></td></tr></table></figure>
+<h5 id="修改快照为15分钟一次，保存10天"><a href="#修改快照为15分钟一次，保存10天" class="headerlink" title="修改快照为15分钟一次，保存10天"></a>修改快照为15分钟一次，保存10天</h5><figure class="highlight plain hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line">SYS@linora&gt; BEGIN</span><br><span class="line">  2  DBMS_WORKLOAD_REPOSITORY.MODIFY_SNAPSHOT_SETTINGS(</span><br><span class="line">  3    interval  =&gt;  15,</span><br><span class="line">  4    retention =&gt;  10*24*60);</span><br><span class="line">  5  END;</span><br><span class="line">  6  /</span><br><span class="line">PL/SQL procedure successfully completed.</span><br></pre></td></tr></table></figure>
+<p>在这个包中，还有其他选项，如：<br><figure class="highlight plain hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line">BEGIN</span><br><span class="line">  DBMS_WORKLOAD_REPOSITORY.MODIFY_SNAPSHOT_SETTINGS(retention =&gt; 43200,</span><br><span class="line">                                                    interval  =&gt; 30,</span><br><span class="line">                                                    topnsql   =&gt; 100,</span><br><span class="line">                                                    dbid      =&gt; 3310949047);</span><br><span class="line">END;</span><br><span class="line">/</span><br></pre></td></tr></table></figure></p>
+<p>1.retention表示快照保留时间，以分钟计算，最小值为1天，最大为100年。如果此参数为0，表示永久保留。<br>2.interval表示快照生产间隔时间，以分钟计算，最小10分钟，最大为1年。如果此参数为0，则表示禁用awr。<br>3.topnsql表示抓取符合以下每一项条件的top N sql：<br><figure class="highlight plain hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br></pre></td><td class="code"><pre><span class="line">1. Elapsed Time (ms)</span><br><span class="line">2. CPU Time (ms)</span><br><span class="line">3. Executions</span><br><span class="line">4. Buffer Gets</span><br><span class="line">5. Disk Reads</span><br><span class="line">6. Parse Calls</span><br><span class="line">7. Rows</span><br><span class="line">8. User I/O Wait Time (ms)</span><br><span class="line">9 Cluster Wait Time (ms)</span><br><span class="line">10. Application Wait Time (ms)</span><br><span class="line">11. Concurrency Wait Time (ms)</span><br><span class="line">12. Invalidations</span><br><span class="line">13. Version Count</span><br><span class="line">14. Sharable Mem(KB)</span><br></pre></td></tr></table></figure></p>
+<h5 id="创建快照"><a href="#创建快照" class="headerlink" title="创建快照"></a>创建快照</h5><figure class="highlight plain hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br></pre></td><td class="code"><pre><span class="line">SYS@linora&gt; col BEGIN_INTERVAL_TIME for a50 </span><br><span class="line">SYS@linora&gt; col FLUSH_ELAPSED for a30</span><br><span class="line">SYS@linora&gt; select SNAP_ID,BEGIN_INTERVAL_TIME,FLUSH_ELAPSED from dba_hist_snapshot order by snap_id;</span><br><span class="line">   SNAP_ID BEGIN_INTERVAL_TIME                                FLUSH_ELAPSED</span><br><span class="line">---------- -------------------------------------------------- ------------------------------</span><br><span class="line">        98 17-JUL-14 02.15.08.645 PM                          +00000 00:00:00.6</span><br><span class="line">        99 17-JUL-14 02.30.11.373 PM                          +00000 00:00:00.6</span><br><span class="line">SYS@linora&gt; exec dbms_workload_repository.create_snapshot();</span><br><span class="line">PL/SQL procedure successfully completed.</span><br><span class="line">SYS@linora&gt;  select SNAP_ID,BEGIN_INTERVAL_TIME,FLUSH_ELAPSED from dba_hist_snapshot order by snap_id;</span><br><span class="line">   SNAP_ID BEGIN_INTERVAL_TIME                                FLUSH_ELAPSED</span><br><span class="line">---------- -------------------------------------------------- ------------------------------</span><br><span class="line">        98 17-JUL-14 02.15.08.645 PM                          +00000 00:00:00.6</span><br><span class="line">        99 17-JUL-14 02.30.11.373 PM                          +00000 00:00:00.6</span><br><span class="line">       100 17-JUL-14 02.45.14.378 PM                          +00000 00:00:01.4</span><br></pre></td></tr></table></figure>
+<h5 id="删除快照"><a href="#删除快照" class="headerlink" title="删除快照"></a>删除快照</h5><figure class="highlight plain hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br></pre></td><td class="code"><pre><span class="line">SYS@linora&gt; select SNAP_ID,BEGIN_INTERVAL_TIME,FLUSH_ELAPSED from dba_hist_snapshot </span><br><span class="line">where snap_id&gt;=75 and snap_id &lt;=80;</span><br><span class="line">   SNAP_ID BEGIN_INTERVAL_TIME                                FLUSH_ELAPSED</span><br><span class="line">---------- -------------------------------------------------- ------------------------------</span><br><span class="line">        75 16-JUL-14 10.50.34.000 AM                          +00000 00:00:08.6</span><br><span class="line">        76 16-JUL-14 10.55.03.421 AM                          +00000 00:00:01.7</span><br><span class="line">        77 16-JUL-14 11.02.59.311 AM                          +00000 00:00:02.8</span><br><span class="line">        78 16-JUL-14 11.15.32.171 AM                          +00000 00:00:02.0</span><br><span class="line">        79 16-JUL-14 11.30.36.014 AM                          +00000 00:00:01.2</span><br><span class="line">        80 16-JUL-14 11.45.39.828 AM                          +00000 00:00:01.7</span><br><span class="line"></span><br><span class="line">6 rows selected.</span><br><span class="line">SYS@linora&gt; BEGIN</span><br><span class="line">  2    DBMS_WORKLOAD_REPOSITORY.DROP_SNAPSHOT_RANGE(low_snap_id  =&gt; 77,</span><br><span class="line">  3                                                 high_snap_id =&gt; 80,</span><br><span class="line">  4                                                 dbid         =&gt; 3385851293);</span><br><span class="line">  5  END;</span><br><span class="line">  6  /</span><br><span class="line">PL/SQL procedure successfully completed.</span><br><span class="line">SYS@linora&gt; select SNAP_ID,BEGIN_INTERVAL_TIME,FLUSH_ELAPSED from dba_hist_snapshot </span><br><span class="line">where snap_id&gt;=75 and snap_id &lt;=80;</span><br><span class="line">   SNAP_ID BEGIN_INTERVAL_TIME                                FLUSH_ELAPSED</span><br><span class="line">---------- -------------------------------------------------- ------------------------------</span><br><span class="line">        75 16-JUL-14 10.50.34.000 AM                          +00000 00:00:08.6</span><br><span class="line">        76 16-JUL-14 10.55.03.421 AM                          +00000 00:00:01.7</span><br></pre></td></tr></table></figure>
+<p>需要注意的是，调用<code>DROP_SNAPSHOT_RANGE</code>删除snapshot时，在此期间内的ASH也会被删除。</p>
+<p></p><h3>2.管理基线</h3><br>Baseline包含指定时间点的性能数据，一般是在业务峰值性能正常时的数据，因此，当某天性能出现异常时，则可与baseline进行比较。基线有几种类型：单一基线，重复基线，及11G的Moving Window Baseline，这里只涉及最简单的单一基线。<p></p>
+<h5 id="创建baseline"><a href="#创建baseline" class="headerlink" title="创建baseline"></a>创建baseline</h5><p>baseline是在两个snapshot之间的，因此，首先从<code>dba_hist_snapshot</code>决定baseline创建在哪两个snapshot之间，然后，使用<code>CREATE_BASELINE</code>进行创建。<br><figure class="highlight plain hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line">SYS@linora&gt; BEGIN</span><br><span class="line">  2    DBMS_WORKLOAD_REPOSITORY.CREATE_BASELINE(start_snap_id =&gt; 81,</span><br><span class="line">  3                                             end_snap_id   =&gt; 85,</span><br><span class="line">  4                                             baseline_name =&gt; &apos;test baseline&apos;,</span><br><span class="line">  5                                             dbid          =&gt; 3385851293,</span><br><span class="line">  6                                             expiration    =&gt; 30);</span><br><span class="line">  7  END;</span><br><span class="line">  8  /</span><br><span class="line"></span><br><span class="line">PL/SQL procedure successfully completed.</span><br></pre></td></tr></table></figure></p>
+<p>该procedure最后一个参数expiration，在本例中表示30天后该baseline过期，如果不指定此参数，则表示永不过期。</p>
+<h5 id="查看baseline"><a href="#查看baseline" class="headerlink" title="查看baseline"></a>查看baseline</h5><figure class="highlight plain hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line">SYS@linora&gt; select baseline_name, baseline_type, start_snap_id, end_snap_id, expiration</span><br><span class="line">  2    from DBA_HIST_BASELINE;</span><br><span class="line"></span><br><span class="line">BASELINE_NAME                            BASELINE_TYPE START_SNAP_ID END_SNAP_ID EXPIRATION</span><br><span class="line">---------------------------------------- ------------- ------------- ----------- ----------</span><br><span class="line">test baseline                            STATIC                   81          85         30</span><br><span class="line">SYSTEM_MOVING_WINDOW                     MOVING_WINDOW            75         104</span><br></pre></td></tr></table></figure>
+<p>这里有个小提示，针对DBA或者其他相关视图，如果忘记此视图叫什么名字，可利用dict数据字典进行模糊查找。<br><figure class="highlight plain hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">select * from dict where table_name like &apos;DBA_HIST%&apos;;</span><br></pre></td></tr></table></figure></p>
+<h5 id="删除baseline"><a href="#删除baseline" class="headerlink" title="删除baseline"></a>删除baseline</h5><figure class="highlight plain hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line">SYS@linora&gt; BEGIN</span><br><span class="line">  DBMS_WORKLOAD_REPOSITORY.DROP_BASELINE(baseline_name =&gt; &apos;test baseline&apos;,</span><br><span class="line">                                         cascade       =&gt; FALSE,</span><br><span class="line">                                         dbid          =&gt; 3385851293);</span><br><span class="line">END;</span><br><span class="line">/</span><br></pre></td></tr></table></figure>
+<p>如果cascade为false，则表示仅仅删除baseline，如果cascade参数为true，则表示相关快照也一起删除。</p>
+<p></p><h3>3.生成AWR报告</h3><br>一般默认执行@?/rdbms/admin/awrrpt.sql，如果需要生成RAC的报告，则执行@?/rdbms/admin/awrgrpt.sql，如果RAC上需要收集其他节点的AWR报告，则执行@?/rdbms/admin/awrrpti.sql。11g同时新增了一个awrddrpt.sql，这个脚本用来比较两个时间段的AWR报告(RAC中使用的是awrgdrpt.sql)。<p></p>
+<h5 id="使用DBMS-WORKLOAD-REPOSITORY手动执行awr报告"><a href="#使用DBMS-WORKLOAD-REPOSITORY手动执行awr报告" class="headerlink" title="使用DBMS_WORKLOAD_REPOSITORY手动执行awr报告"></a>使用DBMS_WORKLOAD_REPOSITORY手动执行awr报告</h5><p>Function AWR_REPORT_HTML定义如下：<br><figure class="highlight plain hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line">DBMS_WORKLOAD_REPOSITORY.AWR_REPORT_HTML(</span><br><span class="line">   l_dbid       IN    NUMBER,</span><br><span class="line">   l_inst_num   IN    NUMBER,</span><br><span class="line">   l_bid        IN    NUMBER,</span><br><span class="line">   l_eid        IN    NUMBER,</span><br><span class="line">   l_options    IN    NUMBER DEFAULT 0)</span><br><span class="line"> RETURN awrrpt_text_type_table PIPELINED;</span><br></pre></td></tr></table></figure></p>
+<p>参数解析：l_dbid表示数据库dbid，l_inst_num表示实例号，l_bid表示开始的snapshot id，l_eid表示结束的snapshot id，l_options控制报表的输出，只有一个值：8，则表示输出中带ADDM的建议值。<br><figure class="highlight plain hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">SYS@linora&gt; spool testawr.html</span><br><span class="line">SYS@linora&gt; select output from table (DBMS_WORKLOAD_REPOSITORY.AWR_REPORT_HTML(3385851293,1,75,76,8));</span><br><span class="line">SYS@linora&gt; spool off</span><br></pre></td></tr></table></figure></p>
+<p>Reference:<br><a href="http://docs.oracle.com/cd/E11882_01/server.112/e41573/toc.htm" target="_blank" rel="noopener">Oracle® Database Performance Tuning Guide 11g Release 2 (11.2)</a><br><a href="http://docs.oracle.com/cd/E11882_01/appdev.112/e40758/d_workload_repos.htm#ARPLS093" target="_blank" rel="noopener">Oracle® Database PL/SQL Packages and Types Reference 11g Release 2 (11.2)</a></p>
+
+    
+    </div>
+    
+    <div class="columns is-variable is-1 is-multiline is-mobile">
+    
+        <span class="column is-narrow"><a class="tag is-light article-tag" href="/tags/tuning/">#tuning</a></span>
+    
+    </div>
+    
+    
+    <div class="columns is-mobile is-multiline article-nav">
+        <span class="column is-12-mobile is-half-desktop  article-nav-prev">
+            
+            <a href="/oracle/oracle-trace.html">Oracle追踪SQL的方法</a>
+            
+        </span>
+        <span class="column is-12-mobile is-half-desktop  article-nav-next">
+            
+            <a href="/oracle/rac-datafile-in-local-node.html">RAC Datafile in Local Node</a>
+            
+        </span>
+    </div>
+    
+</article>
+
+
+
+
+    </div>
+</section>
+    <footer class="footer">
+    <div class="container">
+        <div class="columns content">
+            <div class="column is-narrow has-text-centered">
+                &copy; 2018 Kong&nbsp;
+                Powered by <a href="http://hexo.io/" target="_blank">Hexo</a> & <a
+                        href="http://github.com/ppoffice/hexo-theme-minos">Minos</a>
+            </div>
+            <div class="column is-hidden-mobile"></div>
+
+            
+            
+        </div>
+    </div>
+</footer>
+    <script src="//cdnjs.cloudflare.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
+<script src="//cdnjs.cloudflare.com/ajax/libs/moment.js/2.22.2/moment-with-locales.min.js"></script>
+
+<!-- test if the browser is outdated -->
+<div id="outdated">
+    <h6>Your browser is out-of-date!</h6>
+    <p>Update your browser to view this website correctly. <a id="btnUpdateBrowser" href="http://outdatedbrowser.com/">Update my browser now </a></p>
+    <p class="last"><a href="#" id="btnCloseUpdateBrowser" title="Close">&times;</a></p>
+</div>
+<script src="//cdnjs.cloudflare.com/ajax/libs/outdated-browser/1.1.5/outdatedbrowser.min.js"></script>
+<script>
+    $(document).ready(function () {
+        // plugin function, place inside DOM ready function
+        outdatedBrowser({
+            bgColor: '#f25648',
+            color: '#ffffff',
+            lowerThan: 'flex'
+        })
+    });
+</script>
+
+<script>
+    window.FontAwesomeConfig = {
+        searchPseudoElements: true
+    }
+    moment.locale("en-AU");
+</script>
+
+
+    
+    
+    
+    
+    
+    
+
+    
+
+
+<script src="/js/script.js"></script>
+
+    
+    <div class="searchbox ins-search">
+    <div class="searchbox-mask"></div>
+    <div class="searchbox-container ins-search-container">
+        <div class="searchbox-input-wrapper">
+            <input type="text" class="searchbox-input ins-search-input" placeholder="Type something..." />
+            <span class="searchbox-close ins-close ins-selectable"><i class="fa fa-times-circle"></i></span>
+        </div>
+        <div class="searchbox-result-wrapper ins-section-wrapper">
+            <div class="ins-section-container"></div>
+        </div>
+    </div>
+</div>
+<script>
+    (function (window) {
+        var INSIGHT_CONFIG = {
+            TRANSLATION: {
+                POSTS: 'Posts',
+                PAGES: 'Pages',
+                CATEGORIES: 'Categories',
+                TAGS: 'Tags',
+                UNTITLED: '(Untitled)',
+            },
+            CONTENT_URL: '/content.json',
+        };
+        window.INSIGHT_CONFIG = INSIGHT_CONFIG;
+    })(window);
+</script>
+<script src="/js/insight.js"></script>
+    
+</body>
+</html>
