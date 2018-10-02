@@ -1,0 +1,271 @@
+<!DOCTYPE html>
+<html class="has-navbar-fixed-top">
+<head>
+    <meta charset="utf-8">
+<title>Multiple version Python on the same machine - My Wiki</title>
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+
+<link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/outdated-browser/1.1.5/outdatedbrowser.min.css">
+
+
+<meta name="description" content="Installing latest Python without disruptting current one">
+
+
+
+<meta name="keywords" content="Upgrade Python">
+
+
+
+
+
+
+
+<link rel="icon" href="/images/favicon.ico">
+
+
+<link rel="stylesheet" href="//fonts.googleapis.com/css?family=Ovo|Source+Code+Pro">
+<link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/bulma/0.6.2/css/bulma.min.css">
+
+
+
+<link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/highlight.js/9.12.0/styles/github.min.css">
+
+<link rel="stylesheet" href="/css/style.css">
+
+<script defer src="//use.fontawesome.com/releases/v5.0.8/js/all.js"></script>
+
+
+    
+    
+    
+    
+    
+    
+
+    
+
+
+</head>
+<body>
+    
+<nav class="navbar is-transparent is-fixed-top navbar-main" role="navigation" aria-label="main navigation">
+    <div class="container">
+        <div class="navbar-brand">
+            <a class="navbar-item navbar-logo" href="/">
+                
+                    
+                    My Wiki
+                    
+                
+            </a>
+            <div class="navbar-burger">
+                <span></span>
+                <span></span>
+                <span></span>
+            </div>
+        </div>
+        
+        <div class="navbar-menu navbar-start">
+            
+            <a class="navbar-item "
+               href="/">Home</a>
+            
+            <a class="navbar-item "
+               href="/archives">Archives</a>
+            
+            <a class="navbar-item "
+               href="/about">About</a>
+            
+        </div>
+        
+        <div class="navbar-menu navbar-end">
+            
+            <a class="navbar-item search" title="Search" href="javascript:;">
+                <i class="fas fa-search"></i>
+            </a>
+            
+            
+            
+        </div>
+    </div>
+</nav>
+
+    <section class="section">
+    <div class="container">
+    <article class="article content gallery" itemscope itemprop="blogPost">
+    <h1 class="article-title is-size-3 is-size-4-mobile" itemprop="name">
+        
+            Multiple version Python on the same machine
+        
+    </h1>
+    <div class="article-meta columns is-variable is-1 is-multiline is-mobile is-size-7-mobile">
+        <span class="column is-narrow">
+            <time datetime="2017-04-20T20:47:06.000Z" itemprop="datePublished">Apr 20 2017</time>
+        </span>
+        
+        <span class="column is-narrow article-category">
+            <i class="far fa-folder"></i>
+            <a class="article-category-link" href="/categories/Python/">Python</a>
+        </span>
+        
+        
+        <span class="column is-narrow">
+            
+            
+            3 minutes read (About 502 words)
+        </span>
+        
+    </div>
+    <div class="article-entry is-size-6-mobile" itemprop="articleBody">
+    
+        <p>Python is a critical package on Linux system, if you removed the current version before you install the new version, the OS maybe crash. So the best practice of upgrade Python on RHEL is reserved previous one.<br><a id="more"></a></p>
+<h2 id="Installing-latest-version"><a href="#Installing-latest-version" class="headerlink" title="Installing latest version"></a>Installing latest version</h2><p>I want to install the latest version for Python2 and Python3, download the source code package from official site, and extract them one by one.<br><strong>Extract the source code</strong></p>
+<figure class="highlight bash hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">yum install openssl-devel zlib-devel -y</span><br><span class="line">tar -xzvf Python-3.6.1.tgz</span><br><span class="line">tar -xzvf Python-2.7.13.tgz</span><br></pre></td></tr></table></figure>
+<p><strong>Compile and install the python from source code</strong></p>
+<figure class="highlight bash hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line"><span class="hljs-built_in">cd</span> Python-2.7.13</span><br><span class="line">or</span><br><span class="line"><span class="hljs-built_in">cd</span> Python-3.6.1</span><br><span class="line">./configure --<span class="hljs-built_in">enable</span>-shared --prefix=/usr/<span class="hljs-built_in">local</span>/</span><br><span class="line">make</span><br><span class="line">sudo make altinstall</span><br></pre></td></tr></table></figure>
+<p><strong>create the symbolic link for python2.7 or python3.6 library</strong></p>
+<figure class="highlight bash hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="hljs-comment">#On 64 bit OS</span></span><br><span class="line"><span class="hljs-comment"># ldd `python2.7` to check the dependency</span></span><br><span class="line">sudo ln -s /usr/<span class="hljs-built_in">local</span>/lib/libpython2.7.so.1.0 /usr/lib64/libpython2.7.so.1.0</span><br><span class="line"><span class="hljs-comment">#for python3.6</span></span><br><span class="line">sudo ln -s /usr/<span class="hljs-built_in">local</span>/lib/libpython3.6m.so.1.0 /usr/lib64/libpython3.6m.so.1.0</span><br></pre></td></tr></table></figure>
+<h2 id="Install-pip-for-python2-7"><a href="#Install-pip-for-python2-7" class="headerlink" title="Install pip for python2.7"></a>Install pip for python2.7</h2><p>pip on Python3 will be automatically installed, for python2.7, install <code>pip</code> from <code>get-pip.py</code> is recommended.</p>
+<figure class="highlight bash hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">wget https://bootstrap.pypa.io/get-pip.py</span><br><span class="line">python2.7 get-pip.py</span><br></pre></td></tr></table></figure>
+<p>Now, we have two version of pip.</p>
+<h2 id="Trouble-shooting"><a href="#Trouble-shooting" class="headerlink" title="Trouble shooting"></a>Trouble shooting</h2><blockquote>
+<p>pip is configured with locations that require TLS/SSL, however the ssl module in Python is not available.</p>
+</blockquote>
+<p>Because we missed to install the openssl-devel package, install the package and re-compile/reinstall the source code will resolve this issue.</p>
+<figure class="highlight bash hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">yum install openssl-devel zlib-devel -y</span><br></pre></td></tr></table></figure>
+<blockquote>
+<p>python2.7: error while loading shared libraries: libpython2.7.so.1.0: cannot open shared object file: No such file or directory</p>
+</blockquote>
+<p>Check the lib dependency and found that some libs are missing, create the symbolic link will resolve this issue.</p>
+<figure class="highlight bash hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line">$ ldd /usr/<span class="hljs-built_in">local</span>/bin/python2.7</span><br><span class="line">	linux-vdso.so.1 =&gt;  (0x00007fffd91ff000)</span><br><span class="line">	libpython2.7.so.1.0 =&gt; not found</span><br><span class="line">	libpthread.so.0 =&gt; /lib64/libpthread.so.0 (0x00007f46bf554000)</span><br><span class="line">	libdl.so.2 =&gt; /lib64/libdl.so.2 (0x00007f46bf350000)</span><br><span class="line">	libutil.so.1 =&gt; /lib64/libutil.so.1 (0x00007f46bf14d000)</span><br><span class="line">	libm.so.6 =&gt; /lib64/libm.so.6 (0x00007f46beec8000)</span><br><span class="line">	libc.so.6 =&gt; /lib64/libc.so.6 (0x00007f46beb34000)</span><br><span class="line">	/lib64/ld-linux-x86-64.so.2 (0x00007f46bf77d000)</span><br></pre></td></tr></table></figure>
+<p>Creating the symbolic link for python library</p>
+<figure class="highlight bash hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="hljs-comment">#On 64 bit OS</span></span><br><span class="line"><span class="hljs-comment"># ldd `python2.7` to check the dependency</span></span><br><span class="line">sudo ln -s /usr/<span class="hljs-built_in">local</span>/lib/libpython2.7.so.1.0 /usr/lib64/libpython2.7.so.1.0</span><br><span class="line"><span class="hljs-comment">#for python3.6</span></span><br><span class="line">sudo ln -s /usr/<span class="hljs-built_in">local</span>/lib/libpython3.6m.so.1.0 /usr/lib64/libpython3.6m.so.1.0</span><br></pre></td></tr></table></figure>
+<h2 id="Hint-for-virtualenvwrapper"><a href="#Hint-for-virtualenvwrapper" class="headerlink" title="Hint for virtualenvwrapper"></a>Hint for virtualenvwrapper</h2><p><code>virtualenvwrapper</code> for python virtual environment management, install this package from any version of pip, virtualenvwrapper can cover any version of python, such as:</p>
+<p><strong>Specified version of python to create virtual environment</strong></p>
+<figure class="highlight bash hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><span class="line"><span class="hljs-comment"># for python2</span></span><br><span class="line">mkvirtualenv py2 --python=/usr/<span class="hljs-built_in">local</span>/bin/python2.7</span><br><span class="line">$ python -V</span><br><span class="line">Python 2.7.13</span><br><span class="line">$ pip -V</span><br><span class="line">pip 9.0.1 from /home/kingsley/.virtualenvs/py2/lib/python2.7/site-packages (python 2.7)</span><br><span class="line"></span><br><span class="line"><span class="hljs-comment"># for python3</span></span><br><span class="line">mkvirtualenv py2 --python=/usr/<span class="hljs-built_in">local</span>/bin/python3.6</span><br><span class="line">$ python -V</span><br><span class="line">Python 3.6.1</span><br><span class="line">$ pip -V</span><br><span class="line">pip 9.0.1 from /home/kingsley/.virtualenvs/py2/lib/python3.6/site-packages (python 3.6)</span><br></pre></td></tr></table></figure>
+<p><strong>Deactivating virtual environment</strong></p>
+<figure class="highlight bash hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">$ deactivate</span><br></pre></td></tr></table></figure>
+<p><strong>Activating virtual environment</strong></p>
+<figure class="highlight bash hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">$ workon py2</span><br></pre></td></tr></table></figure>
+<p><strong>Removing virtual environment</strong></p>
+<figure class="highlight bash hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">$ rmvirtualenv py2</span><br><span class="line">Removing py2...</span><br></pre></td></tr></table></figure>
+<p><strong><em>EOF</em></strong></p>
+
+    
+    </div>
+    
+    <div class="columns is-variable is-1 is-multiline is-mobile">
+    
+        <span class="column is-narrow"><a class="tag is-light article-tag" href="/tags/Python/">#Python</a></span>
+    
+    </div>
+    
+    
+    <div class="columns is-mobile is-multiline article-nav">
+        <span class="column is-12-mobile is-half-desktop  article-nav-prev">
+            
+            <a href="/db2-backup-and-recovery.html">db2 backup and recovery</a>
+            
+        </span>
+        <span class="column is-12-mobile is-half-desktop  article-nav-next">
+            
+            <a href="/migrating-sms-to-dms-in-db2.html">Migrating SMS to DMS in DB2</a>
+            
+        </span>
+    </div>
+    
+</article>
+
+
+
+
+    </div>
+</section>
+    <footer class="footer">
+    <div class="container">
+        <div class="columns content">
+            <div class="column is-narrow has-text-centered">
+                &copy; 2018 Fung Kong&nbsp;
+                Powered by <a href="http://hexo.io/" target="_blank">Hexo</a> & <a
+                        href="http://github.com/ppoffice/hexo-theme-minos">Minos</a>
+            </div>
+            <div class="column is-hidden-mobile"></div>
+
+            
+            
+        </div>
+    </div>
+</footer>
+    <script src="//cdnjs.cloudflare.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
+<script src="//cdnjs.cloudflare.com/ajax/libs/moment.js/2.22.2/moment-with-locales.min.js"></script>
+
+<!-- test if the browser is outdated -->
+<div id="outdated">
+    <h6>Your browser is out-of-date!</h6>
+    <p>Update your browser to view this website correctly. <a id="btnUpdateBrowser" href="http://outdatedbrowser.com/">Update my browser now </a></p>
+    <p class="last"><a href="#" id="btnCloseUpdateBrowser" title="Close">&times;</a></p>
+</div>
+<script src="//cdnjs.cloudflare.com/ajax/libs/outdated-browser/1.1.5/outdatedbrowser.min.js"></script>
+<script>
+    $(document).ready(function () {
+        // plugin function, place inside DOM ready function
+        outdatedBrowser({
+            bgColor: '#f25648',
+            color: '#ffffff',
+            lowerThan: 'flex'
+        })
+    });
+</script>
+
+<script>
+    window.FontAwesomeConfig = {
+        searchPseudoElements: true
+    }
+    moment.locale("en-AU");
+</script>
+
+
+    
+    
+    
+    
+    
+    
+
+    
+
+
+<script src="/js/script.js"></script>
+
+    
+    <div class="searchbox ins-search">
+    <div class="searchbox-mask"></div>
+    <div class="searchbox-container ins-search-container">
+        <div class="searchbox-input-wrapper">
+            <input type="text" class="searchbox-input ins-search-input" placeholder="Type something..." />
+            <span class="searchbox-close ins-close ins-selectable"><i class="fa fa-times-circle"></i></span>
+        </div>
+        <div class="searchbox-result-wrapper ins-section-wrapper">
+            <div class="ins-section-container"></div>
+        </div>
+    </div>
+</div>
+<script>
+    (function (window) {
+        var INSIGHT_CONFIG = {
+            TRANSLATION: {
+                POSTS: 'Posts',
+                PAGES: 'Pages',
+                CATEGORIES: 'Categories',
+                TAGS: 'Tags',
+                UNTITLED: '(Untitled)',
+            },
+            CONTENT_URL: '/content.json',
+        };
+        window.INSIGHT_CONFIG = INSIGHT_CONFIG;
+    })(window);
+</script>
+<script src="/js/insight.js"></script>
+    
+</body>
+</html>

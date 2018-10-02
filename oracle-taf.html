@@ -1,0 +1,358 @@
+<!DOCTYPE html>
+<html class="has-navbar-fixed-top">
+<head>
+    <meta charset="utf-8">
+<title>oracle TAF - My Wiki</title>
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+
+<link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/outdated-browser/1.1.5/outdatedbrowser.min.css">
+
+
+
+
+
+
+
+
+
+
+<link rel="icon" href="/images/favicon.ico">
+
+
+<link rel="stylesheet" href="//fonts.googleapis.com/css?family=Ovo|Source+Code+Pro">
+<link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/bulma/0.6.2/css/bulma.min.css">
+
+
+
+<link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/highlight.js/9.12.0/styles/github.min.css">
+
+<link rel="stylesheet" href="/css/style.css">
+
+<script defer src="//use.fontawesome.com/releases/v5.0.8/js/all.js"></script>
+
+
+    
+    
+    
+    
+    
+    
+
+    
+
+
+</head>
+<body>
+    
+<nav class="navbar is-transparent is-fixed-top navbar-main" role="navigation" aria-label="main navigation">
+    <div class="container">
+        <div class="navbar-brand">
+            <a class="navbar-item navbar-logo" href="/">
+                
+                    
+                    My Wiki
+                    
+                
+            </a>
+            <div class="navbar-burger">
+                <span></span>
+                <span></span>
+                <span></span>
+            </div>
+        </div>
+        
+        <div class="navbar-menu navbar-start">
+            
+            <a class="navbar-item "
+               href="/">Home</a>
+            
+            <a class="navbar-item "
+               href="/archives">Archives</a>
+            
+            <a class="navbar-item "
+               href="/about">About</a>
+            
+        </div>
+        
+        <div class="navbar-menu navbar-end">
+            
+            <a class="navbar-item search" title="Search" href="javascript:;">
+                <i class="fas fa-search"></i>
+            </a>
+            
+            
+            
+        </div>
+    </div>
+</nav>
+
+    <section class="section">
+    <div class="container">
+    <article class="article content gallery" itemscope itemprop="blogPost">
+    <h1 class="article-title is-size-3 is-size-4-mobile" itemprop="name">
+        
+            oracle TAF
+        
+    </h1>
+    <div class="article-meta columns is-variable is-1 is-multiline is-mobile is-size-7-mobile">
+        <span class="column is-narrow">
+            <time datetime="2014-03-29T16:00:00.000Z" itemprop="datePublished">Mar 29 2014</time>
+        </span>
+        
+        <span class="column is-narrow article-category">
+            <i class="far fa-folder"></i>
+            <a class="article-category-link" href="/categories/oracle/">oracle</a>
+        </span>
+        
+        
+        <span class="column is-narrow">
+            
+            
+            17 minutes read (About 2492 words)
+        </span>
+        
+    </div>
+    <div class="article-entry is-size-6-mobile" itemprop="articleBody">
+    
+         <h1>1.TAF简介</h1>
+Transparent application failover，即对应用透明的故障切换，是Oracle8i以后推出的基于客户端的HA应用。在RAC环境中，如果实例挂了一个，应用可以通过TAF配置无缝切换。
+<a id="more"></a>
+ 在Oracle中，有三种FAILOVER方式，一种是Client-Side Connect time Failover，一种为TAF，一种为Server-Side TAF。<br>
+
+ Client-Side如果客户端配置了多个IP，客户端请求连接时，会先尝试地址表中的第一个地址，如果连接失败，则继续尝试第二个地址，以此类推。如果连接过程中某个实例挂掉了，则客户端需要重新连接才能继续操作。启用这种Failover方式是在客户端的tnsnames中添加FAILOVER=ON条目。但默认为开启，即使不添加，也默认为打开状态。<br>
+
+ TAF则在客户端tnsnames配置文件中添加TAF参数，具体参数见后续说明。这样的话，在当前连接的实例挂掉的时候，客户端会自动连接到其他可用实例中，而不用重新连接。<br>
+这两种配置的tnsnames范例如下：
+<figure class="highlight plain hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br></pre></td><td class="code"><pre><span class="line">#Client-Side：</span><br><span class="line">orcl_test =</span><br><span class="line">  (DESCRIPTION =</span><br><span class="line">    (ADDRESS_LIST =</span><br><span class="line">      (ADDRESS = (PROTOCOL = TCP)(HOST = 192.168.56.125)(PORT = 1521))</span><br><span class="line">      (ADDRESS = (PROTOCOL = TCP)(HOST = 192.168.56.126)(PORT = 1521))</span><br><span class="line">      (LOAD_BALANCE = YES)</span><br><span class="line">    )</span><br><span class="line">    (CONNECT_DATA =</span><br><span class="line">      (SERVICE_NAME = orcl)</span><br><span class="line">    )</span><br><span class="line">  )</span><br><span class="line">#TAF：</span><br><span class="line">orcl_taf =</span><br><span class="line">  (DESCRIPTION =</span><br><span class="line">    (ADDRESS = (PROTOCOL = TCP)(HOST = 192.168.56.125)(PORT = 1521))</span><br><span class="line">    (ADDRESS = (PROTOCOL = TCP)(HOST = 192.168.56.126)(PORT = 1521))</span><br><span class="line">    (LOAD_BALANCE = yes)</span><br><span class="line">    (CONNECT_DATA =</span><br><span class="line">      (SERVER = DEDICATED)</span><br><span class="line">      (SERVICE_NAME = orcl)</span><br><span class="line">      (FAILOVER_MODE =</span><br><span class="line">        (TYPE = SELECT)</span><br><span class="line">        (METHOD = BASIC)</span><br><span class="line">        (RETRIES = 180)</span><br><span class="line">        (DELAY = 5)</span><br><span class="line">      )</span><br><span class="line">    )</span><br><span class="line">  )</span><br></pre></td></tr></table></figure>
+
+请先看这两种方式的FAILOVER方式，因实验环境配置了Server-Side的TAF，先把对应的TAF Service停止掉：
+<figure class="highlight plain hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br></pre></td><td class="code"><pre><span class="line">[oracle@oel1:/home/oracle]$ srvctl stop service -d orcl -s orcl_taf -i orcl1</span><br><span class="line">[oracle@oel1:/home/oracle]$ srvctl stop service -d orcl -s orcl_taf -i orcl2</span><br><span class="line">[oracle@oel1:/home/oracle]$ srvctl disable service -d orcl -s orcl_taf -i orcl1</span><br><span class="line">[oracle@oel1:/home/oracle]$ srvctl disable service -d orcl -s orcl_taf -i orcl2</span><br><span class="line">[oracle@oel1:/home/oracle]$ crs_stat -t</span><br><span class="line">Name           Type           Target    State     Host</span><br><span class="line">------------------------------------------------------------</span><br><span class="line">ora....SM1.asm application    ONLINE    ONLINE    oel1</span><br><span class="line">ora....L1.lsnr application    ONLINE    ONLINE    oel1</span><br><span class="line">ora.oel1.gsd   application    ONLINE    ONLINE    oel1</span><br><span class="line">ora.oel1.ons   application    ONLINE    ONLINE    oel1</span><br><span class="line">ora.oel1.vip   application    ONLINE    ONLINE    oel1</span><br><span class="line">ora....SM2.asm application    ONLINE    ONLINE    oel2</span><br><span class="line">ora....L2.lsnr application    ONLINE    ONLINE    oel2</span><br><span class="line">ora.oel2.gsd   application    ONLINE    ONLINE    oel2</span><br><span class="line">ora.oel2.ons   application    ONLINE    ONLINE    oel2</span><br><span class="line">ora.oel2.vip   application    ONLINE    ONLINE    oel2</span><br><span class="line">ora.orcl.db    application    ONLINE    ONLINE    oel1</span><br><span class="line">ora....l1.inst application    ONLINE    ONLINE    oel1</span><br><span class="line">ora....l2.inst application    ONLINE    ONLINE    oel2</span><br><span class="line">ora...._taf.cs application    OFFLINE   OFFLINE</span><br><span class="line">ora....cl1.srv application    OFFLINE   OFFLINE</span><br><span class="line">ora....cl2.srv application    OFFLINE   OFFLINE</span><br></pre></td></tr></table></figure>
+
+同时添加上述tns到Clinet端的tnsnames中。开两个窗口，分别通过CS及TAF模式连接，查看连接模式：
+<figure class="highlight sql hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br></pre></td><td class="code"><pre><span class="line">[oracle@oel1:/home/oracle]$ sqlplus system/oracle@orcl_test</span><br><span class="line"></span><br><span class="line"> SQL&gt; select username,failover_type,failover_method</span><br><span class="line">  2  from v$session where username='SYSTEM';</span><br><span class="line"></span><br><span class="line"> USERNAME                       FAILOVER_TYPE FAILOVER_M</span><br><span class="line"><span class="hljs-comment">------------------------------ ------------- ----------</span></span><br><span class="line">SYSTEM                         NONE          NONE</span><br><span class="line">SQL&gt; select instance_name from v$instance;</span><br><span class="line"></span><br><span class="line"> INSTANCE_NAME</span><br><span class="line"><span class="hljs-comment">----------------</span></span><br><span class="line">orcl2</span><br><span class="line"></span><br><span class="line"> [oracle@oel1:/home/oracle]$ sqlplus system/oracle@orcl_taf</span><br><span class="line">SQL&gt; select username,failover_type,failover_method</span><br><span class="line">  2  from v$session where username='SYSTEM';</span><br><span class="line"></span><br><span class="line"> USERNAME                       FAILOVER_TYPE FAILOVER_M</span><br><span class="line"><span class="hljs-comment">------------------------------ ------------- ----------</span></span><br><span class="line">SYSTEM                         <span class="hljs-keyword">SELECT</span>        BASIC</span><br><span class="line"><span class="hljs-keyword">SQL</span>&gt;  <span class="hljs-keyword">select</span> instance_name <span class="hljs-keyword">from</span> v$<span class="hljs-keyword">instance</span>;</span><br><span class="line"></span><br><span class="line"> INSTANCE_NAME</span><br><span class="line"><span class="hljs-comment">----------------</span></span><br><span class="line">orcl2</span><br></pre></td></tr></table></figure>
+
+通过服务器端直接kill掉这两个进程：
+<figure class="highlight sql hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br></pre></td><td class="code"><pre><span class="line">SQL&gt; select pid,spid from v$process</span><br><span class="line">  2  where addr in</span><br><span class="line">  3  (<span class="hljs-keyword">select</span> paddr <span class="hljs-keyword">from</span> v$<span class="hljs-keyword">session</span></span><br><span class="line">  <span class="hljs-number">4</span>  <span class="hljs-keyword">where</span> username=<span class="hljs-string">'SYSTEM'</span>);</span><br><span class="line"></span><br><span class="line">        PID SPID</span><br><span class="line"><span class="hljs-comment">---------- ------------</span></span><br><span class="line">        22 8009</span><br><span class="line">        31 6694</span><br><span class="line">#两个进程的OS pid分别为8009和6694，调用OS kill命令直接杀死两个进程</span><br><span class="line">[oracle@oel2:/home/oracle]$ ps -ef|grep 8009</span><br><span class="line">oracle    8009     1  0 16:34 ?        00:00:00 oracleorcl2 (LOCAL=NO)</span><br><span class="line">oracle    9583  8707  0 16:38 pts/0    00:00:00 grep 8009</span><br><span class="line">[oracle@oel2:/home/oracle]$ ps -ef|grep 6694</span><br><span class="line">oracle    6694     1  0 16:30 ?        00:00:00 oracleorcl2 (LOCAL=NO)</span><br><span class="line">oracle    9610  8707  0 16:38 pts/0    00:00:00 grep 6694</span><br><span class="line">[oracle@oel2:/home/oracle]$ <span class="hljs-keyword">kill</span> <span class="hljs-number">-9</span> <span class="hljs-number">8009</span></span><br><span class="line">[<span class="hljs-keyword">oracle</span>@oel2:/home/<span class="hljs-keyword">oracle</span>]$ <span class="hljs-keyword">kill</span> <span class="hljs-number">-9</span> <span class="hljs-number">6694</span></span><br></pre></td></tr></table></figure>
+
+返回窗口，执行SQL：
+<figure class="highlight sql hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br></pre></td><td class="code"><pre><span class="line">#Client-Side配置：</span><br><span class="line">SQL&gt; select instance_name from v$instance;</span><br><span class="line"><span class="hljs-keyword">select</span> instance_name <span class="hljs-keyword">from</span> v$<span class="hljs-keyword">instance</span></span><br><span class="line">*</span><br><span class="line"><span class="hljs-keyword">ERROR</span> <span class="hljs-keyword">at</span> line <span class="hljs-number">1</span>:</span><br><span class="line">ORA<span class="hljs-number">-03113</span>: <span class="hljs-keyword">end</span>-<span class="hljs-keyword">of</span>-<span class="hljs-keyword">file</span> <span class="hljs-keyword">on</span> communication channel</span><br><span class="line"></span><br><span class="line"> <span class="hljs-keyword">SQL</span>&gt; <span class="hljs-keyword">select</span> instance_name <span class="hljs-keyword">from</span> v$<span class="hljs-keyword">instance</span>;</span><br><span class="line">ERROR:</span><br><span class="line">ORA-03114: not connected to ORACLE</span><br><span class="line"></span><br><span class="line"> #TAF配置：</span><br><span class="line">SQL&gt; select instance_name from v$instance;</span><br><span class="line"><span class="hljs-keyword">select</span> instance_name <span class="hljs-keyword">from</span> v$<span class="hljs-keyword">instance</span></span><br><span class="line">*</span><br><span class="line"><span class="hljs-keyword">ERROR</span> <span class="hljs-keyword">at</span> line <span class="hljs-number">1</span>:</span><br><span class="line">ORA<span class="hljs-number">-03113</span>: <span class="hljs-keyword">end</span>-<span class="hljs-keyword">of</span>-<span class="hljs-keyword">file</span> <span class="hljs-keyword">on</span> communication channel</span><br><span class="line"></span><br><span class="line"> <span class="hljs-keyword">SQL</span>&gt; <span class="hljs-keyword">select</span> instance_name <span class="hljs-keyword">from</span> v$<span class="hljs-keyword">instance</span>;</span><br><span class="line"></span><br><span class="line"> INSTANCE_NAME</span><br><span class="line"><span class="hljs-comment">----------------</span></span><br><span class="line">orcl1</span><br></pre></td></tr></table></figure>
+
+第三种Failover配置为Server-Side TAF，这是配置在服务器端的，在这种配置下，客户端可以不用tns就可以使用到TAF的好处。下面以Oracle 10g为例，说明TAF Server-side的配置。
+<h1>2.配置信息</h1>
+Server端：
+<figure class="highlight plain hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br></pre></td><td class="code"><pre><span class="line">[oracle@oel1:/u01/app/oracle/product/10.2.0/db_1/network/admin]$ cat tnsnames.ora</span><br><span class="line"># tnsnames.ora Network Configuration File: /u01/app/oracle/product/10.2.0/db_1/network/admin/tnsnames.ora</span><br><span class="line"># Generated by Oracle configuration tools.</span><br><span class="line"></span><br><span class="line"> RACDB_TAF =</span><br><span class="line">  (DESCRIPTION =</span><br><span class="line">    (ADDRESS = (PROTOCOL = TCP)(HOST = 192.168.56.125)(PORT = 1521))</span><br><span class="line">    (ADDRESS = (PROTOCOL = TCP)(HOST = 192.168.56.126)(PORT = 1521))</span><br><span class="line">    (LOAD_BALANCE = yes)</span><br><span class="line">    (CONNECT_DATA =</span><br><span class="line">      (SERVER = DEDICATED)</span><br><span class="line">      (SERVICE_NAME = orcl_taf)</span><br><span class="line">      (FAILOVER_MODE =</span><br><span class="line">        (TYPE = SELECT)</span><br><span class="line">        (METHOD = BASIC)</span><br><span class="line">        (RETRIES = 180)</span><br><span class="line">        (DELAY = 5)</span><br><span class="line">      )</span><br><span class="line">    )</span><br><span class="line">  )</span><br><span class="line"></span><br><span class="line"> LISTENERS_ORCL =</span><br><span class="line">  (ADDRESS_LIST =</span><br><span class="line">    (ADDRESS = (PROTOCOL = TCP)(HOST = orcl1-vip)(PORT = 1521))</span><br><span class="line">    (ADDRESS = (PROTOCOL = TCP)(HOST = orcl2-vip)(PORT = 1521))</span><br><span class="line">  )</span><br><span class="line"></span><br><span class="line"> EXTPROC_CONNECTION_DATA =</span><br><span class="line">  (DESCRIPTION =</span><br><span class="line">    (ADDRESS_LIST =</span><br><span class="line">      (ADDRESS = (PROTOCOL = IPC)(KEY = EXTPROC0))</span><br><span class="line">    )</span><br><span class="line">    (CONNECT_DATA =</span><br><span class="line">      (SID = PLSExtProc)</span><br><span class="line">      (PRESENTATION = RO)</span><br><span class="line">    )</span><br><span class="line">  )</span><br></pre></td></tr></table></figure>
+
+<h1>3.切换测试</h1>
+查看当前实例信息：
+<figure class="highlight sql hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br></pre></td><td class="code"><pre><span class="line">SQL&gt; COLUMN instance_name    FORMAT a13</span><br><span class="line">COLUMN host_name        FORMAT a9</span><br><span class="line">COLUMN failover_method  FORMAT a15</span><br><span class="line">COLUMN failed_over      FORMAT a11</span><br><span class="line"><span class="hljs-keyword">SELECT</span></span><br><span class="line">    instance_name</span><br><span class="line">  , host_name</span><br><span class="line">  , <span class="hljs-literal">NULL</span> <span class="hljs-keyword">AS</span> failover_type</span><br><span class="line">  , <span class="hljs-literal">NULL</span> <span class="hljs-keyword">AS</span> failover_method</span><br><span class="line">  , <span class="hljs-literal">NULL</span> <span class="hljs-keyword">AS</span> failed_over</span><br><span class="line"><span class="hljs-keyword">FROM</span> v$<span class="hljs-keyword">instance</span></span><br><span class="line"><span class="hljs-keyword">UNION</span></span><br><span class="line"><span class="hljs-keyword">SELECT</span></span><br><span class="line">    <span class="hljs-literal">NULL</span></span><br><span class="line">  , <span class="hljs-literal">NULL</span></span><br><span class="line">  , failover_type</span><br><span class="line">  , failover_method</span><br><span class="line">  , failed_over</span><br><span class="line"><span class="hljs-keyword">FROM</span> v$<span class="hljs-keyword">session</span></span><br><span class="line"><span class="hljs-keyword">WHERE</span> username = <span class="hljs-string">'SYSTEM'</span>;</span><br><span class="line">INSTANCE_NAME HOST_NAME FAILOVER_TYPE FAILOVER_METHOD FAILED_OVER</span><br><span class="line"><span class="hljs-comment">------------- --------- ------------- --------------- -----------</span></span><br><span class="line">orcl1           oel1          <span class="hljs-keyword">SELECT</span>        BASIC            <span class="hljs-keyword">NO</span></span><br></pre></td></tr></table></figure>
+
+保持上述窗口不变，停止当前实例：
+<figure class="highlight plain hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line">[oracle@oel1:/home/oracle]$ srvctl status database -d orcl</span><br><span class="line">Instance orcl1 is running on node oel1</span><br><span class="line">Instance orcl2 is running on node oel2</span><br><span class="line">[oracle@oel1:/home/oracle]$ srvctl stop instance -d orcl -i orcl1 -o abort</span><br><span class="line">[oracle@oel1:/home/oracle]$ srvctl status database -d orcl</span><br><span class="line">Instance orcl1 is not running on node oel1</span><br><span class="line">Instance orcl2 is running on node oel2</span><br></pre></td></tr></table></figure>
+
+回到上个SQL窗口，再次查询：
+<figure class="highlight plain hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">INSTANCE_NAME HOST_NAME FAILOVER_TYPE FAILOVER_METHOD FAILED_OVER</span><br><span class="line">------------- --------- ------------- --------------- -----------</span><br><span class="line">orcl2         oel2         SELECT          BASIC              YES</span><br></pre></td></tr></table></figure>
+
+从v$session中查询的结果可以看到，FAILED_OVER从原来的“NO”变成了”YES”，也就是说，这个会话是经过故障转移重新连接的会话。
+<h1>4.参数及含义</h1>
+在上述TNS配置中，在FAILOVER_MODE中有如下几个参数：
+<table border="1" cellspacing="0" cellpadding="0">
+<tbody>
+<tr>
+<td valign="top" width="127"><b>参数</b><b></b></td>
+<td valign="top" width="441"><b>描述</b><b></b></td>
+</tr>
+<tr>
+<td valign="top" width="127">BACKUP</td>
+<td valign="top" width="441">指定备用连接所用到的service name，在PRECONNECT模式中，必须要添加此参数。在BASIC模式中，强烈建议添加此参数，会减少因重连失败实例而带来的延时。</td>
+</tr>
+<tr>
+<td valign="top" width="127">TYPE</td>
+<td valign="top" width="441">指定故障切换的类型。OCI默认有三种切换类型。此参数只能通过dbms包修改。
+<ul>
+	<li><b>SESSION </b>只是切换当前会话。即会话不会中断，但是查询语句需要重新执行。<b></b></li>
+	<li><b>SELECT </b>SELECT模式，用户当前正在执行的SELECT语句会被转移到新的实例上，在新的节点继续返回后续结果。<b></b></li>
+	<li><b>NONE </b>表示不会进行任何切换操作，这是默认的模式。<b></b></li>
+</ul>
+</td>
+</tr>
+<tr>
+<td valign="top" width="127">METHOD</td>
+<td valign="top" width="441">此参数决定从主节点到备用节点故障切换的速度。
+<ul>
+	<li><b>BASIC</b> 检测到故障时建立连接。</li>
+	<li><b>PRECONNECT</b> 预先建立连接，一开始创建会话连接就连接到所有实例，当发生故障时，立刻可以快速切换到其他实例上。</li>
+</ul>
+</td>
+</tr>
+<tr>
+<td valign="top" width="127">RETRIES</td>
+<td valign="top" width="441">节点故障时，重新尝试连接备用节点的次数。此参数只能通过dbms包修改。</td>
+</tr>
+<tr>
+<td valign="top" width="127">DELAY</td>
+<td valign="top" width="441">节点故障时，重新尝试连接备用节点的时间。此参数只能通过dbms包修改。</td>
+</tr>
+</tbody>
+</table>
+&nbsp;
+<h1>5. 配置步骤</h1>
+使用dbca配置：
+<ol>
+	<li>通过dbca设置一个新的service name，称为orcl_taf</li>
+	<li>在欢迎界面，选择Oracle Real Application Cluster database，选择下一步</li>
+	<li>选择Service Management，选择下一步</li>
+	<li>选中需要修改的RAC数据库，选择下一步</li>
+	<li>点击Add，添加新的service name：orcl_taf</li>
+	<li>选择PREFERED，点击完成。</li>
+	<li>添加orcl_taf服务到tnsnames.ora中。</li>
+</ol>
+说明：在第五步中，PREFERRED跟AVALIABLE表示首选实例及后备实例。客户端会优先使用首选实例。因srvctl添加服务只会更新OCR信息而不会更新data dictionary及listener信息，还需要调用dbms包去更新信息，因此，建议通过dbca对Service进行更改。<br>
+
+ 命令行添加，添加另一个名为ORCL_TEST的服务：
+<ol>
+	<li>首先添加服务</li>
+</ol>
+<figure class="highlight plain hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br></pre></td><td class="code"><pre><span class="line">[oracle@oel1:/home/oracle]$ srvctl add service -h</span><br><span class="line">Usage: srvctl add service -d &lt;name&gt; -s &lt;service_name&gt; -r &quot;&lt;preferred_list&gt;&quot; [-a &quot;&lt;available_list&gt;&quot;] [-P &lt;taf_policy&gt;]</span><br><span class="line">    -d &lt;name&gt;           Unique name for the database</span><br><span class="line">    -s &lt;service&gt;        Service name</span><br><span class="line">    -r &quot;&lt;pref_list&gt;&quot;    List of preferred instances</span><br><span class="line">    -a &quot;&lt;avail_list&gt;&quot;   List of available instances</span><br><span class="line">    -P &lt;taf_policy&gt;     TAF policy (NONE, BASIC, or PRECONNECT)</span><br><span class="line">Usage: srvctl add service -d &lt;name&gt; -s &lt;service_name&gt; -u &#123;-r &quot;&lt;new_pref_inst&gt;&quot; | -a &quot;&lt;new_avail_inst&gt;&quot;&#125;</span><br><span class="line">    -d &lt;name&gt;           Unique name for the database</span><br><span class="line">    -s &lt;service&gt;        Service name</span><br><span class="line">    -u                  Add a new instance to service configuration</span><br><span class="line">    -r &lt;new_pref_inst&gt;  Name of new preferred instance</span><br><span class="line">    -a &lt;new_avail_inst&gt; Name of new available instance</span><br><span class="line">    -h                  Print usage</span><br><span class="line">[oracle@oel1:/home/oracle]$ srvctl add service -d orcl -s orcl_test -r orcl1,orcl2 -P BASIC</span><br></pre></td></tr></table></figure>
+
+启动服务
+<figure class="highlight plain hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">[oracle@oel1:/home/oracle]$ srvctl start service -d orcl -s orcl_test</span><br></pre></td></tr></table></figure>
+
+执行dbms包，创建service
+<figure class="highlight sql hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br></pre></td><td class="code"><pre><span class="line">SQL&gt;</span><br><span class="line"><span class="hljs-keyword">Begin</span></span><br><span class="line">Dbms_service.modify_service(</span><br><span class="line">Service_name=&gt;<span class="hljs-string">'orcl_test'</span>,</span><br><span class="line">Failover_method=&gt;dbms_service.failover_method_basic,</span><br><span class="line">Failover_type=&gt;dbms_service.failover_type_select,</span><br><span class="line">Failover_retries=&gt;<span class="hljs-number">180</span>,</span><br><span class="line">Failover_delay=&gt;<span class="hljs-number">5</span></span><br><span class="line">);</span><br><span class="line"><span class="hljs-keyword">End</span>;</span><br><span class="line">/</span><br><span class="line">PL/SQL procedure successfully completed.</span><br></pre></td></tr></table></figure>
+
+查看配置结果
+<figure class="highlight sql hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br></pre></td><td class="code"><pre><span class="line">SQL&gt; show parameter name</span><br><span class="line"></span><br><span class="line"> NAME                                 TYPE        VALUE</span><br><span class="line"><span class="hljs-comment">------------------------------------ ----------- ------------------------------</span></span><br><span class="line">db_file_name_convert                 string</span><br><span class="line">db_name                              string      orcl</span><br><span class="line">db_unique_name                       string      orcl</span><br><span class="line">global_names                         boolean     FALSE</span><br><span class="line">instance_name                        string      orcl1</span><br><span class="line">lock_name_space                      string</span><br><span class="line">log_file_name_convert                string</span><br><span class="line">service_names                    string      orcl_taf, orcl, orcl_test</span><br></pre></td></tr></table></figure>
+
+查看监听服务信息
+<figure class="highlight plain hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br></pre></td><td class="code"><pre><span class="line">[oracle@oel1:/home/oracle]$ lsnrctl service</span><br><span class="line">Service &quot;orcl_test&quot; has 2 instance(s).</span><br><span class="line">  Instance &quot;orcl1&quot;, status READY, has 2 handler(s) for this service...</span><br><span class="line">    Handler(s):</span><br><span class="line">      &quot;DEDICATED&quot; established:0 refused:0 state:ready</span><br><span class="line">         REMOTE SERVER</span><br><span class="line">         (ADDRESS=(PROTOCOL=TCP)(HOST=oel1)(PORT=1521))</span><br><span class="line">      &quot;DEDICATED&quot; established:0 refused:0 state:ready</span><br><span class="line">         LOCAL SERVER</span><br><span class="line">  Instance &quot;orcl2&quot;, status READY, has 1 handler(s) for this service...</span><br><span class="line">    Handler(s):</span><br><span class="line">      &quot;DEDICATED&quot; established:0 refused:0 state:ready</span><br><span class="line">         REMOTE SERVER</span><br><span class="line">         (ADDRESS=(PROTOCOL=TCP)(HOST=oel2)(PORT=1521))</span><br><span class="line">The command completed successfully</span><br></pre></td></tr></table></figure>
+
+<h1>6.总结</h1>
+在Oracle 11g中，增加了SCAN-IP，即如果在Oracle中配置了DNS的SCAN的话，可以直接通过DNS进行负载均衡和故障切换，而大部分用户都是没有使用DNS的SCAN的，而是使用HOSTS文件进行解析。在11g RAC中，dbca已经没有service Management选项了，因此，要添加类似10g的Server-side的taf必须通过命令行去添加。<br>
+
+ 补充：删除服务
+    停止服务
+<figure class="highlight plain hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">[oracle@oel1:/home/oracle]$ srvctl stop service -d orcl -s orcl_test</span><br></pre></td></tr></table></figure>
+
+删除服务
+<figure class="highlight plain hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">[oracle@oel1:/home/oracle]$ srvctl remove service -d orcl -s orcl_test</span><br><span class="line">orcl_test PREF: orcl1 orcl2 AVAIL:</span><br><span class="line">Remove service orcl_test from the database orcl? (y/[n]) y</span><br></pre></td></tr></table></figure>
+
+查看数据字典内容
+<figure class="highlight sql hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line">SQL&gt; select name,failover_method,failover_type,goal,clb_goal from dba_services;</span><br><span class="line"></span><br><span class="line"> NAME            FAILOVER_METHOD      FAILOVER_TYPE        GOAL         CLB_G</span><br><span class="line"><span class="hljs-comment">--------------- -------------------- -------------------- ------------ -----</span></span><br><span class="line">SYS$BACKGROUND                                            NONE         SHORT</span><br><span class="line">SYS$USERS                                                 NONE         SHORT</span><br><span class="line">orcl                                                                   LONG</span><br><span class="line">orcl_taf                                                  NONE         LONG</span><br><span class="line">orcl_test       BASIC                <span class="hljs-keyword">SELECT</span>               <span class="hljs-keyword">NONE</span>         <span class="hljs-keyword">LONG</span></span><br></pre></td></tr></table></figure>
+
+删除数据字典内容
+<figure class="highlight sql hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><span class="line">SQL&gt; begin</span><br><span class="line">dbms_service.delete_service(service_name=&gt;'orcl_test');</span><br><span class="line"><span class="hljs-keyword">end</span>;</span><br><span class="line">/</span><br><span class="line">PL/SQL procedure successfully completed.</span><br><span class="line">SQL&gt; select name,failover_method,failover_type,goal,clb_goal from dba_services;</span><br><span class="line"></span><br><span class="line"> NAME            FAILOVER_METHOD      FAILOVER_TYPE        GOAL         CLB_G</span><br><span class="line"><span class="hljs-comment">--------------- -------------------- -------------------- ------------ -----</span></span><br><span class="line">SYS$BACKGROUND                                            NONE         SHORT</span><br><span class="line">SYS$USERS                                                 NONE         SHORT</span><br><span class="line">orcl                                                                   LONG</span><br><span class="line">orcl_taf                                                  NONE         LONG</span><br></pre></td></tr></table></figure>
+
+ How To Configure Server Side Transparent Application Failover [ID 460982.1]
+
+    
+    </div>
+    
+    
+    <div class="columns is-mobile is-multiline article-nav">
+        <span class="column is-12-mobile is-half-desktop  article-nav-prev">
+            
+            <a href="/10gr2-rac-installation.html">installing 10gr2 rac on linux</a>
+            
+        </span>
+        <span class="column is-12-mobile is-half-desktop  article-nav-next">
+            
+            <a href="/11gr2-scan-dns.html">11gr2 RAC SCAN DNS Configuration</a>
+            
+        </span>
+    </div>
+    
+</article>
+
+
+
+
+    </div>
+</section>
+    <footer class="footer">
+    <div class="container">
+        <div class="columns content">
+            <div class="column is-narrow has-text-centered">
+                &copy; 2018 Kong&nbsp;
+                Powered by <a href="http://hexo.io/" target="_blank">Hexo</a> & <a
+                        href="http://github.com/ppoffice/hexo-theme-minos">Minos</a>
+            </div>
+            <div class="column is-hidden-mobile"></div>
+
+            
+            
+        </div>
+    </div>
+</footer>
+    <script src="//cdnjs.cloudflare.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
+<script src="//cdnjs.cloudflare.com/ajax/libs/moment.js/2.22.2/moment-with-locales.min.js"></script>
+
+<!-- test if the browser is outdated -->
+<div id="outdated">
+    <h6>Your browser is out-of-date!</h6>
+    <p>Update your browser to view this website correctly. <a id="btnUpdateBrowser" href="http://outdatedbrowser.com/">Update my browser now </a></p>
+    <p class="last"><a href="#" id="btnCloseUpdateBrowser" title="Close">&times;</a></p>
+</div>
+<script src="//cdnjs.cloudflare.com/ajax/libs/outdated-browser/1.1.5/outdatedbrowser.min.js"></script>
+<script>
+    $(document).ready(function () {
+        // plugin function, place inside DOM ready function
+        outdatedBrowser({
+            bgColor: '#f25648',
+            color: '#ffffff',
+            lowerThan: 'flex'
+        })
+    });
+</script>
+
+<script>
+    window.FontAwesomeConfig = {
+        searchPseudoElements: true
+    }
+    moment.locale("en-AU");
+</script>
+
+
+    
+    
+    
+    
+    
+    
+
+    
+
+
+<script src="/js/script.js"></script>
+
+    
+    <div class="searchbox ins-search">
+    <div class="searchbox-mask"></div>
+    <div class="searchbox-container ins-search-container">
+        <div class="searchbox-input-wrapper">
+            <input type="text" class="searchbox-input ins-search-input" placeholder="Type something..." />
+            <span class="searchbox-close ins-close ins-selectable"><i class="fa fa-times-circle"></i></span>
+        </div>
+        <div class="searchbox-result-wrapper ins-section-wrapper">
+            <div class="ins-section-container"></div>
+        </div>
+    </div>
+</div>
+<script>
+    (function (window) {
+        var INSIGHT_CONFIG = {
+            TRANSLATION: {
+                POSTS: 'Posts',
+                PAGES: 'Pages',
+                CATEGORIES: 'Categories',
+                TAGS: 'Tags',
+                UNTITLED: '(Untitled)',
+            },
+            CONTENT_URL: '/content.json',
+        };
+        window.INSIGHT_CONFIG = INSIGHT_CONFIG;
+    })(window);
+</script>
+<script src="/js/insight.js"></script>
+    
+</body>
+</html>

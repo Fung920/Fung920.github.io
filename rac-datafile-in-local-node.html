@@ -1,0 +1,253 @@
+<!DOCTYPE html>
+<html class="has-navbar-fixed-top">
+<head>
+    <meta charset="utf-8">
+<title>RAC Datafile in Local Node - My Wiki</title>
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+
+<link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/outdated-browser/1.1.5/outdatedbrowser.min.css">
+
+
+<meta name="description" content="RAC数据文件错误地建立在本地">
+
+
+
+<meta name="keywords" content="rac datafile in local node">
+
+
+
+
+
+
+
+<link rel="icon" href="/images/favicon.ico">
+
+
+<link rel="stylesheet" href="//fonts.googleapis.com/css?family=Ovo|Source+Code+Pro">
+<link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/bulma/0.6.2/css/bulma.min.css">
+
+
+
+<link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/highlight.js/9.12.0/styles/github.min.css">
+
+<link rel="stylesheet" href="/css/style.css">
+
+<script defer src="//use.fontawesome.com/releases/v5.0.8/js/all.js"></script>
+
+
+    
+    
+    
+    
+    
+    
+
+    
+
+
+</head>
+<body>
+    
+<nav class="navbar is-transparent is-fixed-top navbar-main" role="navigation" aria-label="main navigation">
+    <div class="container">
+        <div class="navbar-brand">
+            <a class="navbar-item navbar-logo" href="/">
+                
+                    
+                    My Wiki
+                    
+                
+            </a>
+            <div class="navbar-burger">
+                <span></span>
+                <span></span>
+                <span></span>
+            </div>
+        </div>
+        
+        <div class="navbar-menu navbar-start">
+            
+            <a class="navbar-item "
+               href="/">Home</a>
+            
+            <a class="navbar-item "
+               href="/archives">Archives</a>
+            
+            <a class="navbar-item "
+               href="/about">About</a>
+            
+        </div>
+        
+        <div class="navbar-menu navbar-end">
+            
+            <a class="navbar-item search" title="Search" href="javascript:;">
+                <i class="fas fa-search"></i>
+            </a>
+            
+            
+            
+        </div>
+    </div>
+</nav>
+
+    <section class="section">
+    <div class="container">
+    <article class="article content gallery" itemscope itemprop="blogPost">
+    <h1 class="article-title is-size-3 is-size-4-mobile" itemprop="name">
+        
+            RAC Datafile in Local Node
+        
+    </h1>
+    <div class="article-meta columns is-variable is-1 is-multiline is-mobile is-size-7-mobile">
+        <span class="column is-narrow">
+            <time datetime="2014-06-20T02:36:58.000Z" itemprop="datePublished">Jun 19 2014</time>
+        </span>
+        
+        <span class="column is-narrow article-category">
+            <i class="far fa-folder"></i>
+            <a class="article-category-link" href="/categories/oracle/">oracle</a>
+        </span>
+        
+        
+        <span class="column is-narrow">
+            
+            
+            9 minutes read (About 1293 words)
+        </span>
+        
+    </div>
+    <div class="article-entry is-size-6-mobile" itemprop="articleBody">
+    
+        <p>客户在创建数据文件时，误将ASM数据文件创建在本地磁盘，导致重启的时候另一个节点怎么也起不来。<br><a id="more"></a><br>客户现场无法记录操作日志，本文用虚拟机模拟类似场景。环境为11.2.0.4双节点RAC，使用ASM存储。</p>
+<p>#####节点1模拟创建表空间<br><figure class="highlight plain hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br></pre></td><td class="code"><pre><span class="line">SQL&gt; create tablespace data datafile &apos;/backup/rac11g/data01.dbf&apos; size 100M autoextend off;</span><br><span class="line"></span><br><span class="line">Tablespace altered.</span><br><span class="line">SQL&gt; alter user fung default tablespace data;</span><br><span class="line"></span><br><span class="line">User altered.</span><br><span class="line">SQL&gt; col name for a50</span><br><span class="line">SQL&gt; select name,status from v$datafile;</span><br><span class="line"></span><br><span class="line">NAME                                               STATUS</span><br><span class="line">-------------------------------------------------- --------------</span><br><span class="line">+DATA/rac11g/datafile/system.259.848925423         SYSTEM</span><br><span class="line">+DATA/rac11g/datafile/sysaux.260.848925443         ONLINE</span><br><span class="line">+DATA/rac11g/datafile/undotbs1.261.848925457       ONLINE</span><br><span class="line">+DATA/rac11g/datafile/undotbs2.263.848925475       ONLINE</span><br><span class="line">+DATA/rac11g/datafile/users.264.848925483          ONLINE</span><br><span class="line">+DATA/rac11g/datafile/fung.298.849353657           ONLINE</span><br><span class="line">+DATA/rac11g/datafile/data.286.849526463           ONLINE</span><br><span class="line">/backup/rac11g/data01.dbf                          ONLINE</span><br></pre></td></tr></table></figure></p>
+<p>节点1创建文件没任何问题：<br><figure class="highlight plain hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">SQL&gt; create table fung.obj as select * from user_objects;</span><br><span class="line"></span><br><span class="line">Table created.</span><br></pre></td></tr></table></figure></p>
+<p>节点2创建会报错：<br><figure class="highlight plain hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line">SQL&gt; create table fung.obj2 as select * from fung.obj;</span><br><span class="line">create table fung.obj2 as select * from fung.obj</span><br><span class="line">                                             *</span><br><span class="line">ERROR at line 1:</span><br><span class="line">ORA-01157: cannot identify/lock data file 7 - see DBWR trace file</span><br><span class="line">ORA-01110: data file 7: &apos;/backup/rac11g/data01.dbf&apos;</span><br></pre></td></tr></table></figure></p>
+<p>重启集群，会发现节点2起不来<br><figure class="highlight plain hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br></pre></td><td class="code"><pre><span class="line">[grid@fung01:/home/grid]$ srvctl stop database -d rac11g</span><br><span class="line">[grid@fung01:/home/grid]$ srvctl start database -d rac11g</span><br><span class="line">PRCR-1079 : Failed to start resource ora.rac11g.db</span><br><span class="line">CRS-5017: The resource action &quot;ora.rac11g.db start&quot; encountered the following error: </span><br><span class="line">ORA-01157: cannot identify/lock data file 7 - see DBWR trace file</span><br><span class="line">ORA-01110: data file 7: &apos;/backup/rac11g/data01.dbf&apos;</span><br><span class="line">. For details refer to &quot;(:CLSN00107:)&quot; in</span><br><span class="line"> &quot;/u01/app/11gr2/grid/log/fung02/agent/crsd/oraagent_oracle/oraagent_oracle.log&quot;.</span><br><span class="line"></span><br><span class="line">CRS-2674: Start of &apos;ora.rac11g.db&apos; on &apos;fung02&apos; failed</span><br><span class="line">CRS-2632: There are no more servers to try to place resource &apos;ora.rac11g.db&apos; </span><br><span class="line">          on that would satisfy its placement policy</span><br></pre></td></tr></table></figure></p>
+<p>#####解决方案</p>
+<h3 id="1-ASM-CP"><a href="#1-ASM-CP" class="headerlink" title="1. ASM CP"></a>1. ASM CP</h3><p>ASM CP命令是11g提供的，能将OS文件复制到ASM里面。而在10g中，使用<code>DBMS_FILE_TRANSFER</code>包进行处理。 DBMS_FILE_TRANSFER可以在同一台Oracle服务器上或两台Oracle 服务器之间复制文件。它使用directory对象来指定源directory和目的directory，因为directory支持ASM路径名称，所以DBMS_FILE_TRANSFER也支持ASM路径名。这使得从常规文件系统的ASM存储区移入和移出文件变得十分简单。</p>
+<h5 id="11g-ASM-CP命令"><a href="#11g-ASM-CP命令" class="headerlink" title="11g ASM CP命令"></a>11g ASM CP命令</h5><figure class="highlight plain hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br></pre></td><td class="code"><pre><span class="line">ASMCMD&gt; pwd</span><br><span class="line">+data/rac11g/datafile</span><br><span class="line">ASMCMD&gt; ls</span><br><span class="line">FUNG.298.849353657</span><br><span class="line">SYSAUX.260.848925443</span><br><span class="line">SYSTEM.259.848925423</span><br><span class="line">UNDOTBS1.261.848925457</span><br><span class="line">UNDOTBS2.263.848925475</span><br><span class="line">USERS.264.848925483</span><br><span class="line">ASMCMD&gt; cp /backup/rac11g/data01.dbf ./</span><br><span class="line">copying /backup/rac11g/data01.dbf -&gt; +data/rac11g/datafile/data01.dbf</span><br><span class="line">ASMCMD&gt; ls</span><br><span class="line">FUNG.298.849353657</span><br><span class="line">SYSAUX.260.848925443</span><br><span class="line">SYSTEM.259.848925423</span><br><span class="line">UNDOTBS1.261.848925457</span><br><span class="line">UNDOTBS2.263.848925475</span><br><span class="line">USERS.264.848925483</span><br><span class="line">data01.dbf</span><br></pre></td></tr></table></figure>
+<p>#####在节点1使用rename重命名该数据文件<br><figure class="highlight plain hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br></pre></td><td class="code"><pre><span class="line">SQL&gt; alter tablespace data offline;</span><br><span class="line">Tablespace altered.</span><br><span class="line">SQL&gt; alter database rename file &apos;/backup/rac11g/data01.dbf&apos; to &apos;+data/rac11g/datafile/data01.dbf&apos;;</span><br><span class="line">Database altered.</span><br><span class="line">SQL&gt; alter tablespace data online;</span><br><span class="line">alter tablespace data online</span><br><span class="line">*</span><br><span class="line">ERROR at line 1:</span><br><span class="line">ORA-01113: file 7 needs media recovery</span><br><span class="line">ORA-01110: data file 7: &apos;+DATA/rac11g/datafile/data01.dbf&apos;</span><br><span class="line"></span><br><span class="line">SQL&gt; recover datafile 7;</span><br><span class="line">Media recovery complete.</span><br><span class="line">SQL&gt; alter tablespace data online;</span><br><span class="line"></span><br><span class="line">Tablespace altered.</span><br><span class="line">#查看修改后的结果</span><br><span class="line">SQL&gt; select name,status from v$datafile;</span><br><span class="line"></span><br><span class="line">NAME                                               STATUS</span><br><span class="line">-------------------------------------------------- --------------</span><br><span class="line">+DATA/rac11g/datafile/system.259.848925423         SYSTEM</span><br><span class="line">+DATA/rac11g/datafile/sysaux.260.848925443         ONLINE</span><br><span class="line">+DATA/rac11g/datafile/undotbs1.261.848925457       ONLINE</span><br><span class="line">+DATA/rac11g/datafile/undotbs2.263.848925475       ONLINE</span><br><span class="line">+DATA/rac11g/datafile/users.264.848925483          ONLINE</span><br><span class="line">+DATA/rac11g/datafile/fung.298.849353657           ONLINE</span><br><span class="line">+DATA/rac11g/datafile/data01.dbf                   ONLINE</span><br></pre></td></tr></table></figure></p>
+<p>#####开启节点2实例，同时观察实例后台日志是否正常<br><figure class="highlight plain hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">[oracle@fung02:/home/oracle]$ srvctl start instance -d rac11g -i rac11g2</span><br></pre></td></tr></table></figure></p>
+<h3 id="2-RMAN-copy功能"><a href="#2-RMAN-copy功能" class="headerlink" title="2. RMAN copy功能"></a>2. RMAN copy功能</h3><figure class="highlight plain hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br></pre></td><td class="code"><pre><span class="line">RMAN&gt; sql &quot;alter tablespace data offline&quot;;</span><br><span class="line"></span><br><span class="line">using target database control file instead of recovery catalog</span><br><span class="line">sql statement: alter tablespace data offline</span><br><span class="line"></span><br><span class="line">RMAN&gt; copy datafile &apos;/backup/rac11g/data01.dbf&apos; to &apos;+data/rac11g/datafile/data01.dbf&apos;;</span><br><span class="line"></span><br><span class="line">Starting backup at 2014-06-20 11:28:30</span><br><span class="line">allocated channel: ORA_DISK_1</span><br><span class="line">channel ORA_DISK_1: SID=78 instance=rac11g1 device type=DISK</span><br><span class="line">channel ORA_DISK_1: starting datafile copy</span><br><span class="line">input datafile file number=00007 name=/backup/rac11g/data01.dbf</span><br><span class="line">output file name=+DATA/rac11g/datafile/data01.dbf tag=TAG20140620T112831 RECID=20 STAMP=850735714</span><br><span class="line">channel ORA_DISK_1: datafile copy complete, elapsed time: 00:00:03</span><br><span class="line">Finished backup at 2014-06-20 11:28:34</span><br><span class="line">RMAN&gt; sql &quot;alter database rename file &apos;&apos;/backup/rac11g/data01.dbf&apos;&apos; </span><br><span class="line">to &apos;&apos;+data/rac11g/datafile/data01.dbf&apos;&apos;&quot;;</span><br><span class="line">SQL&gt; alter tablespace data online;</span><br><span class="line"></span><br><span class="line">Tablespace altered.</span><br><span class="line">#查看修正结果</span><br><span class="line">SQL&gt; col tablespace_name for a10</span><br><span class="line">SQL&gt; col file_name for a50</span><br><span class="line">SQL&gt; set line 200</span><br><span class="line">SQL&gt; select tablespace_name,file_name,status,online_status from dba_data_files;</span><br><span class="line"></span><br><span class="line">TABLESPACE FILE_NAME                                          STATUS             ONLINE_STATUS</span><br><span class="line">---------- -------------------------------------------------- ------------------ --------------</span><br><span class="line">SYSTEM     +DATA/rac11g/datafile/system.259.848925423         AVAILABLE          SYSTEM</span><br><span class="line">SYSAUX     +DATA/rac11g/datafile/sysaux.260.848925443         AVAILABLE          ONLINE</span><br><span class="line">UNDOTBS1   +DATA/rac11g/datafile/undotbs1.261.848925457       AVAILABLE          ONLINE</span><br><span class="line">UNDOTBS2   +DATA/rac11g/datafile/undotbs2.263.848925475       AVAILABLE          ONLINE</span><br><span class="line">USERS      +DATA/rac11g/datafile/users.264.848925483          AVAILABLE          ONLINE</span><br><span class="line">FUNG       +DATA/rac11g/datafile/fung.298.849353657           AVAILABLE          ONLINE</span><br><span class="line">DATA       +DATA/rac11g/datafile/data01.dbf                   AVAILABLE          ONLINE</span><br></pre></td></tr></table></figure>
+<h3 id="3-10g-DBMS-FILE-TRANSFER"><a href="#3-10g-DBMS-FILE-TRANSFER" class="headerlink" title="3. 10g DBMS_FILE_TRANSFER"></a>3. 10g <code>DBMS_FILE_TRANSFER</code></h3><p>创建transfer所需directory：<br><figure class="highlight plain hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">SQL&gt; create directory fs as &apos;/backup/rac11g&apos;;</span><br><span class="line">Directory created.</span><br><span class="line">SQL&gt; create directory asm as &apos;+data/rac11g/datafile&apos;;</span><br><span class="line">Directory created.</span><br></pre></td></tr></table></figure></p>
+<p>使用transfer包进行复制<br><figure class="highlight plain hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br></pre></td><td class="code"><pre><span class="line">SQL&gt; alter tablespace data offline;</span><br><span class="line">Tablespace altered.</span><br><span class="line">SQL&gt; exec dbms_file_transfer.copy_file(&apos;FS&apos;,&apos;data01.dbf&apos;,&apos;ASM&apos;,&apos;data01.dbf&apos;);</span><br><span class="line"></span><br><span class="line">PL/SQL procedure successfully completed.</span><br><span class="line">#asm磁盘组中查看是否有文件过来</span><br><span class="line">ASMCMD [+data/rac11g/datafile] &gt; ls</span><br><span class="line">COPY_FILE.501.850736539</span><br><span class="line">FUNG.298.849353657</span><br><span class="line">SYSAUX.260.848925443</span><br><span class="line">SYSTEM.259.848925423</span><br><span class="line">UNDOTBS1.261.848925457</span><br><span class="line">UNDOTBS2.263.848925475</span><br><span class="line">USERS.264.848925483</span><br><span class="line">data01.dbf</span><br><span class="line">SQL&gt; alter database rename file &apos;/backup/rac11g/data01.dbf&apos; to &apos;+data/rac11g/datafile/data01.dbf&apos;;</span><br><span class="line">Database altered.</span><br><span class="line">SQL&gt; alter tablespace data online;</span><br><span class="line">Tablespace altered.</span><br><span class="line">SQL&gt; select tablespace_name,file_name,status,online_status from dba_data_files;</span><br><span class="line"></span><br><span class="line">TABLESPACE FILE_NAME                                          STATUS             ONLINE_STATUS</span><br><span class="line">---------- -------------------------------------------------- ------------------ --------------</span><br><span class="line">SYSTEM     +DATA/rac11g/datafile/system.259.848925423         AVAILABLE          SYSTEM</span><br><span class="line">SYSAUX     +DATA/rac11g/datafile/sysaux.260.848925443         AVAILABLE          ONLINE</span><br><span class="line">UNDOTBS1   +DATA/rac11g/datafile/undotbs1.261.848925457       AVAILABLE          ONLINE</span><br><span class="line">UNDOTBS2   +DATA/rac11g/datafile/undotbs2.263.848925475       AVAILABLE          ONLINE</span><br><span class="line">USERS      +DATA/rac11g/datafile/users.264.848925483          AVAILABLE          ONLINE</span><br><span class="line">FUNG       +DATA/rac11g/datafile/fung.298.849353657           AVAILABLE          ONLINE</span><br><span class="line">DATA       +DATA/rac11g/datafile/data01.dbf                   AVAILABLE          ONLINE</span><br></pre></td></tr></table></figure></p>
+<h4 id="4-总结"><a href="#4-总结" class="headerlink" title="4. 总结"></a>4. 总结</h4><p>在对数据库增加数据文件或者表空间时，首先要确认这些数据文件是存放在本地还是ASM或者是裸设备中，不要盲目的自以为根目录下的/oradata就是数据文件存放地。总之身为一个DBA，任何情况下对生产系统的操作，都要小心谨慎，且在做任何操作前，有时间备份，先进行备份，绝对不做一个给别人留坑的DBA！</p>
+
+    
+    </div>
+    
+    <div class="columns is-variable is-1 is-multiline is-mobile">
+    
+        <span class="column is-narrow"><a class="tag is-light article-tag" href="/tags/rac/">#rac</a></span>
+    
+    </div>
+    
+    
+    <div class="columns is-mobile is-multiline article-nav">
+        <span class="column is-12-mobile is-half-desktop  article-nav-prev">
+            
+            <a href="/manage-awr.html">管理AWR快照</a>
+            
+        </span>
+        <span class="column is-12-mobile is-half-desktop  article-nav-next">
+            
+            <a href="/dataguard-broker.html">DataGuard Broker</a>
+            
+        </span>
+    </div>
+    
+</article>
+
+
+
+
+    </div>
+</section>
+    <footer class="footer">
+    <div class="container">
+        <div class="columns content">
+            <div class="column is-narrow has-text-centered">
+                &copy; 2018 Kong&nbsp;
+                Powered by <a href="http://hexo.io/" target="_blank">Hexo</a> & <a
+                        href="http://github.com/ppoffice/hexo-theme-minos">Minos</a>
+            </div>
+            <div class="column is-hidden-mobile"></div>
+
+            
+            
+        </div>
+    </div>
+</footer>
+    <script src="//cdnjs.cloudflare.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
+<script src="//cdnjs.cloudflare.com/ajax/libs/moment.js/2.22.2/moment-with-locales.min.js"></script>
+
+<!-- test if the browser is outdated -->
+<div id="outdated">
+    <h6>Your browser is out-of-date!</h6>
+    <p>Update your browser to view this website correctly. <a id="btnUpdateBrowser" href="http://outdatedbrowser.com/">Update my browser now </a></p>
+    <p class="last"><a href="#" id="btnCloseUpdateBrowser" title="Close">&times;</a></p>
+</div>
+<script src="//cdnjs.cloudflare.com/ajax/libs/outdated-browser/1.1.5/outdatedbrowser.min.js"></script>
+<script>
+    $(document).ready(function () {
+        // plugin function, place inside DOM ready function
+        outdatedBrowser({
+            bgColor: '#f25648',
+            color: '#ffffff',
+            lowerThan: 'flex'
+        })
+    });
+</script>
+
+<script>
+    window.FontAwesomeConfig = {
+        searchPseudoElements: true
+    }
+    moment.locale("en-AU");
+</script>
+
+
+    
+    
+    
+    
+    
+    
+
+    
+
+
+<script src="/js/script.js"></script>
+
+    
+    <div class="searchbox ins-search">
+    <div class="searchbox-mask"></div>
+    <div class="searchbox-container ins-search-container">
+        <div class="searchbox-input-wrapper">
+            <input type="text" class="searchbox-input ins-search-input" placeholder="Type something..." />
+            <span class="searchbox-close ins-close ins-selectable"><i class="fa fa-times-circle"></i></span>
+        </div>
+        <div class="searchbox-result-wrapper ins-section-wrapper">
+            <div class="ins-section-container"></div>
+        </div>
+    </div>
+</div>
+<script>
+    (function (window) {
+        var INSIGHT_CONFIG = {
+            TRANSLATION: {
+                POSTS: 'Posts',
+                PAGES: 'Pages',
+                CATEGORIES: 'Categories',
+                TAGS: 'Tags',
+                UNTITLED: '(Untitled)',
+            },
+            CONTENT_URL: '/content.json',
+        };
+        window.INSIGHT_CONFIG = INSIGHT_CONFIG;
+    })(window);
+</script>
+<script src="/js/insight.js"></script>
+    
+</body>
+</html>

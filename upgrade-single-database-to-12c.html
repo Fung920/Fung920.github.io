@@ -1,0 +1,337 @@
+<!DOCTYPE html>
+<html class="has-navbar-fixed-top">
+<head>
+    <meta charset="utf-8">
+<title>Upgrade single database to 12c - My Wiki</title>
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+
+<link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/outdated-browser/1.1.5/outdatedbrowser.min.css">
+
+
+<meta name="description" content="upgrade Oracle database to 12c and convert it to PDB">
+
+
+
+<meta name="keywords" content="upgrade Oracle to 12c">
+
+
+
+
+
+
+
+<link rel="icon" href="/images/favicon.ico">
+
+
+<link rel="stylesheet" href="//fonts.googleapis.com/css?family=Ovo|Source+Code+Pro">
+<link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/bulma/0.6.2/css/bulma.min.css">
+
+
+
+<link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/highlight.js/9.12.0/styles/github.min.css">
+
+<link rel="stylesheet" href="/css/style.css">
+
+<script defer src="//use.fontawesome.com/releases/v5.0.8/js/all.js"></script>
+
+
+    
+    
+    
+    
+    
+    
+
+    
+
+
+</head>
+<body>
+    
+<nav class="navbar is-transparent is-fixed-top navbar-main" role="navigation" aria-label="main navigation">
+    <div class="container">
+        <div class="navbar-brand">
+            <a class="navbar-item navbar-logo" href="/">
+                
+                    
+                    My Wiki
+                    
+                
+            </a>
+            <div class="navbar-burger">
+                <span></span>
+                <span></span>
+                <span></span>
+            </div>
+        </div>
+        
+        <div class="navbar-menu navbar-start">
+            
+            <a class="navbar-item "
+               href="/">Home</a>
+            
+            <a class="navbar-item "
+               href="/archives">Archives</a>
+            
+            <a class="navbar-item "
+               href="/about">About</a>
+            
+        </div>
+        
+        <div class="navbar-menu navbar-end">
+            
+            <a class="navbar-item search" title="Search" href="javascript:;">
+                <i class="fas fa-search"></i>
+            </a>
+            
+            
+            
+        </div>
+    </div>
+</nav>
+
+    <section class="section">
+    <div class="container">
+    <article class="article content gallery" itemscope itemprop="blogPost">
+    <h1 class="article-title is-size-3 is-size-4-mobile" itemprop="name">
+        
+            Upgrade single database to 12c
+        
+    </h1>
+    <div class="article-meta columns is-variable is-1 is-multiline is-mobile is-size-7-mobile">
+        <span class="column is-narrow">
+            <time datetime="2016-03-25T07:03:33.000Z" itemprop="datePublished">Mar 25 2016</time>
+        </span>
+        
+        <span class="column is-narrow article-category">
+            <i class="far fa-folder"></i>
+            <a class="article-category-link" href="/categories/oracle/">oracle</a>
+        </span>
+        
+        
+        <span class="column is-narrow">
+            
+            
+            18 minutes read (About 2707 words)
+        </span>
+        
+    </div>
+    <div class="article-entry is-size-6-mobile" itemprop="articleBody">
+    
+        <p>There are two upgrade approaches, one is with GUI tool DBUA, another is upgrade with manually. This post is focus on manualy upgrade method. After upgrade to 12c, the new version database is non-CDB,which is DEPRECATED by Oracle, so I also will show you how to convert the non-CDB to PDB.<br><a id="more"></a><br>Regarding the PDB and CDB, you can refer my previous topic <a href="/cdb-overview.html">CDB Overview</a>.<br>DBUA can automatic backup the database, when upgrade finished, if you’re not satisfied with the result, you can simply restore to previous version if you backup the database with DBUA.</p>
+<h3 id="1-Pre-upgrade-tasks"><a href="#1-Pre-upgrade-tasks" class="headerlink" title="1. Pre-upgrade tasks"></a>1. Pre-upgrade tasks</h3><p>Database version 11.2.0.2 or higher, 10.2.0.5 can be upgraded to 12c directly. Other version should be upgraded to the specific version to meet upgrade  requirements.<br>Assume my new 12c binary code has been install into a new directory: /u02/app/oracle/product/12.1.0/db1/.</p>
+<h4 id="1-1-Perform-an-offline-full-backup-before-upgrade"><a href="#1-1-Perform-an-offline-full-backup-before-upgrade" class="headerlink" title="1.1 Perform an offline full backup before upgrade"></a>1.1 Perform an offline full backup before upgrade</h4><p>Upgrade is high risk operations in any softwares, whenever you upgrade a database, you should perform a full backup.<br><figure class="highlight plain hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line">SQL&gt; shutdown immediate</span><br><span class="line">SQL&gt; startup mount</span><br><span class="line">SQL&gt; create pfile from spfile;</span><br><span class="line">RMAN&gt; run &#123;</span><br><span class="line">allocate channel c1 type disk format &apos;/backup/full_offline_%d_%T_%s&apos;;</span><br><span class="line">backup full database</span><br><span class="line">include current controlfile;</span><br><span class="line">release channel c1;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure></p>
+<h4 id="1-2-Pre-request-check"><a href="#1-2-Pre-request-check" class="headerlink" title="1.2 Pre-request check"></a>1.2 Pre-request check</h4><ul>
+<li>Gather Statistics</li>
+</ul>
+<p>This step can reduce the amount of downtime.<br><figure class="highlight plain hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">SQL&gt; alter database open;</span><br><span class="line">SQL&gt; EXEC DBMS_STATS.GATHER_DICTIONARY_STATS;</span><br></pre></td></tr></table></figure></p>
+<ul>
+<li>Purge recyclebin</li>
+</ul>
+<figure class="highlight plain hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">SQL&gt; purge recyclebin;</span><br></pre></td></tr></table></figure>
+<ul>
+<li>Check the integrity of the source database</li>
+</ul>
+<figure class="highlight plain hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">SQL&gt; @?/rdbms/admin/utlrp.sql</span><br></pre></td></tr></table></figure>
+<h4 id="1-3-Run-the-preupgrade-sql-from-12c"><a href="#1-3-Run-the-preupgrade-sql-from-12c" class="headerlink" title="1.3 Run the preupgrade.sql from 12c"></a>1.3 Run the preupgrade.sql from 12c</h4><p>These scripts are copied from from 12c <code>$ORACLE_HOME/rdbms/admin</code>.<br><figure class="highlight plain hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line">[oracle@linora:/home/oracle]$ cp /u02/app/oracle/product/12.1.0/db1/rdbms/admin/preupgrd.sql ~/</span><br><span class="line">[oracle@linora:/home/oracle]$ cp /u02/app/oracle/product/12.1.0/db1/rdbms/admin/utluppkg.sql ~/</span><br><span class="line">SQL&gt; @preupgrd.sql</span><br><span class="line">--sample of output</span><br><span class="line">ACTIONS REQUIRED:</span><br><span class="line">1. Review results of the pre-upgrade checks:</span><br><span class="line"> /u01/app/oracle/cfgtoollogs/linora/preupgrade/preupgrade.log</span><br><span class="line">2. Execute in the SOURCE environment BEFORE upgrade:</span><br><span class="line"> /u01/app/oracle/cfgtoollogs/linora/preupgrade/preupgrade_fixups.sql</span><br><span class="line">3. Execute in the NEW environment AFTER upgrade:</span><br><span class="line"> /u01/app/oracle/cfgtoollogs/linora/preupgrade/postupgrade_fixups.sql</span><br></pre></td></tr></table></figure></p>
+<p>The Pre-Upgrade Information Tool produces 3 scripts.</p>
+<ul>
+<li><p>preupgrade.log: The results of all the checks performed. You need to check this to see if it is safe to continue with the upgrade.</p>
+</li>
+<li><p>preupgrade_fixups.sql: A fixup script that should be run before the upgrade.</p>
+</li>
+<li><p>postupgrade_fixups.sql: A fixup script that should be run after the upgrade.</p>
+</li>
+</ul>
+<p>So, let’s run preupgrade fix script.<br><figure class="highlight plain hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">SQL&gt; @/u01/app/oracle/cfgtoollogs/linora/preupgrade/preupgrade_fixups.sql</span><br></pre></td></tr></table></figure></p>
+<h4 id="1-4-Copy-source-database-configuration-files-to-new-12c-ORACLE-HOME"><a href="#1-4-Copy-source-database-configuration-files-to-new-12c-ORACLE-HOME" class="headerlink" title="1.4 Copy source database configuration files to new 12c ORACLE_HOME"></a>1.4 Copy source database configuration files to new 12c ORACLE_HOME</h4><p>Copy the netowrk configuration files, the password files into the new DBHOME. Modify network config files to meet the new database configuration.<br><figure class="highlight plain hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">[oracle@linora:/home/oracle]$ export ORACLE_12C_HOME=/u02/app/oracle/product/12.1.0/db1</span><br><span class="line">[oracle@linora:/home/oracle]$ cp $ORACLE_HOME/network/admin/*.ora $ORACLE_12C_HOME/network/admin/</span><br><span class="line">[oracle@linora:/home/oracle]$ cp $ORACLE_HOME/dbs/orapw* $ORACLE_12C_HOME/dbs</span><br><span class="line">[oracle@linora:/home/oracle]$ cp $ORACLE_HOME/dbs/*.ora $ORACLE_12C_HOME/dbs</span><br></pre></td></tr></table></figure></p>
+<p>After that, stop the listener, stop the dbconsole and isqlplus.<br><figure class="highlight plain hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><span class="line">LSNRCTL&gt; stop</span><br><span class="line">[oracle@linora:/home/oracle]$ emctl stop dbconsole</span><br><span class="line">[oracle@linora:/home/oracle]$ isqlplusctl stop</span><br><span class="line">#Remove em when you are using old version EM</span><br><span class="line">[oracle@linora:/home/oracle]$ source ~/.bash_profile_11g</span><br><span class="line">[oracle@linora:/home/oracle]$ sqlplus &quot;/as sysdba&quot;</span><br><span class="line">Connected to:</span><br><span class="line">Oracle Database 11g Enterprise Edition Release 11.2.0.4.0 - 64bit Production</span><br><span class="line">With the Partitioning, OLAP, Data Mining and Real Application Testing options</span><br><span class="line">SQL&gt; @/u02/app/oracle/product/12.1.0/db1/rdbms/admin/emremove.sql</span><br><span class="line">old  69:     IF (upper(&apos;&amp;LOGGING&apos;) = &apos;VERBOSE&apos;)</span><br><span class="line">new  69:     IF (upper(&apos;VERBOSE&apos;) = &apos;VERBOSE&apos;)</span><br><span class="line">PL/SQL procedure successfully completed.</span><br></pre></td></tr></table></figure></p>
+<p>Remove OLAP if you are using in old version, because OALP catalog is desupported in 12c.<br><figure class="highlight plain hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">[oracle@linora:/home/oracle]$ source ~/.bash_profile_11g</span><br><span class="line">[oracle@linora:/home/oracle]$ sqlplus &quot;/as sysdba&quot;</span><br><span class="line">SQL&gt; @?/olap/admin/catnoamd.sql</span><br></pre></td></tr></table></figure></p>
+<p>Before upgrade, check the dba_registry:<br><figure class="highlight plain hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br></pre></td><td class="code"><pre><span class="line">SQL&gt; set line 200</span><br><span class="line">col comp_name for a50</span><br><span class="line">col version for a15</span><br><span class="line">col status for a10</span><br><span class="line">select comp_name,version,status from dba_registry;</span><br><span class="line">COMP_NAME                                          VERSION         STATUS</span><br><span class="line">-------------------------------------------------- --------------- ----------</span><br><span class="line">OWB                                                11.2.0.4.0      VALID</span><br><span class="line">Oracle Application Express                         3.2.1.00.12     VALID</span><br><span class="line">Spatial                                            11.2.0.4.0      VALID</span><br><span class="line">Oracle Multimedia                                  11.2.0.4.0      VALID</span><br><span class="line">Oracle XML Database                                11.2.0.4.0      VALID</span><br><span class="line">Oracle Text                                        11.2.0.4.0      VALID</span><br><span class="line">Oracle Expression Filter                           11.2.0.4.0      VALID</span><br><span class="line">Oracle Rules Manager                               11.2.0.4.0      VALID</span><br><span class="line">Oracle Workspace Manager                           11.2.0.4.0      VALID</span><br><span class="line">Oracle Database Catalog Views                      11.2.0.4.0      VALID</span><br><span class="line">Oracle Database Packages and Types                 11.2.0.4.0      VALID</span><br><span class="line">JServer JAVA Virtual Machine                       11.2.0.4.0      VALID</span><br><span class="line">Oracle XDK                                         11.2.0.4.0      VALID</span><br><span class="line">Oracle Database Java Packages                      11.2.0.4.0      VALID</span><br><span class="line">OLAP Analytic Workspace                            11.2.0.4.0      VALID</span><br><span class="line">Oracle OLAP API                                    11.2.0.4.0      VALID</span><br></pre></td></tr></table></figure></p>
+<p>Before upgrade, it’s recommend that change the archive log mode to no-archivelog mode.<br><figure class="highlight plain hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line">SQL&gt; shutdown immediate</span><br><span class="line">SQL&gt; startup mount</span><br><span class="line">SQL&gt; alter database noarchivelog;</span><br><span class="line">SQL&gt; archive log list;</span><br><span class="line">Database log mode              No Archive Mode</span><br><span class="line">Automatic archival             Disabled</span><br><span class="line">Archive destination            /arch/linora</span><br><span class="line">SQL&gt; shutdown immediate</span><br></pre></td></tr></table></figure></p>
+<h3 id="2-Upgrade-tasks"><a href="#2-Upgrade-tasks" class="headerlink" title="2. Upgrade tasks"></a>2. Upgrade tasks</h3><p>Update the /etc/oratab to new oracle home, and disable the automatic startup.<br><figure class="highlight plain hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">[oracle@linora:/home/oracle]$ tail -2 /etc/oratab</span><br><span class="line">#linora:/u01/app/oracle/product/11gr2:N</span><br><span class="line">linora:/u02/app/oracle/product/12.1.0/db1:N</span><br></pre></td></tr></table></figure></p>
+<p>After modified the oratab file, execute the oraenv to set new environments.<br><figure class="highlight plain hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">[oracle@linora:/home/oracle]$ . oraenv</span><br><span class="line">ORACLE_SID = [linora] ?</span><br><span class="line">The Oracle base remains unchanged with value /u02/app/oracle</span><br></pre></td></tr></table></figure></p>
+<p>Now, we can start upgrade now. Although I  keep a copy of old version .bash_profile, but during upgrade,  you need to use new 12c profile.<br>Execute upgrade.<br><figure class="highlight plain hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br></pre></td><td class="code"><pre><span class="line">[oracle@linora:/home/oracle]$ source ~/.bash_profile_12c</span><br><span class="line">SQL&gt; startup upgrade</span><br><span class="line">ORACLE instance started.</span><br><span class="line"></span><br><span class="line">Total System Global Area  591396864 bytes</span><br><span class="line">Fixed Size		    2927096 bytes</span><br><span class="line">Variable Size		  180356616 bytes</span><br><span class="line">Database Buffers	  402653184 bytes</span><br><span class="line">Redo Buffers		    5459968 bytes</span><br><span class="line">Database mounted.</span><br><span class="line">Database opened.</span><br><span class="line">SQL&gt; exit</span><br></pre></td></tr></table></figure></p>
+<p>Execute Upgrade Utilities.<br><figure class="highlight plain hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br></pre></td><td class="code"><pre><span class="line">[oracle@linora:/home/oracle]$ echo $ORACLE_HOME</span><br><span class="line">/u02/app/oracle/product/12.1.0/db1</span><br><span class="line">[oracle@linora:/home/oracle]$ cd $ORACLE_HOME/rdbms/admin</span><br><span class="line">#the parameter -n, it&apos;s value means the parallelism is 4</span><br><span class="line">[oracle@linora:/u02/app/oracle/product/12.1.0/db1/rdbms/admin]$ $ORACLE_HOME/perl/bin/perl catctl.pl -n 4 catupgrd.sql</span><br><span class="line"></span><br><span class="line">#portion output</span><br><span class="line">Analyzing file catupgrd.sql</span><br><span class="line">Log files in /u02/app/oracle/product/12.1.0/db1/rdbms/admin</span><br><span class="line">catcon: ALL catcon-related output will be written to catupgrd_catcon_2980.lst</span><br><span class="line">catcon: See catupgrd*.log files for output generated by scripts</span><br><span class="line">catcon: See catupgrd_*.lst files for spool files, if any</span><br><span class="line">...</span><br><span class="line">LOG FILES: (catupgrd*.log)</span><br><span class="line">Upgrade Summary Report Located in:</span><br><span class="line">/u02/app/oracle/product/12.1.0/db1/cfgtoollogs/linora/upgrade/upg_summary.log</span><br><span class="line">Grand Total Upgrade Time:    [0d:0h:15m:44s]</span><br></pre></td></tr></table></figure></p>
+<h3 id="3-Post-upgrade-tasks"><a href="#3-Post-upgrade-tasks" class="headerlink" title="3. Post-upgrade tasks"></a>3. Post-upgrade tasks</h3><p>Run the post-upgrade scripts when upgrade finished.<br><figure class="highlight plain hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line">SQL&gt; startup</span><br><span class="line">#Run catcon.pl to invoke utlrp.sql to recompile any remaining stored PL/SQL and Java code.</span><br><span class="line">[oracle@linora:/home/oracle]$ cd $ORACLE_HOME/rdbms/admin</span><br><span class="line">[oracle@linora:/u02/app/oracle/product/12.1.0/db1/rdbms/admin]$ $ORACLE_HOME/perl/bin/perl \</span><br><span class="line">catcon.pl -n 1 -e -b utlrp -d &apos;&apos;&apos;.&apos;&apos;&apos; utlrp.sql</span><br><span class="line"></span><br><span class="line">catcon: ALL catcon-related output will be written to utlrp_catcon_5779.lst</span><br><span class="line">catcon: See utlrp*.log files for output generated by scripts</span><br><span class="line">catcon: See utlrp_*.lst files for spool files, if any</span><br></pre></td></tr></table></figure></p>
+<p>Run postupgrade_fixups.sql.<br><figure class="highlight plain hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">SQL&gt; startup</span><br><span class="line">SQL&gt; @/u01/app/oracle/cfgtoollogs/linora/preupgrade/postupgrade_fixups.sql</span><br></pre></td></tr></table></figure></p>
+<p>Run utlu121s.sql to verify that all issues have been fixed.<br><figure class="highlight plain hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">SQL&gt; @?/rdbms/admin/utlu121s.sql</span><br></pre></td></tr></table></figure></p>
+<p>Run catuppst.sql<br><figure class="highlight plain hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">SQL&gt; @?/rdbms/admin/catuppst.sql</span><br></pre></td></tr></table></figure></p>
+<p>Gether statistics<br><figure class="highlight plain hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">SQL&gt; EXECUTE DBMS_STATS.gather_fixed_objects_stats;</span><br></pre></td></tr></table></figure></p>
+<p>Verify and compile invalid objects<br><figure class="highlight plain hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">SQL&gt; @?/rdbms/admin/utlrp.sql</span><br><span class="line">SQL&gt; @?/rdbms/admin/utluiobj.sql</span><br><span class="line">SQL&gt; @?/rdbms/admin/utlu121s.sql</span><br></pre></td></tr></table></figure></p>
+<p>Bring the database back to archive log mode.<br><figure class="highlight plain hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line">SQL&gt; shutdown immediate</span><br><span class="line">SQL&gt; startup mount</span><br><span class="line">SQL&gt; alter database archivelog;</span><br><span class="line">SQL&gt; alter database open;</span><br><span class="line">SQL&gt; archive log list;</span><br><span class="line">Database log mode	       Archive Mode</span><br><span class="line">Automatic archival	       Enabled</span><br><span class="line">Archive destination	       /arch/linora</span><br><span class="line">Oldest online log sequence     54</span><br><span class="line">Next log sequence to archive   56</span><br><span class="line">Current log sequence	       56</span><br></pre></td></tr></table></figure></p>
+<p>Verify the upgrade result.<br><figure class="highlight plain hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br></pre></td><td class="code"><pre><span class="line">SQL&gt; set line 200</span><br><span class="line">SQL&gt; col comp_name for a50</span><br><span class="line">SQL&gt; col version for a15</span><br><span class="line">SQL&gt; col status for a10</span><br><span class="line">SQL&gt; select comp_name,version,status from dba_registry;</span><br><span class="line">COMP_NAME                                          VERSION         STATUS</span><br><span class="line">-------------------------------------------------- --------------- ----------</span><br><span class="line">Oracle Application Express                         4.2.5.00.08     VALID</span><br><span class="line">OWB                                                11.2.0.4.0      VALID</span><br><span class="line">Spatial                                            12.1.0.2.0      VALID</span><br><span class="line">Oracle Multimedia                                  12.1.0.2.0      VALID</span><br><span class="line">Oracle XML Database                                12.1.0.2.0      VALID</span><br><span class="line">Oracle Text                                        12.1.0.2.0      VALID</span><br><span class="line">Oracle Workspace Manager                           12.1.0.2.0      VALID</span><br><span class="line">Oracle Database Catalog Views                      12.1.0.2.0      VALID</span><br><span class="line">Oracle Database Packages and Types                 12.1.0.2.0      VALID</span><br><span class="line">JServer JAVA Virtual Machine                       12.1.0.2.0      VALID</span><br><span class="line">Oracle XDK                                         12.1.0.2.0      VALID</span><br><span class="line">Oracle Database Java Packages                      12.1.0.2.0      VALID</span><br><span class="line">OLAP Analytic Workspace                            12.1.0.2.0      VALID</span><br><span class="line">Oracle OLAP API                                    12.1.0.2.0      VALID</span><br></pre></td></tr></table></figure></p>
+<p>Backup the database and do rest tasks for post upgrading.<br><figure class="highlight plain hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line">RMAN&gt; run&#123;</span><br><span class="line">allocate channel c1 type disk format &apos;/backup/full_%d_%T_%s&apos;;</span><br><span class="line">backup full database</span><br><span class="line">include current controlfile</span><br><span class="line">plus archivelog  delete all input;</span><br><span class="line">release channel c1;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure></p>
+<p>Modify initial file, adjust parameters to meet new 12 database.<br><figure class="highlight plain hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line">SQL&gt; shutdown immediate</span><br><span class="line">#adjust oracle_base, compatible, diagnostic_dest ,audit_file_dest etc.,</span><br><span class="line">#do not forget create necessary directories</span><br><span class="line">[oracle@linora:/home/oracle]$ mkdir -p /u02/app/oracle/admin/linora/adump</span><br><span class="line">SQL&gt; startup</span><br><span class="line">SQL&gt; create spfile from pfile;</span><br></pre></td></tr></table></figure></p>
+<p>Re-create password file by using orapwd tools.<br><figure class="highlight plain hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">[oracle@linora:/home/oracle]$ orapwd file=$ORACLE_HOME/dbs/orapw$ORACLE_SID \</span><br><span class="line">password=oracle entries=5 force=y ignorecase=y</span><br></pre></td></tr></table></figure></p>
+<h4 id="3-1-Upgrade-the-Time-Zone-File-Version"><a href="#3-1-Upgrade-the-Time-Zone-File-Version" class="headerlink" title="3.1 Upgrade the Time Zone File Version."></a>3.1 Upgrade the Time Zone File Version.</h4><figure class="highlight plain hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br></pre></td><td class="code"><pre><span class="line">#current timezone file version</span><br><span class="line">SQL&gt; SELECT version FROM v$timezone_file;</span><br><span class="line">   VERSION</span><br><span class="line">----------</span><br><span class="line">	14</span><br><span class="line">SQL&gt; SELECT PROPERTY_NAME, SUBSTR(property_value, 1, 30) value</span><br><span class="line">FROM DATABASE_PROPERTIES</span><br><span class="line">WHERE PROPERTY_NAME LIKE &apos;DST_%&apos;</span><br><span class="line">ORDER BY PROPERTY_NAME;</span><br><span class="line"></span><br><span class="line">PROPERTY_NAME		       VALUE</span><br><span class="line">------------------------------ ----------------------------------------</span><br><span class="line">DST_PRIMARY_TT_VERSION	       14</span><br><span class="line">DST_SECONDARY_TT_VERSION       0</span><br><span class="line">DST_UPGRADE_STATE	       NONE</span><br></pre></td></tr></table></figure>
+<ul>
+<li>Prepare update timezone file version</li>
+</ul>
+<p>Need to put upgrade mode to update the timezone file<br><figure class="highlight plain hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br></pre></td><td class="code"><pre><span class="line">SQL&gt; shutdown immediate</span><br><span class="line">SQL&gt; startup upgrade</span><br><span class="line">SQL&gt; alter session set &quot;_with_subquery&quot;=materialize;</span><br><span class="line">SQL&gt; alter session set &quot;_simple_view_merging&quot;=TRUE;</span><br><span class="line">SQL&gt; exec DBMS_DST.BEGIN_PREPARE(18);</span><br><span class="line">SQL&gt; SELECT PROPERTY_NAME, SUBSTR(property_value, 1, 30) value</span><br><span class="line">     FROM DATABASE_PROPERTIES WHERE PROPERTY_NAME LIKE &apos;DST_%&apos; ORDER BY PROPERTY_NAME;</span><br><span class="line"></span><br><span class="line">PROPERTY_NAME		       VALUE</span><br><span class="line">------------------------------ ----------------------------------------</span><br><span class="line">DST_PRIMARY_TT_VERSION	       14</span><br><span class="line">DST_SECONDARY_TT_VERSION       18</span><br><span class="line">DST_UPGRADE_STATE	       PREPARE</span><br><span class="line"></span><br><span class="line">SQL&gt; TRUNCATE TABLE SYS.DST$TRIGGER_TABLE;</span><br><span class="line">SQL&gt; TRUNCATE TABLE sys.dst$affected_tables;</span><br><span class="line">SQL&gt; TRUNCATE TABLE sys.dst$error_table;</span><br><span class="line">SQL&gt; set serveroutput on</span><br><span class="line">SQL&gt; BEGIN</span><br><span class="line">     DBMS_DST.FIND_AFFECTED_TABLES</span><br><span class="line">     (affected_tables =&gt; &apos;sys.dst$affected_tables&apos;,</span><br><span class="line">     log_errors =&gt; TRUE,</span><br><span class="line">     log_errors_table =&gt; &apos;sys.dst$error_table&apos;);</span><br><span class="line">     END;</span><br><span class="line">     /</span><br><span class="line">#Below query should not return any rows</span><br><span class="line">SQL&gt; SELECT * FROM sys.dst$affected_tables;</span><br><span class="line">SQL&gt; SELECT * FROM sys.dst$error_table;</span><br><span class="line">SQL&gt; EXEC DBMS_DST.END_PREPARE;</span><br><span class="line">A prepare window has been successfully ended.</span><br></pre></td></tr></table></figure></p>
+<ul>
+<li>Begin update the timezone file</li>
+</ul>
+<figure class="highlight plain hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br></pre></td><td class="code"><pre><span class="line">SQL&gt; purge dba_recyclebin;</span><br><span class="line">SQL&gt; alter session set &quot;_with_subquery&quot;=materialize;</span><br><span class="line">SQL&gt; alter session set &quot;_simple_view_merging&quot;=TRUE;</span><br><span class="line">SQL&gt; EXEC DBMS_DST.BEGIN_UPGRADE(18);</span><br><span class="line">SQL&gt; SELECT PROPERTY_NAME, SUBSTR(property_value, 1, 30) value</span><br><span class="line">FROM DATABASE_PROPERTIES WHERE PROPERTY_NAME LIKE &apos;DST_%&apos; ORDER BY PROPERTY_NAME;</span><br><span class="line">PROPERTY_NAME		       VALUE</span><br><span class="line">------------------------------ ----------------------------------------</span><br><span class="line">DST_PRIMARY_TT_VERSION	       18</span><br><span class="line">DST_SECONDARY_TT_VERSION       14</span><br><span class="line">DST_UPGRADE_STATE	       UPGRADE</span><br><span class="line">#restart the instance</span><br><span class="line">SQL&gt; shutdown immediate</span><br><span class="line">SQL&gt;  startup</span><br><span class="line">SQL&gt; alter session set &quot;_with_subquery&quot;=materialize;</span><br><span class="line">SQL&gt; alter session set &quot;_simple_view_merging&quot;=TRUE;</span><br><span class="line">SQL&gt; set serveroutput on</span><br><span class="line">     VAR numfail number</span><br><span class="line">     BEGIN</span><br><span class="line">     DBMS_DST.UPGRADE_DATABASE(:numfail,</span><br><span class="line">     parallel =&gt; TRUE,</span><br><span class="line">     log_errors =&gt; TRUE,</span><br><span class="line">     log_errors_table =&gt; &apos;SYS.DST$ERROR_TABLE&apos;,</span><br><span class="line">     log_triggers_table =&gt; &apos;SYS.DST$TRIGGER_TABLE&apos;,</span><br><span class="line">     error_on_overlap_time =&gt; FALSE,</span><br><span class="line">     error_on_nonexisting_time =&gt; FALSE);</span><br><span class="line">     DBMS_OUTPUT.PUT_LINE(&apos;Failures:&apos;|| :numfail);</span><br><span class="line">     END;</span><br><span class="line">/</span><br><span class="line">SQL&gt; VAR fail number</span><br><span class="line">     BEGIN</span><br><span class="line">     DBMS_DST.END_UPGRADE(:fail);</span><br><span class="line">     DBMS_OUTPUT.PUT_LINE(&apos;Failures:&apos;|| :fail);</span><br><span class="line">     END;</span><br><span class="line">/</span><br></pre></td></tr></table></figure>
+<ul>
+<li>Verify the result</li>
+</ul>
+<figure class="highlight plain hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br></pre></td><td class="code"><pre><span class="line">SQL&gt; SELECT PROPERTY_NAME, SUBSTR(property_value, 1, 30) value</span><br><span class="line">     FROM DATABASE_PROPERTIES WHERE PROPERTY_NAME LIKE &apos;DST_%&apos; ORDER BY PROPERTY_NAME;</span><br><span class="line">PROPERTY_NAME		       VALUE</span><br><span class="line">------------------------------ ----------------------------------------</span><br><span class="line">DST_PRIMARY_TT_VERSION	       18</span><br><span class="line">DST_SECONDARY_TT_VERSION       0</span><br><span class="line">DST_UPGRADE_STATE	       NONE</span><br><span class="line"></span><br><span class="line">SQL&gt; SELECT * FROM v$timezone_file;</span><br><span class="line">FILENAME				    VERSION	CON_ID</span><br><span class="line">---------------------------------------- ---------- ----------</span><br><span class="line">timezlrg_18.dat 				 18	     0</span><br></pre></td></tr></table></figure>
+<ul>
+<li>Update the registry</li>
+</ul>
+<figure class="highlight plain hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line">SQL&gt; select TZ_VERSION from registry$database;</span><br><span class="line">TZ_VERSION</span><br><span class="line">----------</span><br><span class="line">	14</span><br><span class="line">SQL&gt; update registry$database set TZ_VERSION = (select version FROM v$timezone_file);</span><br><span class="line">SQL&gt; commit;</span><br><span class="line">SQL&gt; select TZ_VERSION from registry$database;</span><br><span class="line">TZ_VERSION</span><br><span class="line">----------</span><br><span class="line">	18</span><br></pre></td></tr></table></figure>
+<h3 id="4-Convert-non-CDB-to-PDB"><a href="#4-Convert-non-CDB-to-PDB" class="headerlink" title="4. Convert non-CDB to PDB"></a>4. Convert non-CDB to PDB</h3><p>When upgrade finished, the database in new 12c should be a non-CDB, which is DEPRECATED by Oracle. If the upgraded database is the only database on the current system, then you need to create a Container Database (CDB) first using dbca. Once the CDB is created you can proceed with the next step.<br><figure class="highlight plain hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">SQL&gt; select name,open_mode,database_role,cdb from v$database;</span><br><span class="line"></span><br><span class="line">NAME			       OPEN_MODE  DATABASE_ROLE 		   CDB</span><br><span class="line">------------------------------ ---------- -------------------------------- ------</span><br><span class="line">LINORA			       READ WRITE PRIMARY			   NO</span><br></pre></td></tr></table></figure></p>
+<h4 id="4-1-Create-CDB"><a href="#4-1-Create-CDB" class="headerlink" title="4.1 Create CDB"></a>4.1 Create CDB</h4><p>Please refer this post <a href="/oracle/12c-silent-installation.html">Silent Install 12c</a> to build an empty CDB. My testing environment as below:<br><figure class="highlight plain hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line">SQL&gt; select con_id,dbid,name,open_mode,total_size from v$containers;</span><br><span class="line"></span><br><span class="line">    CON_ID	 DBID NAME	 OPEN_MODE  TOTAL_SIZE</span><br><span class="line">---------- ---------- ---------- ---------- ----------</span><br><span class="line">	 1  285246148 CDB$ROOT	 READ WRITE	     0</span><br><span class="line">	 2 1525007667 PDB$SEED	 READ ONLY   361758720</span><br></pre></td></tr></table></figure></p>
+<p>My CDB instance is ora12c, my non-CDB instance is linora.</p>
+<h4 id="4-2-Convert-non-CDB-to-PDB"><a href="#4-2-Convert-non-CDB-to-PDB" class="headerlink" title="4.2 Convert non-CDB to PDB"></a>4.2 Convert non-CDB to PDB</h4><p>When CDB is ready, there are ways can transfer the non-CDB to PDB: data pump, OGG and DBMS_PDB function. Recommend to use DBMS_PDB.</p>
+<ul>
+<li>Open non-CDB in read only mode</li>
+</ul>
+<figure class="highlight plain hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">[oracle@linora:/home/oracle]$ export ORACLE_SID=linora</span><br><span class="line">[oracle@linora:/home/oracle]$ sqlplus &quot;/as sysdba&quot;</span><br><span class="line">SQL&gt; shutdown immediate</span><br><span class="line">SQL&gt; startup mount exclusive</span><br><span class="line">SQL&gt; alter database open read only;</span><br></pre></td></tr></table></figure>
+<ul>
+<li>Generate PDB xml manifest file</li>
+</ul>
+<figure class="highlight plain hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">SQL&gt; exec DBMS_PDB.DESCRIBE(pdb_descr_file =&gt; &apos;/home/oracle/ncdb.xml&apos;);</span><br><span class="line">SQL&gt; shutdown immediate</span><br></pre></td></tr></table></figure>
+<ul>
+<li>Connect to CDB, verify xml file</li>
+</ul>
+<figure class="highlight plain hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br></pre></td><td class="code"><pre><span class="line">[oracle@linora:/home/oracle]$ export ORACLE_SID=ora12c</span><br><span class="line">[oracle@linora:/home/oracle]$ sqlplus &quot;/as sysdba&quot;</span><br><span class="line">SQL&gt; SET SERVEROUTPUT ON</span><br><span class="line">SET SERVEROUTPUT ON</span><br><span class="line">DECLARE</span><br><span class="line">hold_var boolean;</span><br><span class="line">begin</span><br><span class="line">hold_var := DBMS_PDB.CHECK_PLUG_COMPATIBILITY(pdb_descr_file=&gt;&apos;/home/oracle/ncdb.xml&apos;);</span><br><span class="line">if hold_var then</span><br><span class="line">dbms_output.put_line(&apos;YES&apos;);</span><br><span class="line">else</span><br><span class="line">dbms_output.put_line(&apos;NO&apos;);</span><br><span class="line">end if;</span><br><span class="line">end;</span><br><span class="line">/</span><br><span class="line">YES</span><br></pre></td></tr></table></figure>
+<p>If the output is NO, please query the following view:<br><figure class="highlight plain hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br></pre></td><td class="code"><pre><span class="line">SQL&gt; col cause for a25</span><br><span class="line">col message for a85</span><br><span class="line">set pagesize 9999</span><br><span class="line">select cause,type,message,status from PDB_PLUG_IN_VIOLATIONS where name=&apos;LINORA&apos;;</span><br><span class="line">CAUSE			  TYPE		     MESSAGE											STATUS</span><br><span class="line">------------------------- ------------------ ------------------------------------------------------------------------------------------ ------------------</span><br><span class="line">Parameter		  WARNING	     CDB parameter sga_target mismatch: Previous 564M Current 0 				RESOLVED</span><br><span class="line">Service Name Conflict	  WARNING	     Service name or network name of service linora in the PDB is invalid or conflicts with an	RESOLVED</span><br><span class="line">					     existing service name or network name in the CDB.</span><br><span class="line"></span><br><span class="line">Parameter		  WARNING	     CDB parameter open_cursors mismatch: Previous 300 Current 500				RESOLVED</span><br><span class="line">Parameter		  WARNING	     CDB parameter pga_aggregate_target mismatch: Previous 187M Current 10M			RESOLVED</span><br><span class="line">Non-CDB to PDB		  ERROR 	     PDB plugged in is a non-CDB, requires noncdb_to_pdb.sql be run.				RESOLVED</span><br><span class="line">Database CHARACTER SET	  ERROR 	     Character set mismatch: PDB character set WE8MSWIN1252. CDB character set AL32UTF8.	PENDING</span><br><span class="line">OPTION			  ERROR 	     Database option OWM mismatch: PDB installed version 12.1.0.2.0. CDB installed version NULL PENDING</span><br></pre></td></tr></table></figure></p>
+<ul>
+<li>Convert the non-CDB to PDB</li>
+</ul>
+<figure class="highlight plain hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line">SQL&gt; CREATE PLUGGABLE DATABASE linora</span><br><span class="line">USING &apos;/home/oracle/ncdb.xml&apos;</span><br><span class="line">COPY</span><br><span class="line">FILE_NAME_CONVERT = (&apos;/oradata/linora/linora/&apos;,</span><br><span class="line">&apos;/data/PDB/linora/&apos;);</span><br><span class="line">#Use NOCOPY, reuse tempfile</span><br><span class="line">CREATE PLUGGABLE DATABASE linora USING &apos;/home/oracle/ncdb.xml&apos; NOCOPY TEMPFILE REUSE;</span><br></pre></td></tr></table></figure>
+<ul>
+<li>Verify the result</li>
+</ul>
+<figure class="highlight plain hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><span class="line">SQL&gt; select name, open_mode from v$pdbs;</span><br><span class="line"></span><br><span class="line">NAME	   OPEN_MODE</span><br><span class="line">---------- --------------------</span><br><span class="line">PDB$SEED   READ ONLY</span><br><span class="line">LINORA	   MOUNTED</span><br><span class="line">SQL&gt; col pdb_name for a15</span><br><span class="line">select pdb_name, status from dba_pdbs;</span><br><span class="line"></span><br><span class="line">PDB_NAME	STATUS</span><br><span class="line">--------------- ------------------</span><br><span class="line">PDB$SEED	NORMAL</span><br><span class="line">LINORA		NEW</span><br></pre></td></tr></table></figure>
+<ul>
+<li>Access to PDB</li>
+</ul>
+<figure class="highlight plain hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line">SQL&gt; alter session set container=linora;</span><br><span class="line">SQL&gt; show con_name</span><br><span class="line">CON_NAME</span><br><span class="line">------------------------------</span><br><span class="line">LINORA</span><br><span class="line">#This script must be run before the new PDB can be opened for the first time</span><br><span class="line">SQL&gt; @?/rdbms/admin/noncdb_to_pdb.sql</span><br></pre></td></tr></table></figure>
+<ul>
+<li>Access to CDB, verify the convert result</li>
+</ul>
+<figure class="highlight plain hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br></pre></td><td class="code"><pre><span class="line">SQL&gt; col cause for a25</span><br><span class="line">SQL&gt; col message for a85</span><br><span class="line">SQL&gt; set pagesize 9999</span><br><span class="line">SQL&gt; select cause,type,message,status from PDB_PLUG_IN_VIOLATIONS;</span><br><span class="line"></span><br><span class="line">CAUSE                     TYPE               MESSAGE                                                                               STATUS</span><br><span class="line">------------------------- ------------------ ------------------------------------------------------------------------------------- ------------------</span><br><span class="line">Parameter                 WARNING            CDB parameter sga_target mismatch: Previous 3616M Current 3600M                       RESOLVED</span><br><span class="line">Service Name Conflict     WARNING            Service name or network name of service orcl1 in the PDB is invalid or conflicts with RESOLVED</span><br><span class="line">                                              an existing service name or network name in the CDB.</span><br><span class="line"></span><br><span class="line">Parameter                 WARNING            CDB parameter compatible mismatch: Previous &apos;12.1.0&apos; Current &apos;12.1.0.2.0&apos;             RESOLVED</span><br><span class="line">Parameter                 WARNING            CDB parameter pga_aggregate_target mismatch: Previous 1203M Current 1200M             RESOLVED</span><br><span class="line">Non-CDB to PDB            ERROR              PDB plugged in is a non-CDB, requires noncdb_to_pdb.sql be run.                       RESOLVED</span><br><span class="line">OPTION                    WARNING            Database option DV mismatch: PDB installed version NULL. CDB installed version 12.1.0 PENDING</span><br><span class="line">                                             .2.0.</span><br><span class="line"></span><br><span class="line">OPTION                    WARNING            Database option OLS mismatch: PDB installed version NULL. CDB installed version 12.1. PENDING</span><br><span class="line">                                             0.2.0.</span><br><span class="line">SQL&gt; select con_id, name,open_mode from v$containers;</span><br><span class="line"></span><br><span class="line">    CON_ID NAME                                                         OPEN_MODE</span><br><span class="line">---------- ------------------------------------------------------------ --------------------</span><br><span class="line">         1 CDB$ROOT                                                     READ WRITE</span><br><span class="line">         2 PDB$SEED                                                     READ ONLY</span><br><span class="line">         3 LINORA                                                       READ WRITE</span><br></pre></td></tr></table></figure>
+<p>You also can use v$database view to verify it:<br><figure class="highlight plain hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">SQL&gt; select name, decode(cdb, &apos;YES&apos;, &apos;Multitenant Option enabled&apos;, &apos;Regular 12c Database: &apos;) &quot;Multitenant Option&quot; , open_mode, con_id from v$database;</span><br><span class="line">NAME		   Multitenant Option					OPEN_MODE      CON_ID</span><br><span class="line">------------------ ---------------------------------------------------- ---------- ----------</span><br><span class="line">ORA12C		   Multitenant Option enabled				READ WRITE	    0</span><br></pre></td></tr></table></figure></p>
+<p><b>EOF</b><br></p>
+
+    
+    </div>
+    
+    <div class="columns is-variable is-1 is-multiline is-mobile">
+    
+        <span class="column is-narrow"><a class="tag is-light article-tag" href="/tags/upgrade-12c/">#upgrade, 12c</a></span>
+    
+    </div>
+    
+    
+    <div class="columns is-mobile is-multiline article-nav">
+        <span class="column is-12-mobile is-half-desktop  article-nav-prev">
+            
+            <a href="/part-of-12c-new-features.html">Part of 12c New Features</a>
+            
+        </span>
+        <span class="column is-12-mobile is-half-desktop  article-nav-next">
+            
+            <a href="/moving-files-in-database.html">Moving Files in database</a>
+            
+        </span>
+    </div>
+    
+</article>
+
+
+
+
+    </div>
+</section>
+    <footer class="footer">
+    <div class="container">
+        <div class="columns content">
+            <div class="column is-narrow has-text-centered">
+                &copy; 2018 Kong&nbsp;
+                Powered by <a href="http://hexo.io/" target="_blank">Hexo</a> & <a
+                        href="http://github.com/ppoffice/hexo-theme-minos">Minos</a>
+            </div>
+            <div class="column is-hidden-mobile"></div>
+
+            
+            
+        </div>
+    </div>
+</footer>
+    <script src="//cdnjs.cloudflare.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
+<script src="//cdnjs.cloudflare.com/ajax/libs/moment.js/2.22.2/moment-with-locales.min.js"></script>
+
+<!-- test if the browser is outdated -->
+<div id="outdated">
+    <h6>Your browser is out-of-date!</h6>
+    <p>Update your browser to view this website correctly. <a id="btnUpdateBrowser" href="http://outdatedbrowser.com/">Update my browser now </a></p>
+    <p class="last"><a href="#" id="btnCloseUpdateBrowser" title="Close">&times;</a></p>
+</div>
+<script src="//cdnjs.cloudflare.com/ajax/libs/outdated-browser/1.1.5/outdatedbrowser.min.js"></script>
+<script>
+    $(document).ready(function () {
+        // plugin function, place inside DOM ready function
+        outdatedBrowser({
+            bgColor: '#f25648',
+            color: '#ffffff',
+            lowerThan: 'flex'
+        })
+    });
+</script>
+
+<script>
+    window.FontAwesomeConfig = {
+        searchPseudoElements: true
+    }
+    moment.locale("en-AU");
+</script>
+
+
+    
+    
+    
+    
+    
+    
+
+    
+
+
+<script src="/js/script.js"></script>
+
+    
+    <div class="searchbox ins-search">
+    <div class="searchbox-mask"></div>
+    <div class="searchbox-container ins-search-container">
+        <div class="searchbox-input-wrapper">
+            <input type="text" class="searchbox-input ins-search-input" placeholder="Type something..." />
+            <span class="searchbox-close ins-close ins-selectable"><i class="fa fa-times-circle"></i></span>
+        </div>
+        <div class="searchbox-result-wrapper ins-section-wrapper">
+            <div class="ins-section-container"></div>
+        </div>
+    </div>
+</div>
+<script>
+    (function (window) {
+        var INSIGHT_CONFIG = {
+            TRANSLATION: {
+                POSTS: 'Posts',
+                PAGES: 'Pages',
+                CATEGORIES: 'Categories',
+                TAGS: 'Tags',
+                UNTITLED: '(Untitled)',
+            },
+            CONTENT_URL: '/content.json',
+        };
+        window.INSIGHT_CONFIG = INSIGHT_CONFIG;
+    })(window);
+</script>
+<script src="/js/insight.js"></script>
+    
+</body>
+</html>

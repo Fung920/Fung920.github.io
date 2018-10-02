@@ -1,0 +1,280 @@
+<!DOCTYPE html>
+<html class="has-navbar-fixed-top">
+<head>
+    <meta charset="utf-8">
+<title>Oracle ROWID学习 - My Wiki</title>
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+
+<link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/outdated-browser/1.1.5/outdatedbrowser.min.css">
+
+
+
+
+
+
+
+
+
+
+<link rel="icon" href="/images/favicon.ico">
+
+
+<link rel="stylesheet" href="//fonts.googleapis.com/css?family=Ovo|Source+Code+Pro">
+<link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/bulma/0.6.2/css/bulma.min.css">
+
+
+
+<link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/highlight.js/9.12.0/styles/github.min.css">
+
+<link rel="stylesheet" href="/css/style.css">
+
+<script defer src="//use.fontawesome.com/releases/v5.0.8/js/all.js"></script>
+
+
+    
+    
+    
+    
+    
+    
+
+    
+
+
+</head>
+<body>
+    
+<nav class="navbar is-transparent is-fixed-top navbar-main" role="navigation" aria-label="main navigation">
+    <div class="container">
+        <div class="navbar-brand">
+            <a class="navbar-item navbar-logo" href="/">
+                
+                    
+                    My Wiki
+                    
+                
+            </a>
+            <div class="navbar-burger">
+                <span></span>
+                <span></span>
+                <span></span>
+            </div>
+        </div>
+        
+        <div class="navbar-menu navbar-start">
+            
+            <a class="navbar-item "
+               href="/">Home</a>
+            
+            <a class="navbar-item "
+               href="/archives">Archives</a>
+            
+            <a class="navbar-item "
+               href="/about">About</a>
+            
+        </div>
+        
+        <div class="navbar-menu navbar-end">
+            
+            <a class="navbar-item search" title="Search" href="javascript:;">
+                <i class="fas fa-search"></i>
+            </a>
+            
+            
+            
+        </div>
+    </div>
+</nav>
+
+    <section class="section">
+    <div class="container">
+    <article class="article content gallery" itemscope itemprop="blogPost">
+    <h1 class="article-title is-size-3 is-size-4-mobile" itemprop="name">
+        
+            Oracle ROWID学习
+        
+    </h1>
+    <div class="article-meta columns is-variable is-1 is-multiline is-mobile is-size-7-mobile">
+        <span class="column is-narrow">
+            <time datetime="2013-06-14T16:00:00.000Z" itemprop="datePublished">Jun 14 2013</time>
+        </span>
+        
+        <span class="column is-narrow article-category">
+            <i class="far fa-folder"></i>
+            <a class="article-category-link" href="/categories/oracle/">oracle</a>
+        </span>
+        
+        
+        <span class="column is-narrow">
+            
+            
+            5 minutes read (About 738 words)
+        </span>
+        
+    </div>
+    <div class="article-entry is-size-6-mobile" itemprop="articleBody">
+    
+        Reference：http://www.orafaq.com/wiki/ROWID<br> 
+<a id="more"></a>
+http://www.cnblogs.com/rootq/archive/2008/10/24/1319058.html<br> 
+http://www.oracleonlinux.cn/2011/11/whats-oracle-rowid/<br> 
+在Oracle数据库中，每一行记录都会有一个唯一的ROWID指向磁盘中存放此记录的物理地址。<br> 
+一般ROWID一旦分配就不会改变，但当重组表或者使用exp/imp工具导入一个表时候，ROWID将会改变。<br> 
+在分区表中，因为update导致数据从一个分区到另一个分区的row Migration也会改变该记录的ROWID。<br>
+从8i开始，ROWID大小固定为10bytes，由data_object_id#+rfile#+block#+row#组成，显示为18位字符串，如下所示：
+<pre>
+BBED@linora> SELECT owner,rowid FROM t WHERE rownum=1;
+
+OWNER      ROWID
+---------- ------------------
+SYSTEM     AAAO3qAAJAAAAQNAAA
+</pre>
+  对以上18位字符解释如下：<br> 
+The Oracle 8 format is on 10 bytes:<br> 
+<li>                    bits 1 to 32 (bytes 1 to 4): data object id (0-4294967295)</li>
+<li>                   bits 33 to 44 (byte 5 and half byte 6): file number inside the tablespace (0-4095)</li>
+<li>                   bits 45 to 64 (half byte 6 and bytes 7 and 8): block number inside the file (0-1048575)</li>
+<li>                    bits 65 to 80 (bytes 9 and 10): row number inside the block (0-65535)</li>
+32bit的object number，每个数据库最多有4G个对象<br> 
+10bit的file number，每个对象最多有1022个文件（2个文件预留）<br> 
+22bit的block number，每个文件最多有4M个BLOCK<br> 
+16bit的row number，每个BLOCK最多有64K个ROWS <br> 
+ROWID的格式如下：<br>  
+数据对象编号        文件编号        块编号           行编号<br> 
+OOOOOO               FFF              BBBBBB           RRR<br> 
+       根据SQL查找出来的ROWID显示是18字符，这些字符是64位编码，10进制跟64进制转换如下：<br> 
+<p><img src="/images/dec.png"></p>
+  由此可得知：
+A-Z <==> 0 – 25 (26)<br> 
+a-z <==> 26 – 51 (26)<br> 
+0-9 <==> 52 – 61 (10)<br> 
++/ <==> 62 – 63 (2)<br>
+       因此10进制跟64进制编码转换公式如下：d*(b^p)，其中b为基数，这里就是64，p就是从右至左，以0开始的位置数，那么上面例子中AAAO3qAAJAAAAQNAAA，文件号AAJ具体计算应该为：<br>
+9*(64^0)=9<br>
+0*(64^1)=0<br>
+0*(64^2)=0<br>
+       因此该文件号为9。块编号为AAAAQN，具体计算为(A值为0，可以不算了)：<br>
+N=13*(64^0)=13<br>
+Q=16*(64^1)=1024<br>
+       因此，该块编号为1037，行编号为0，可以使用DBMS_ROWID包验证以上计算结果：<br>
+<figure class="highlight plain hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br></pre></td><td class="code"><pre><span class="line">SELECT DBMS_ROWID.ROWID_OBJECT(rowid) &quot;OBJECT&quot;,</span><br><span class="line">DBMS_ROWID.ROWID_RELATIVE_FNO(rowid) &quot;FILE&quot;,</span><br><span class="line">DBMS_ROWID.ROWID_BLOCK_NUMBER(rowid) &quot;BLOCK&quot;,</span><br><span class="line">DBMS_ROWID.ROWID_ROW_NUMBER(rowid) &quot;ROW&quot;</span><br><span class="line">FROM bbed.t</span><br><span class="line">WHERE rownum=1</span><br><span class="line">/</span><br><span class="line">或者：</span><br><span class="line">SELECT rowid,</span><br><span class="line">dbms_rowid.rowid_object(rowid) object_id,</span><br><span class="line">dbms_rowid.rowid_relative_fno(rowid)  file_id,</span><br><span class="line">dbms_rowid.rowid_block_number(rowid)  block_id ,</span><br><span class="line">dbms_rowid.rowid_row_number(rowid)   num ,</span><br><span class="line">rowidtochar(rowid) FROM bbed.t WHERE rownum=1</span><br><span class="line">;</span><br><span class="line">    OBJECT       FILE      BLOCK        ROW</span><br><span class="line">---------- ---------- ---------- ----------</span><br><span class="line">     60906          9       1037          0</span><br><span class="line">--也可以通过以下方式获取相关rowid信息：</span><br><span class="line">CREATE OR REPLACE FUNCTION get_rowid</span><br><span class="line">(l_rowid IN varchar2) RETURN varchar2 IS</span><br><span class="line">  ls_my_rowid   varchar2(200);</span><br><span class="line">  rowid_type    NUMBER;</span><br><span class="line">  object_number NUMBER;</span><br><span class="line">  relative_fno  NUMBER;</span><br><span class="line">  block_number  NUMBER;</span><br><span class="line">  ROW_NUMBER    NUMBER;</span><br><span class="line">BEGIN</span><br><span class="line">  dbms_rowid.rowid_info(l_rowid,</span><br><span class="line">                        rowid_type,</span><br><span class="line">                        object_number,</span><br><span class="line">                        relative_fno,</span><br><span class="line">                        block_number,</span><br><span class="line">                        ROW_NUMBER);</span><br><span class="line">  ls_my_rowid := &apos;Object# is      :&apos; || to_char(object_number) || chr(10) ||</span><br><span class="line">                 &apos;Relative_fno is :&apos; || to_char(relative_fno) || chr(10) ||</span><br><span class="line">                 &apos;Block number is :&apos; || to_char(block_number) || chr(10) ||</span><br><span class="line">                 &apos;Row number is   :&apos; || to_char(ROW_NUMBER);</span><br><span class="line">  RETURN ls_my_rowid;</span><br><span class="line">END;</span><br><span class="line">/</span><br><span class="line"> -- 结果如下所示：</span><br><span class="line">BBED@linora&amp;gt;selectget_rowid(rowid), owner FROM t WHERE rownum=1;</span><br><span class="line">GET_ROWID(ROWID)               OWNER</span><br><span class="line">---------------------------- -------------------------------</span><br><span class="line">Object# IS      :60906         SYSTEM</span><br><span class="line">Relative_fno IS :9</span><br><span class="line">Block NUMBER IS :1037</span><br><span class="line">ROW NUMBER IS   :0</span><br></pre></td></tr></table></figure>
+
+</==></==></==></==>
+    
+    </div>
+    
+    <div class="columns is-variable is-1 is-multiline is-mobile">
+    
+        <span class="column is-narrow"><a class="tag is-light article-tag" href="/tags/fundamentals/">#fundamentals</a></span>
+    
+    </div>
+    
+    
+    <div class="columns is-mobile is-multiline article-nav">
+        <span class="column is-12-mobile is-half-desktop  article-nav-prev">
+            
+            <a href="/oracle-histograms.html">使用直方图(Histograms)</a>
+            
+        </span>
+        <span class="column is-12-mobile is-half-desktop  article-nav-next">
+            
+            <a href="/logminer-simple-use.html">Logminer简单用法</a>
+            
+        </span>
+    </div>
+    
+</article>
+
+
+
+
+    </div>
+</section>
+    <footer class="footer">
+    <div class="container">
+        <div class="columns content">
+            <div class="column is-narrow has-text-centered">
+                &copy; 2018 Kong&nbsp;
+                Powered by <a href="http://hexo.io/" target="_blank">Hexo</a> & <a
+                        href="http://github.com/ppoffice/hexo-theme-minos">Minos</a>
+            </div>
+            <div class="column is-hidden-mobile"></div>
+
+            
+            
+        </div>
+    </div>
+</footer>
+    <script src="//cdnjs.cloudflare.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
+<script src="//cdnjs.cloudflare.com/ajax/libs/moment.js/2.22.2/moment-with-locales.min.js"></script>
+
+<!-- test if the browser is outdated -->
+<div id="outdated">
+    <h6>Your browser is out-of-date!</h6>
+    <p>Update your browser to view this website correctly. <a id="btnUpdateBrowser" href="http://outdatedbrowser.com/">Update my browser now </a></p>
+    <p class="last"><a href="#" id="btnCloseUpdateBrowser" title="Close">&times;</a></p>
+</div>
+<script src="//cdnjs.cloudflare.com/ajax/libs/outdated-browser/1.1.5/outdatedbrowser.min.js"></script>
+<script>
+    $(document).ready(function () {
+        // plugin function, place inside DOM ready function
+        outdatedBrowser({
+            bgColor: '#f25648',
+            color: '#ffffff',
+            lowerThan: 'flex'
+        })
+    });
+</script>
+
+<script>
+    window.FontAwesomeConfig = {
+        searchPseudoElements: true
+    }
+    moment.locale("en-AU");
+</script>
+
+
+    
+    
+    
+    
+    
+    
+
+    
+
+
+<script src="/js/script.js"></script>
+
+    
+    <div class="searchbox ins-search">
+    <div class="searchbox-mask"></div>
+    <div class="searchbox-container ins-search-container">
+        <div class="searchbox-input-wrapper">
+            <input type="text" class="searchbox-input ins-search-input" placeholder="Type something..." />
+            <span class="searchbox-close ins-close ins-selectable"><i class="fa fa-times-circle"></i></span>
+        </div>
+        <div class="searchbox-result-wrapper ins-section-wrapper">
+            <div class="ins-section-container"></div>
+        </div>
+    </div>
+</div>
+<script>
+    (function (window) {
+        var INSIGHT_CONFIG = {
+            TRANSLATION: {
+                POSTS: 'Posts',
+                PAGES: 'Pages',
+                CATEGORIES: 'Categories',
+                TAGS: 'Tags',
+                UNTITLED: '(Untitled)',
+            },
+            CONTENT_URL: '/content.json',
+        };
+        window.INSIGHT_CONFIG = INSIGHT_CONFIG;
+    })(window);
+</script>
+<script src="/js/insight.js"></script>
+    
+</body>
+</html>

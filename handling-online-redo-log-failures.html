@@ -1,0 +1,325 @@
+<!DOCTYPE html>
+<html class="has-navbar-fixed-top">
+<head>
+    <meta charset="utf-8">
+<title>Oracle日志文件损坏的恢复 - My Wiki</title>
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+
+<link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/outdated-browser/1.1.5/outdatedbrowser.min.css">
+
+
+<meta name="description" content="how to hand types of redo log failures,Oracle日志文件损坏的恢复">
+
+
+
+<meta name="keywords" content="redo,rman,recovery">
+
+
+
+
+
+
+
+<link rel="icon" href="/images/favicon.ico">
+
+
+<link rel="stylesheet" href="//fonts.googleapis.com/css?family=Ovo|Source+Code+Pro">
+<link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/bulma/0.6.2/css/bulma.min.css">
+
+
+
+<link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/highlight.js/9.12.0/styles/github.min.css">
+
+<link rel="stylesheet" href="/css/style.css">
+
+<script defer src="//use.fontawesome.com/releases/v5.0.8/js/all.js"></script>
+
+
+    
+    
+    
+    
+    
+    
+
+    
+
+
+</head>
+<body>
+    
+<nav class="navbar is-transparent is-fixed-top navbar-main" role="navigation" aria-label="main navigation">
+    <div class="container">
+        <div class="navbar-brand">
+            <a class="navbar-item navbar-logo" href="/">
+                
+                    
+                    My Wiki
+                    
+                
+            </a>
+            <div class="navbar-burger">
+                <span></span>
+                <span></span>
+                <span></span>
+            </div>
+        </div>
+        
+        <div class="navbar-menu navbar-start">
+            
+            <a class="navbar-item "
+               href="/">Home</a>
+            
+            <a class="navbar-item "
+               href="/archives">Archives</a>
+            
+            <a class="navbar-item "
+               href="/about">About</a>
+            
+        </div>
+        
+        <div class="navbar-menu navbar-end">
+            
+            <a class="navbar-item search" title="Search" href="javascript:;">
+                <i class="fas fa-search"></i>
+            </a>
+            
+            
+            
+        </div>
+    </div>
+</nav>
+
+    <section class="section">
+    <div class="container">
+    <article class="article content gallery" itemscope itemprop="blogPost">
+    <h1 class="article-title is-size-3 is-size-4-mobile" itemprop="name">
+        
+            Oracle日志文件损坏的恢复
+        
+    </h1>
+    <div class="article-meta columns is-variable is-1 is-multiline is-mobile is-size-7-mobile">
+        <span class="column is-narrow">
+            <time datetime="2014-06-05T02:06:11.000Z" itemprop="datePublished">Jun 4 2014</time>
+        </span>
+        
+        <span class="column is-narrow article-category">
+            <i class="far fa-folder"></i>
+            <a class="article-category-link" href="/categories/oracle/">oracle</a>
+        </span>
+        
+        
+        <span class="column is-narrow">
+            
+            
+            12 minutes read (About 1811 words)
+        </span>
+        
+    </div>
+    <div class="article-entry is-size-6-mobile" itemprop="articleBody">
+    
+        <p>如前文<a href="/redo-manage.html">管理redo文件</a>所述，Online redo log是记录数据所有操作的地方，它最大的目的就是在数据库需要恢复的时候提供恢复的依据。<br><a id="more"></a><br>Oracle的日志是循环写，因此，它要求至少要有两组日志文件，每个组至少有一个成员，成员就是磁盘中的物理文件。类似控制文件，Oracle也强烈要求日志文件多路存储在不同磁盘或者路径上。但由于日志文件没有一个很好的保护机制，它不能用RMAN进行备份，如果因为人为(rm -rf *.log)或者磁盘故障等导致日志文件损坏，该如何修复日志文件呢？  </p>
+<ol>
+<li>日志文件损坏信息都会被记录在alert log里面，因此，首先可以查看alert log确认是哪个日志的哪个成员损坏。  </li>
+<li>通过<code>v$log</code>和<code>v$logfile</code>，确认日志文件信息，这两个视图很有用。  </li>
+<li>如果仅仅是同一日志组的某一成员损坏，数据库仍会正常工作，只是在后台日志会报错。  </li>
+<li>日志文件状态决定了恢复策略。  <figure class="highlight plain hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br></pre></td><td class="code"><pre><span class="line">SQL&gt; set linesize 200</span><br><span class="line">SQL&gt; col member for a50</span><br><span class="line">SQL&gt; select</span><br><span class="line">a.group#, a.thread#,</span><br><span class="line">a.status grp_status,</span><br><span class="line">b.member member,</span><br><span class="line">b.status mem_status</span><br><span class="line">from v$log a,</span><br><span class="line">v$logfile b</span><br><span class="line">where a.group# = b.group#</span><br><span class="line">order by a.group#, b.member;</span><br><span class="line"></span><br><span class="line">    GROUP#    THREAD# GRP_STATUS       MEMBER                                             MEM_STA</span><br><span class="line">---------- ---------- ---------------- -------------------------------------------------- -------</span><br><span class="line">         1          1 CURRENT          /oracle/backup/redo01b.rdo                         INVALID</span><br><span class="line">         1          1 CURRENT          /oracle/oradata/orcl/redo01.log</span><br><span class="line">         2          1 INACTIVE         /oracle/backup/redo02b.rdo                         INVALID</span><br><span class="line">         2          1 INACTIVE         /oracle/oradata/orcl/redo02.log</span><br><span class="line">         3          1 INACTIVE         /oracle/backup/redo03b.rdo                         INVALID</span><br><span class="line">         3          1 INACTIVE         /oracle/oradata/orcl/redo03.log</span><br><span class="line">         5          1 UNUSED           /oracle/backup/redo05b.log</span><br><span class="line">         5          1 UNUSED           /oracle/oradata/orcl/redo05a.log</span><br></pre></td></tr></table></figure>
+</li>
+</ol>
+<center>v$log视图status含义</center>
+
+<table>
+<thead>
+<tr>
+<th>Status</th>
+<th>Meaning</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>CURRENT</td>
+<td>正在使用的日志组</td>
+</tr>
+<tr>
+<td>ACTIVE</td>
+<td>当前日志文件需要在crash recovery用到，且可能尚未归档</td>
+</tr>
+<tr>
+<td>CLEARING</td>
+<td>正在被清除(alter database clear logfile)，清除完毕后，状态变为UNUSED</td>
+</tr>
+<tr>
+<td>CLEARING_CURRENT</td>
+<td>表明正在清除当前日志文件中的已关闭线程，如果切换时发生某些故障，如写入新日志标题时的I/O错误，则该日志可以停留在该状态</td>
+</tr>
+<tr>
+<td>INACTIVE</td>
+<td>表面此日志文件不需要在crash recovery用到，且可能尚未归档</td>
+</tr>
+<tr>
+<td>UNUSED</td>
+<td>表明从未对联机重做日志组进行写入，这种状态的日志文件要么而是刚增加的，要么是当日志不是current redo log时RESETLOGS操作后的状态</td>
+</tr>
+</tbody>
+</table>
+<center>v$logfile视图status含义</center>
+
+<table>
+<thead>
+<tr>
+<th>Status</th>
+<th>Meaning</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>INVALID</td>
+<td>日志文件无法被访问，或者是新增加的</td>
+</tr>
+<tr>
+<td>DELETED</td>
+<td>日志文件已经被删除，已不再使用</td>
+</tr>
+<tr>
+<td>STALE</td>
+<td>表明该文件内容不完全，例如正在添加一个日志文件成员</td>
+</tr>
+<tr>
+<td>NULL</td>
+<td>日志文件正在被使用</td>
+</tr>
+</tbody>
+</table>
+<p>两个视图status栏位有不同的含义，v$log反应的是日志组的状态，v$logfile反应的是日志组成员即物理日志文件的状态。</p>
+<h3 id="1-丢失多个成员中的一个"><a href="#1-丢失多个成员中的一个" class="headerlink" title="1. 丢失多个成员中的一个"></a>1. 丢失多个成员中的一个</h3><figure class="highlight plain hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line">SQL&gt; !rm -rf /oracle/backup/redo05b.log</span><br><span class="line">Errors in file /oracle/app/oracle/diag/rdbms/orcl/orcl/trace/orcl_m000_6226036.trc:</span><br><span class="line">ORA-00313: open failed for members of log group 5 of thread 1</span><br><span class="line">ORA-00313: open failed for members of log group 5 of thread 1</span><br><span class="line">ORA-00312: online log 5 thread 1: &apos;/oracle/backup/redo05b.log&apos;</span><br><span class="line">ORA-27037: unable to obtain file status</span><br><span class="line">IBM AIX RISC System/6000 Error: 2: No such file or directory</span><br></pre></td></tr></table></figure>
+<p>由于仅仅是丢失其中一份copy，因此数据库仍旧会正常工作，解决方法：<br><figure class="highlight plain hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">SQL&gt; alter database drop logfile member &apos;/oracle/backup/redo05b.log&apos;;</span><br><span class="line">Database altered.</span><br><span class="line">SQL&gt; alter database add logfile member &apos;/oracle/backup/redo05b.log&apos; to group 5;</span><br><span class="line">Database altered.</span><br></pre></td></tr></table></figure></p>
+<p>重新创建日志组成员可以在open或者mount状态下进行，但建议在mount下进行，这样能保证在drop和recreate过程中log group的状态不变。</p>
+<h3 id="2-日志组状态inactive，丢失所有成员"><a href="#2-日志组状态inactive，丢失所有成员" class="headerlink" title="2. 日志组状态inactive，丢失所有成员"></a>2. 日志组状态inactive，丢失所有成员</h3><figure class="highlight plain hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br></pre></td><td class="code"><pre><span class="line">SQL&gt; !rm -rf /oracle/backup/redo05b.log</span><br><span class="line">SQL&gt; !rm -rf /oracle/oradata/orcl/redo05a.log</span><br><span class="line">ORA-00312: online log 5 thread 1: &apos;/oracle/oradata/orcl/redo05a.log&apos;</span><br><span class="line">ORA-27037: unable to obtain file status</span><br><span class="line">IBM AIX RISC System/6000 Error: 2: No such file or directory</span><br><span class="line">Additional information: 3</span><br><span class="line">ORA-00313: open failed for members of log group 1 of thread </span><br><span class="line">ORA-00312: online log 5 thread 1: &apos;/oracle/oradata/orcl/redo05a.log&apos;</span><br><span class="line">ORA-00312: online log 5 thread 1: &apos;/oracle/backup/redo05b.log&apos;</span><br><span class="line">SQL&gt; startup mount</span><br><span class="line">SQL&gt; select group#, status, archived, thread#, sequence# from v$log;</span><br><span class="line"></span><br><span class="line">    GROUP# STATUS           ARC    THREAD#  SEQUENCE#</span><br><span class="line">---------- ---------------- --- ---------- ----------</span><br><span class="line">         1 INACTIVE         YES          1         46</span><br><span class="line">         5 INACTIVE         YES          1         47</span><br><span class="line">         3 INACTIVE         YES          1         45</span><br><span class="line">         2 CURRENT          NO           1         48</span><br></pre></td></tr></table></figure>
+<p>确认损坏的日志组status为inactive，因为inactive状态的日志不需要在crash recovery中用到，因此，可以直接clear log方式恢复。如果尚未归档的，需要立刻对数据库进行备份。<br><figure class="highlight plain hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line">SQL&gt; alter database clear logfile group 5;</span><br><span class="line">SQL&gt; select group#, status, archived, thread#, sequence# from v$log;</span><br><span class="line"></span><br><span class="line">    GROUP# STATUS           ARC    THREAD#  SEQUENCE#</span><br><span class="line">---------- ---------------- --- ---------- ----------</span><br><span class="line">         1 INACTIVE         YES          1         46</span><br><span class="line">         2 CURRENT          NO           1         48</span><br><span class="line">         3 INACTIVE         YES          1         45</span><br><span class="line">         5 UNUSED           YES          1          0</span><br></pre></td></tr></table></figure></p>
+<p>对于尚未归档的日志组，需要用以下命令进行clear：<br><figure class="highlight plain hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">SQL&gt; alter database clear unarchived logfile group 5;</span><br></pre></td></tr></table></figure></p>
+<h3 id="3-日志组状态为active，丢失所有成员"><a href="#3-日志组状态为active，丢失所有成员" class="headerlink" title="3. 日志组状态为active，丢失所有成员"></a>3. 日志组状态为active，丢失所有成员</h3><p>Active状态表示日志在crash recovery时候需要用到，且可能尚未归档。<br><figure class="highlight plain hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line">SQL&gt; select group#, status, archived, thread#, sequence# from v$log;</span><br><span class="line"></span><br><span class="line">    GROUP# STATUS           ARC    THREAD#  SEQUENCE#</span><br><span class="line">---------- ---------------- --- ---------- ----------</span><br><span class="line">         1 INACTIVE         YES          1         46</span><br><span class="line">         2 ACTIVE           YES          1         48</span><br><span class="line">         3 INACTIVE         YES          1         45</span><br><span class="line">         5 CURRENT          NO           1         49</span><br><span class="line">[oracle@:/home/oracle]$ rm -rf /oracle/backup/redo02b.log</span><br><span class="line">[oracle@:/home/oracle]$ rm -rf /oracle/oradata/orcl/redo02a.log</span><br></pre></td></tr></table></figure></p>
+<p>首先尝试进行Checkpoinnt<br><figure class="highlight plain hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">SQL&gt; alter system checkpoint;</span><br></pre></td></tr></table></figure></p>
+<p>如果Checkpoinnt成功，那么，active状态的日志会变成inactive，Checkpoinnt成功后，所有被修改的脏块被写入磁盘，只有current状态的Online redo log才会被crash recovery用到。当日志组状态变为inactive后，clear log即可修复。同样，要是尚未归档，建议立刻进行备份。<br><figure class="highlight plain hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line">SQL&gt; alter database clear logfile group 2;</span><br><span class="line"></span><br><span class="line">Database altered</span><br><span class="line">SQL&gt; select group#, status, archived, thread#, sequence# from v$log;</span><br><span class="line"></span><br><span class="line">    GROUP# STATUS           ARC    THREAD#  SEQUENCE#</span><br><span class="line">---------- ---------------- --- ---------- ----------</span><br><span class="line">         1 INACTIVE         YES          1         46</span><br><span class="line">         2 UNUSED           YES          1          0</span><br><span class="line">         3 INACTIVE         YES          1         45</span><br><span class="line">         5 CURRENT          NO           1         49</span><br></pre></td></tr></table></figure></p>
+<p>对于尚未归档的日志组，需要用以下命令进行clear：<br><figure class="highlight plain hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">SQL&gt; alter database clear unarchived logfile group 5;</span><br></pre></td></tr></table></figure></p>
+<h3 id="4-日志组状态为current，丢失所有成员"><a href="#4-日志组状态为current，丢失所有成员" class="headerlink" title="4. 日志组状态为current，丢失所有成员"></a>4. 日志组状态为current，丢失所有成员</h3><p>如果所有current状态日志组成员损坏，则需要不完全恢复，或是使用flashback database功能闪回。如果是DataGuard，还可以进行Failover切换。<br>在准备不完全恢复前，先通过查询v$log的first_change#栏位确定能恢复的SCN值。但是，只能恢复到这个SCN前，而不包含当前SCN。<br><figure class="highlight plain hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br></pre></td><td class="code"><pre><span class="line">SQL&gt; select group#, status, archived, thread#, sequence#, first_change# from v$log;</span><br><span class="line"></span><br><span class="line">    GROUP# STATUS           ARC    THREAD#  SEQUENCE# FIRST_CHANGE#</span><br><span class="line">---------- ---------------- --- ---------- ---------- -------------</span><br><span class="line">         1 INACTIVE         YES          1         46        439571</span><br><span class="line">         2 CURRENT          NO           1         50        472169</span><br><span class="line">         3 INACTIVE         YES          1         45        403581</span><br><span class="line">         5 UNUSED           YES          1          0        471475</span><br><span class="line">[oracle@:/home/oracle]$ rm -rf /oracle/backup/redo02b.log</span><br><span class="line">[oracle@:/home/oracle]$ rm -rf /oracle/oradata/orcl/redo02a.log</span><br><span class="line">SQL&gt; startup</span><br><span class="line">ORACLE instance started.</span><br><span class="line"></span><br><span class="line">Total System Global Area 1570009088 bytes</span><br><span class="line">Fixed Size                  2221840 bytes</span><br><span class="line">Variable Size            1006635248 bytes</span><br><span class="line">Database Buffers          553648128 bytes</span><br><span class="line">Redo Buffers                7503872 bytes</span><br><span class="line">Database mounted.</span><br><span class="line">ORA-03113: end-of-file on communication channel</span><br><span class="line">Process ID: 10158148</span><br><span class="line">Session ID: 63 Serial number: 5</span><br><span class="line">#alert log</span><br><span class="line">ORA-00313: open failed for members of log group 1 of thread </span><br><span class="line">ORA-00312: online log 2 thread 1: &apos;/oracle/oradata/orcl/redo02.log&apos;</span><br><span class="line">ORA-00312: online log 2 thread 1: &apos;/oracle/backup/redo02b.rdo&apos;</span><br></pre></td></tr></table></figure></p>
+<p>在此例中，能恢复到SCN=472169前的数据，但不包含SCN=472169。<br><figure class="highlight plain hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br></pre></td><td class="code"><pre><span class="line">run&#123;</span><br><span class="line">allocate channel c1 type disk;</span><br><span class="line">set until scn=472169;</span><br><span class="line">restore database;</span><br><span class="line">recover database;</span><br><span class="line">release channel c1;</span><br><span class="line">&#125;</span><br><span class="line">SQL&gt; alter database open RESETLOGS;</span><br><span class="line">SQL&gt; col member for a50</span><br><span class="line">SQL&gt; set line 200</span><br><span class="line">SQL&gt; select a.group#, a.thread#,a.status grp_status,</span><br><span class="line">  2  b.member member,b.status mem_status</span><br><span class="line">  3  from v$log a,v$logfile b</span><br><span class="line">  4  where a.group# = b.group#</span><br><span class="line">  5  order by a.group#, b.member;</span><br><span class="line"></span><br><span class="line">    GROUP#    THREAD# GRP_STATUS       MEMBER                                             MEM_STA</span><br><span class="line">---------- ---------- ---------------- -------------------------------------------------- -------</span><br><span class="line">         1          1 CURRENT          /oracle/backup/redo01b.rdo</span><br><span class="line">         1          1 CURRENT          /oracle/oradata/orcl/redo01.log</span><br><span class="line">         2          1 UNUSED           /oracle/backup/redo02b.rdo</span><br><span class="line">         2          1 UNUSED           /oracle/oradata/orcl/redo02.log</span><br><span class="line">         3          1 UNUSED           /oracle/backup/redo03b.rdo</span><br><span class="line">         3          1 UNUSED           /oracle/oradata/orcl/redo03.log</span><br><span class="line">         5          1 UNUSED           /oracle/backup/redo05b.log</span><br><span class="line">         5          1 UNUSED           /oracle/oradata/orcl/redo05a.log</span><br></pre></td></tr></table></figure></p>
+<p><b>EOF</b><br>Reference： RMAN recipes for oracle database 11g </p>
+
+    
+    </div>
+    
+    <div class="columns is-variable is-1 is-multiline is-mobile">
+    
+        <span class="column is-narrow"><a class="tag is-light article-tag" href="/tags/redo/">#redo</a></span>
+    
+    </div>
+    
+    
+    <div class="columns is-mobile is-multiline article-nav">
+        <span class="column is-12-mobile is-half-desktop  article-nav-prev">
+            
+            <a href="/rman-complete-and-incomplete-recovery.html">RMAN完全恢复和不完全恢复</a>
+            
+        </span>
+        <span class="column is-12-mobile is-half-desktop  article-nav-next">
+            
+            <a href="/rman-recovery-concepts.html">RMAN恢复基本概念</a>
+            
+        </span>
+    </div>
+    
+</article>
+
+
+
+
+    </div>
+</section>
+    <footer class="footer">
+    <div class="container">
+        <div class="columns content">
+            <div class="column is-narrow has-text-centered">
+                &copy; 2018 Kong&nbsp;
+                Powered by <a href="http://hexo.io/" target="_blank">Hexo</a> & <a
+                        href="http://github.com/ppoffice/hexo-theme-minos">Minos</a>
+            </div>
+            <div class="column is-hidden-mobile"></div>
+
+            
+            
+        </div>
+    </div>
+</footer>
+    <script src="//cdnjs.cloudflare.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
+<script src="//cdnjs.cloudflare.com/ajax/libs/moment.js/2.22.2/moment-with-locales.min.js"></script>
+
+<!-- test if the browser is outdated -->
+<div id="outdated">
+    <h6>Your browser is out-of-date!</h6>
+    <p>Update your browser to view this website correctly. <a id="btnUpdateBrowser" href="http://outdatedbrowser.com/">Update my browser now </a></p>
+    <p class="last"><a href="#" id="btnCloseUpdateBrowser" title="Close">&times;</a></p>
+</div>
+<script src="//cdnjs.cloudflare.com/ajax/libs/outdated-browser/1.1.5/outdatedbrowser.min.js"></script>
+<script>
+    $(document).ready(function () {
+        // plugin function, place inside DOM ready function
+        outdatedBrowser({
+            bgColor: '#f25648',
+            color: '#ffffff',
+            lowerThan: 'flex'
+        })
+    });
+</script>
+
+<script>
+    window.FontAwesomeConfig = {
+        searchPseudoElements: true
+    }
+    moment.locale("en-AU");
+</script>
+
+
+    
+    
+    
+    
+    
+    
+
+    
+
+
+<script src="/js/script.js"></script>
+
+    
+    <div class="searchbox ins-search">
+    <div class="searchbox-mask"></div>
+    <div class="searchbox-container ins-search-container">
+        <div class="searchbox-input-wrapper">
+            <input type="text" class="searchbox-input ins-search-input" placeholder="Type something..." />
+            <span class="searchbox-close ins-close ins-selectable"><i class="fa fa-times-circle"></i></span>
+        </div>
+        <div class="searchbox-result-wrapper ins-section-wrapper">
+            <div class="ins-section-container"></div>
+        </div>
+    </div>
+</div>
+<script>
+    (function (window) {
+        var INSIGHT_CONFIG = {
+            TRANSLATION: {
+                POSTS: 'Posts',
+                PAGES: 'Pages',
+                CATEGORIES: 'Categories',
+                TAGS: 'Tags',
+                UNTITLED: '(Untitled)',
+            },
+            CONTENT_URL: '/content.json',
+        };
+        window.INSIGHT_CONFIG = INSIGHT_CONFIG;
+    })(window);
+</script>
+<script src="/js/insight.js"></script>
+    
+</body>
+</html>

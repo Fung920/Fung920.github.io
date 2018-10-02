@@ -1,0 +1,317 @@
+<!DOCTYPE html>
+<html class="has-navbar-fixed-top">
+<head>
+    <meta charset="utf-8">
+<title>11gr2 RAC增加节点 - My Wiki</title>
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+
+<link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/outdated-browser/1.1.5/outdatedbrowser.min.css">
+
+
+
+
+
+
+
+
+
+
+<link rel="icon" href="/images/favicon.ico">
+
+
+<link rel="stylesheet" href="//fonts.googleapis.com/css?family=Ovo|Source+Code+Pro">
+<link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/bulma/0.6.2/css/bulma.min.css">
+
+
+
+<link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/highlight.js/9.12.0/styles/github.min.css">
+
+<link rel="stylesheet" href="/css/style.css">
+
+<script defer src="//use.fontawesome.com/releases/v5.0.8/js/all.js"></script>
+
+
+    
+    
+    
+    
+    
+    
+
+    
+
+
+</head>
+<body>
+    
+<nav class="navbar is-transparent is-fixed-top navbar-main" role="navigation" aria-label="main navigation">
+    <div class="container">
+        <div class="navbar-brand">
+            <a class="navbar-item navbar-logo" href="/">
+                
+                    
+                    My Wiki
+                    
+                
+            </a>
+            <div class="navbar-burger">
+                <span></span>
+                <span></span>
+                <span></span>
+            </div>
+        </div>
+        
+        <div class="navbar-menu navbar-start">
+            
+            <a class="navbar-item "
+               href="/">Home</a>
+            
+            <a class="navbar-item "
+               href="/archives">Archives</a>
+            
+            <a class="navbar-item "
+               href="/about">About</a>
+            
+        </div>
+        
+        <div class="navbar-menu navbar-end">
+            
+            <a class="navbar-item search" title="Search" href="javascript:;">
+                <i class="fas fa-search"></i>
+            </a>
+            
+            
+            
+        </div>
+    </div>
+</nav>
+
+    <section class="section">
+    <div class="container">
+    <article class="article content gallery" itemscope itemprop="blogPost">
+    <h1 class="article-title is-size-3 is-size-4-mobile" itemprop="name">
+        
+            11gr2 RAC增加节点
+        
+    </h1>
+    <div class="article-meta columns is-variable is-1 is-multiline is-mobile is-size-7-mobile">
+        <span class="column is-narrow">
+            <time datetime="2013-09-05T16:00:00.000Z" itemprop="datePublished">Sep 5 2013</time>
+        </span>
+        
+        <span class="column is-narrow article-category">
+            <i class="far fa-folder"></i>
+            <a class="article-category-link" href="/categories/oracle/">oracle</a>
+        </span>
+        
+        
+        <span class="column is-narrow">
+            
+            
+            13 minutes read (About 1992 words)
+        </span>
+        
+    </div>
+    <div class="article-entry is-size-6-mobile" itemprop="articleBody">
+    
+             RAC的扩展分两个层次：Clusterware及Oracle数据库。在对RAC进行增加节点时候，需要分别对Clusterware及数据库进行扩展，其实就跟安装步骤差不多。也需要分grid及oracle用户完成。 
+<a id="more"></a>
+     <p>在安装RAC的时候，可以现在一个节点上安装GI及Oracle软件，并且创建数据库，由这个节点构成单一节点的RAC集群，然后再根据对集群进行扩展，本文将以此种方式演示11gr2 RAC添加节点。</p>
+<h1>1.       扩展前准备</h1>
+<ul>
+	<li>操作系统设置</li>
+</ul>
+    OS版本必须相同，检查内核参数，系统内存、CPU、文件系统大小、swap空间等。
+<ul>
+	<li>创建必要的用户及组</li>
+</ul>
+    用户及用户组UID及GID必须跟其他节点相同，同时对这些用户环境变量进行设置。
+<ul>
+	<li>网络配置</li>
+</ul>
+    网络规划，Public及private网络名称必须相同。
+<ul>
+	<li>共享存储配置</li>
+</ul>
+    对于共享存储，必须保证在新的节点上是可以访问的，而且对软件安装者必须有读写权限。
+<ul>
+	<li>创建相关目录</li>
+</ul>
+    这些目录用户存放GI及Oracle数据库软件，同时要保证用户组及用户对这些目录的权限。
+<ul>
+	<li>配置RAC等效性</li>
+	<li>时间同步设置(CTSS )</li>
+</ul>
+<h1>2.       扩展Clusterware</h1>
+    <p>首先在正常运行的节点对新增加的节点进行验证，包括ssh等效性、rpm包等。</p>
+    以grid用户进入GI软件安装目录，执行以下命令：
+<figure class="highlight plain hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">[grid@orcl1:/home/grid/.ssh]$ cd /u01/app/11.2.0/grid/bin/ </span><br><span class="line">[grid@orcl1:/u01/app/11.2.0/grid/bin]$  ./cluvfy stage -pre nodeadd -n orcl2 -fixup –verbose</span><br></pre></td></tr></table></figure>
+
+接着进入GI安装目录的oui/bin子目录，执行以下命令将新节点node2加入集群中：
+<figure class="highlight plain hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">[grid@orcl1:/u01/app/11.2.0/grid/bin]$ cd ../oui/bin/ </span><br><span class="line">[grid@orcl1:/u01/app/11.2.0/grid/oui/bin]$ export IGNORE_PREADDNODE_CHECKS=Y</span><br></pre></td></tr></table></figure>
+
+以上变量是因为在之前已经检测过节点2，因此忽略执行addNode.sh时候忽略检测。
+<figure class="highlight plain hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">[grid@orcl1:/u01/app/11.2.0/grid/oui/bin]$ ./addNode.sh -silent \ </span><br><span class="line">&quot;CLUSTER_NEW_NODES=&#123;orcl2&#125;&quot; &quot;CLUSTER_NEW_VIRTUAL_HOSTNAMES=&#123;racdb2-vip&#125;&quot; \ </span><br><span class="line">&quot;CLUSTER_NEW_PRIVATE_NODE_NAMES=&#123;racdb2-priv&#125;&quot; &amp;&gt;~/add_node.log</span><br></pre></td></tr></table></figure>
+
+执行完之后需要<b>以</b><b>root</b><b>用户在新加节点上</b>执行两个脚本。请勿无视结果输出。 
+输出结果如下：
+<figure class="highlight plain hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br></pre></td><td class="code"><pre><span class="line">[root@orcl1:/worktmp]# cat /home/grid/add_node.log </span><br><span class="line">Starting Oracle Universal Installer... </span><br><span class="line">Checking swap space: must be greater than 500 MB.   Actual 3694 MB    Passed </span><br><span class="line">Oracle Universal Installer, Version 11.2.0.4.0 Production </span><br><span class="line">Copyright (C) 1999, 2013, Oracle. All rights reserved. </span><br><span class="line">Performing tests to see whether nodes orcl2 are available </span><br><span class="line">............................................................... 100% Done. </span><br><span class="line">.</span><br><span class="line">----------------------------------------------------------------------------- </span><br><span class="line">Cluster Node Addition Summary </span><br><span class="line">Global Settings </span><br><span class="line">Source: /u01/app/11.2.0/grid </span><br><span class="line">New Nodes </span><br><span class="line">Space Requirements </span><br><span class="line">New Nodes </span><br><span class="line">orcl2 </span><br><span class="line">/: Required 4.43GB : Available 17.14GB </span><br><span class="line">Installed Products</span><br><span class="line"></span><br><span class="line"> Product Names </span><br><span class="line">Oracle Grid Infrastructure 11g 11.2.0.4.0 </span><br><span class="line">……………….. </span><br><span class="line">Oracle Database 11g 11.2.0.4.0 </span><br><span class="line">----------------------------------------------------------------------------- </span><br><span class="line"></span><br><span class="line"> Instantiating scripts for add node (Friday, September 6, 2013 2:19:09 PM CST) </span><br><span class="line"></span><br><span class="line"> .                                                                 1% Done. </span><br><span class="line"></span><br><span class="line"> Instantiation of add node scripts complete </span><br><span class="line">Copying to remote nodes (Friday, September 6, 2013 2:19:12 PM CST) </span><br><span class="line">...............................................................................................                                 96% Done. </span><br><span class="line">Home copied to new nodes </span><br><span class="line">Saving inventory on nodes (Friday, September 6, 2013 2:37:27 PM CST) </span><br><span class="line"></span><br><span class="line"> .                                                               100% Done. </span><br><span class="line">Save inventory complete </span><br><span class="line"></span><br><span class="line"> WARNING:A new inventory has been created on one or more nodes in this session. However, it has not yet been registered as the central inventory of this system. </span><br><span class="line">To register the new inventory please run the script at &apos;/u01/app/oraInventory/orainstRoot.sh&apos; with root privileges on nodes &apos;orcl2&apos;. </span><br><span class="line">If you do not register the inventory, you may not be able to update or patch the products you installed. </span><br><span class="line">The following configuration scripts need to be executed as the &quot;root&quot; user in each new cluster node. Each script in the list below is followed by a list of nodes. </span><br><span class="line">/u01/app/oraInventory/orainstRoot.sh #On nodes orcl2 </span><br><span class="line">/u01/app/11.2.0/grid/root.sh #On nodes orcl2 </span><br><span class="line">To execute the configuration scripts: </span><br><span class="line">1. Open a terminal window </span><br><span class="line">2. Log in as &quot;root&quot; </span><br><span class="line">3. Run the scripts in each cluster node </span><br><span class="line">The Cluster Node Addition of /u01/app/11.2.0/grid was successful. </span><br><span class="line">Please check &apos;/tmp/silentInstall.log&apos; for more details.</span><br></pre></td></tr></table></figure>
+
+执行结果： 
+
+<figure class="highlight plain hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br></pre></td><td class="code"><pre><span class="line">[root@orcl2:/root]# /u01/app/oraInventory/orainstRoot.sh </span><br><span class="line">Creating the Oracle inventory pointer file (/etc/oraInst.loc) </span><br><span class="line">Changing permissions of /u01/app/oraInventory. </span><br><span class="line">Adding read,write permissions for group. </span><br><span class="line">Removing read,write,execute permissions for world. </span><br><span class="line">Changing groupname of /u01/app/oraInventory to oinstall. </span><br><span class="line">The execution of the script is complete.</span><br><span class="line"></span><br><span class="line"> [root@orcl2:/root]# /u01/app/11.2.0/grid/root.sh </span><br><span class="line">Performing root user operation for Oracle 11g </span><br><span class="line">The following environment variables are set as: </span><br><span class="line">ORACLE_OWNER= grid </span><br><span class="line">ORACLE_HOME=  /u01/app/11.2.0/grid </span><br><span class="line">Enter the full pathname of the local bin directory: [/usr/local/bin]: </span><br><span class="line">Copying dbhome to /usr/local/bin ... </span><br><span class="line">Copying oraenv to /usr/local/bin ... </span><br><span class="line">Copying coraenv to /usr/local/bin ... </span><br><span class="line">Creating /etc/oratab file... </span><br><span class="line">Entries will be added to the /etc/oratab file as needed by </span><br><span class="line">Database Configuration Assistant when a database is created </span><br><span class="line">Finished running generic part of root script. </span><br><span class="line">Now product-specific root actions will be performed. </span><br><span class="line">Using configuration parameter file: /u01/app/11.2.0/grid/crs/install/crsconfig_params </span><br><span class="line">Creating trace directory </span><br><span class="line">User ignored Prerequisites during installation </span><br><span class="line">Installing Trace File Analyzer </span><br><span class="line">OLR initialization - successful </span><br><span class="line">Adding Clusterware entries to inittab </span><br><span class="line">CRS-4402: The CSS daemon was started in exclusive mode but found an active CSS daemon on node orcl1, number 1, and is terminating </span><br><span class="line">An active cluster was found during exclusive startup, restarting to join the cluster </span><br><span class="line">clscfg: EXISTING configuration version 5 detected. </span><br><span class="line">clscfg: version 5 is 11g Release 2. </span><br><span class="line">Successfully accumulated necessary OCR keys. </span><br><span class="line">Creating OCR keys for user &apos;root&apos;, privgrp &apos;root&apos;.. </span><br><span class="line">Operation successful. </span><br><span class="line">Preparing packages for installation... </span><br><span class="line">cvuqdisk-1.0.9-1 </span><br><span class="line">Configure Oracle Grid Infrastructure for a Cluster ... succeeded</span><br></pre></td></tr></table></figure>
+
+ 如果root.sh执行失败，执行以下脚本，fixup完再重新实现root.sh:
+<pre>
+[root@orcl2:/u01/app/11.2.0/grid/crs/install]# ./rootcrs.pl -deconfig -force
+</pre>
+
+ 在此节点重启CRS：
+<figure class="highlight plain hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">[root@orcl2:/root]# /u01/app/11.2.0/grid/bin/crsctl stop crs </span><br><span class="line">[root@orcl2:/root]# /u01/app/11.2.0/grid/bin/crsctl start crs</span><br></pre></td></tr></table></figure>
+
+ 最后，在新加节点上用grid用户通过以下命令对RAC扩展结果进行验证：
+<pre>
+[grid@orcl2:/u01/app/11.2.0/grid]$ cluvfy stage -post nodeadd -n orcl1,orcl2
+</pre> 
+
+ <h1>3.       扩展Oracle数据库服务器</h1>
+Oracle数据库服务器的扩展包括两部：第一步复制Oracle数据库软件；第二步在新节点上创建数据库实例及数据库监听。
+<h2>3.1复制软件</h2>
+以Oracle用户登录node1,执行以下命令将数据库软件复制到新添加节点上。
+<figure class="highlight plain hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br></pre></td><td class="code"><pre><span class="line">[root@orcl1:/root]# su - oracle </span><br><span class="line">[oracle@orcl1:/home/oracle]$ cd $ORACLE_HOME/oui/bin </span><br><span class="line">[oracle@orcl1:/u01/app/oracle/product/11gr2/oui/bin]$ </span><br><span class="line">[oracle@orcl1:/u01/app/oracle/product/11gr2/oui/bin]$ ./addNode.sh -silent &quot;CLUSTER_NEW_NODES=&#123;orcl2&#125;&quot; </span><br><span class="line">Performing pre-checks for node addition </span><br><span class="line">Checking node reachability... </span><br><span class="line">Node reachability check passed from node &quot;orcl1&quot;</span><br><span class="line"></span><br><span class="line"> Checking user equivalence... </span><br><span class="line">User equivalence check passed for user &quot;oracle&quot; </span><br><span class="line">WARNING: </span><br><span class="line">Node &quot;orcl2&quot; already appears to be part of cluster </span><br><span class="line">Pre-check for node addition was successful. </span><br><span class="line">Starting Oracle Universal Installer... </span><br><span class="line"></span><br><span class="line"> Checking swap space: must be greater than 500 MB.   Actual 3739 MB    Passed </span><br><span class="line">Oracle Universal Installer, Version 11.2.0.4.0 Production </span><br><span class="line">Copyright (C) 1999, 2013, Oracle. All rights reserved. </span><br><span class="line"></span><br><span class="line"> Performing tests to see whether nodes orcl2 are available </span><br><span class="line">............................................................... 100% Done. </span><br><span class="line">.. </span><br><span class="line">----------------------------------------------------------------------------- </span><br><span class="line">Cluster Node Addition Summary </span><br><span class="line">Global Settings </span><br><span class="line">Source: /u01/app/oracle/product/11gr2 </span><br><span class="line">New Nodes </span><br><span class="line">Space Requirements </span><br><span class="line">New Nodes </span><br><span class="line">orcl2 </span><br><span class="line">/: Required 4.29GB : Available 13.18GB </span><br><span class="line">Installed Products </span><br><span class="line">Product Names </span><br><span class="line">Oracle Database 11g 11.2.0.4.0 </span><br><span class="line">……… </span><br><span class="line">Oracle Partitioning 11.2.0.4.0 </span><br><span class="line"></span><br><span class="line"> Enterprise Edition Options 11.2.0.4.0 </span><br><span class="line">----------------------------------------------------------------------------- </span><br><span class="line">Instantiating scripts for add node (Friday, September 6, 2013 3:12:01 PM CST) </span><br><span class="line"></span><br><span class="line"> .                                                                 1% Done. </span><br><span class="line">Instantiation of add node scripts complete </span><br><span class="line">Copying to remote nodes (Friday, September 6, 2013 3:12:07 PM CST) </span><br><span class="line">...............................................................................................                                 96% Done. </span><br><span class="line">Home copied to new nodes </span><br><span class="line"></span><br><span class="line"> Saving inventory on nodes (Friday, September 6, 2013 3:36:48 PM CST) </span><br><span class="line">.                                                               100% Done. </span><br><span class="line">Save inventory complete </span><br><span class="line">WARNING: </span><br><span class="line">The following configuration scripts need to be executed as the &quot;root&quot; user in each new cluster node. Each script in the list below is followed by a list of nodes. </span><br><span class="line">/u01/app/oracle/product/11gr2/root.sh #On nodes orcl2 </span><br><span class="line">To execute the configuration scripts: </span><br><span class="line">1. Open a terminal window </span><br><span class="line">2. Log in as &quot;root&quot; </span><br><span class="line">3. Run the scripts in each cluster node </span><br><span class="line">The Cluster Node Addition of /u01/app/oracle/product/11gr2 was successful. </span><br><span class="line">Please check &apos;/tmp/silentInstall.log&apos; for more details.</span><br></pre></td></tr></table></figure>
+
+ 在节点2以root用户执行以上脚本：
+<pre>
+[root@orcl2:/worktmp]# /u01/app/oracle/product/11gr2/root.sh
+</pre>
+<h2>3.2创建数据库实例</h2>
+在node1上以Oracle用户登录，使用dbca silent模式创建数据库实例：
+<figure class="highlight plain hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br></pre></td><td class="code"><pre><span class="line">[oracle@orcl1:/u01]$ dbca -silent -addInstance -nodeList orcl2 -gdbName racdb \ </span><br><span class="line">-instanceName racdb2 -sysDBAUserName sys -sysDBAPassword oracle</span><br><span class="line"></span><br><span class="line"> Adding instance </span><br><span class="line">1% complete </span><br><span class="line">2% complete </span><br><span class="line">6% complete </span><br><span class="line">13% complete </span><br><span class="line">20% complete </span><br><span class="line">26% complete </span><br><span class="line">33% complete </span><br><span class="line">40% complete </span><br><span class="line">46% complete </span><br><span class="line">53% complete </span><br><span class="line">66% complete </span><br><span class="line">Completing instance management. </span><br><span class="line">76% complete </span><br><span class="line">100% complete </span><br><span class="line">Look at the log file &quot;/u01/app/oracle/cfgtoollogs/dbca/racdb/racdb.log&quot; for further details.</span><br></pre></td></tr></table></figure>
+
+节点添加完毕，验证下： 
+
+<figure class="highlight plain hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br></pre></td><td class="code"><pre><span class="line">[root@orcl2:/root]# /u01/app/11.2.0/grid/bin/crsctl stat res -t  </span><br><span class="line">-------------------------------------------------------------------------------- </span><br><span class="line">NAME           TARGET  STATE        SERVER                   STATE_DETAILS        </span><br><span class="line">-------------------------------------------------------------------------------- </span><br><span class="line">Local Resources </span><br><span class="line">-------------------------------------------------------------------------------- </span><br><span class="line">ora.CRS.dg </span><br><span class="line">               ONLINE  ONLINE       orcl1                                         </span><br><span class="line">               ONLINE  ONLINE       orcl2                                         </span><br><span class="line">ora.DATA.dg </span><br><span class="line">               ONLINE  ONLINE       orcl1                                         </span><br><span class="line">               ONLINE  ONLINE       orcl2                                         </span><br><span class="line">ora.LISTENER.lsnr </span><br><span class="line">               ONLINE  ONLINE       orcl1                                         </span><br><span class="line">               ONLINE  ONLINE       orcl2                                         </span><br><span class="line">ora.asm </span><br><span class="line">               ONLINE  ONLINE       orcl1                    Started              </span><br><span class="line">               ONLINE  ONLINE       orcl2                    Started              </span><br><span class="line">ora.gsd </span><br><span class="line">               OFFLINE OFFLINE      orcl1                                         </span><br><span class="line">               OFFLINE OFFLINE      orcl2                                         </span><br><span class="line">ora.net1.network </span><br><span class="line">               ONLINE  ONLINE       orcl1                                         </span><br><span class="line">               ONLINE  ONLINE       orcl2                                         </span><br><span class="line">ora.ons </span><br><span class="line">               ONLINE  ONLINE       orcl1                                         </span><br><span class="line">               ONLINE  ONLINE       orcl2                                         </span><br><span class="line">ora.registry.acfs </span><br><span class="line">               ONLINE  ONLINE       orcl1                                         </span><br><span class="line">               ONLINE  ONLINE       orcl2                                         </span><br><span class="line">-------------------------------------------------------------------------------- </span><br><span class="line">Cluster Resources </span><br><span class="line">-------------------------------------------------------------------------------- </span><br><span class="line">ora.LISTENER_SCAN1.lsnr </span><br><span class="line">      1        ONLINE  ONLINE       orcl1                                         </span><br><span class="line">ora.cvu </span><br><span class="line">      1        ONLINE  ONLINE       orcl2                                         </span><br><span class="line">ora.oc4j </span><br><span class="line">      1        ONLINE  ONLINE       orcl1                                         </span><br><span class="line">ora.orcl1.vip </span><br><span class="line">      1        ONLINE  ONLINE       orcl1                                         </span><br><span class="line">ora.orcl2.vip </span><br><span class="line">      1        ONLINE  ONLINE       orcl2                                         </span><br><span class="line">ora.racdb.db </span><br><span class="line">      1        ONLINE  ONLINE       orcl1                    Open                 </span><br><span class="line">      2        ONLINE  ONLINE       orcl2                    Open                 </span><br><span class="line">ora.scan1.vip </span><br><span class="line">      1        ONLINE  ONLINE       orcl1</span><br></pre></td></tr></table></figure>
+
+查看inventory，节点2已经能被识别：
+<figure class="highlight plain hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br></pre></td><td class="code"><pre><span class="line">[grid@orcl2:/home/grid]$ /u01/app/11.2.0/grid/OPatch/opatch lsinventory </span><br><span class="line">Oracle Interim Patch Installer version 11.2.0.3.4 </span><br><span class="line">Copyright (c) 2012, Oracle Corporation.  All rights reserved.</span><br><span class="line"></span><br><span class="line"> Oracle Home       : /u01/app/11.2.0/grid </span><br><span class="line">Central Inventory : /u01/app/oraInventory </span><br><span class="line">   from           : /u01/app/11.2.0/grid/oraInst.loc </span><br><span class="line">OPatch version    : 11.2.0.3.4 </span><br><span class="line">OUI version       : 11.2.0.4.0 </span><br><span class="line">Log file location : /u01/app/11.2.0/grid/cfgtoollogs/opatch/opatch2013-09-06_22-01-23PM_1.log </span><br><span class="line"></span><br><span class="line"> Lsinventory Output file location : /u01/app/11.2.0/grid/cfgtoollogs/opatch/lsinv/lsinventory2013-09-06_22-01-23PM.txt </span><br><span class="line"></span><br><span class="line"> -------------------------------------------------------------------------------- </span><br><span class="line">Installed Top-level Products (1):  </span><br><span class="line"></span><br><span class="line"> Oracle Grid Infrastructure 11g                                       11.2.0.4.0 </span><br><span class="line">There are 1 products installed in this Oracle Home. </span><br><span class="line"></span><br><span class="line"> There are no Interim patches installed in this Oracle Home. </span><br><span class="line"></span><br><span class="line"> Rac system comprising of multiple nodes </span><br><span class="line">  Local node = orcl2 </span><br><span class="line">  Remote node = orcl1 </span><br><span class="line"></span><br><span class="line"> -------------------------------------------------------------------------------- </span><br><span class="line"></span><br><span class="line"> OPatch succeeded. </span><br><span class="line">[grid@orcl2:/home/grid]$</span><br></pre></td></tr></table></figure>
+
+ <b>EOF</b> 
+
+    
+    </div>
+    
+    <div class="columns is-variable is-1 is-multiline is-mobile">
+    
+        <span class="column is-narrow"><a class="tag is-light article-tag" href="/tags/rac/">#rac</a></span>
+    
+    </div>
+    
+    
+    <div class="columns is-mobile is-multiline article-nav">
+        <span class="column is-12-mobile is-half-desktop  article-nav-prev">
+            
+            <a href="/using-udev-replace-asmlib.html">使用udev代替ASMlib</a>
+            
+        </span>
+        <span class="column is-12-mobile is-half-desktop  article-nav-next">
+            
+            <a href="/manage-11gr2-rac-resource.html">11gr2 RAC Resource管理</a>
+            
+        </span>
+    </div>
+    
+</article>
+
+
+
+
+    </div>
+</section>
+    <footer class="footer">
+    <div class="container">
+        <div class="columns content">
+            <div class="column is-narrow has-text-centered">
+                &copy; 2018 Kong&nbsp;
+                Powered by <a href="http://hexo.io/" target="_blank">Hexo</a> & <a
+                        href="http://github.com/ppoffice/hexo-theme-minos">Minos</a>
+            </div>
+            <div class="column is-hidden-mobile"></div>
+
+            
+            
+        </div>
+    </div>
+</footer>
+    <script src="//cdnjs.cloudflare.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
+<script src="//cdnjs.cloudflare.com/ajax/libs/moment.js/2.22.2/moment-with-locales.min.js"></script>
+
+<!-- test if the browser is outdated -->
+<div id="outdated">
+    <h6>Your browser is out-of-date!</h6>
+    <p>Update your browser to view this website correctly. <a id="btnUpdateBrowser" href="http://outdatedbrowser.com/">Update my browser now </a></p>
+    <p class="last"><a href="#" id="btnCloseUpdateBrowser" title="Close">&times;</a></p>
+</div>
+<script src="//cdnjs.cloudflare.com/ajax/libs/outdated-browser/1.1.5/outdatedbrowser.min.js"></script>
+<script>
+    $(document).ready(function () {
+        // plugin function, place inside DOM ready function
+        outdatedBrowser({
+            bgColor: '#f25648',
+            color: '#ffffff',
+            lowerThan: 'flex'
+        })
+    });
+</script>
+
+<script>
+    window.FontAwesomeConfig = {
+        searchPseudoElements: true
+    }
+    moment.locale("en-AU");
+</script>
+
+
+    
+    
+    
+    
+    
+    
+
+    
+
+
+<script src="/js/script.js"></script>
+
+    
+    <div class="searchbox ins-search">
+    <div class="searchbox-mask"></div>
+    <div class="searchbox-container ins-search-container">
+        <div class="searchbox-input-wrapper">
+            <input type="text" class="searchbox-input ins-search-input" placeholder="Type something..." />
+            <span class="searchbox-close ins-close ins-selectable"><i class="fa fa-times-circle"></i></span>
+        </div>
+        <div class="searchbox-result-wrapper ins-section-wrapper">
+            <div class="ins-section-container"></div>
+        </div>
+    </div>
+</div>
+<script>
+    (function (window) {
+        var INSIGHT_CONFIG = {
+            TRANSLATION: {
+                POSTS: 'Posts',
+                PAGES: 'Pages',
+                CATEGORIES: 'Categories',
+                TAGS: 'Tags',
+                UNTITLED: '(Untitled)',
+            },
+            CONTENT_URL: '/content.json',
+        };
+        window.INSIGHT_CONFIG = INSIGHT_CONFIG;
+    })(window);
+</script>
+<script src="/js/insight.js"></script>
+    
+</body>
+</html>

@@ -1,0 +1,305 @@
+<!DOCTYPE html>
+<html class="has-navbar-fixed-top">
+<head>
+    <meta charset="utf-8">
+<title>使用直方图(Histograms) - My Wiki</title>
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+
+<link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/outdated-browser/1.1.5/outdatedbrowser.min.css">
+
+
+
+
+
+
+
+
+
+
+<link rel="icon" href="/images/favicon.ico">
+
+
+<link rel="stylesheet" href="//fonts.googleapis.com/css?family=Ovo|Source+Code+Pro">
+<link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/bulma/0.6.2/css/bulma.min.css">
+
+
+
+<link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/highlight.js/9.12.0/styles/github.min.css">
+
+<link rel="stylesheet" href="/css/style.css">
+
+<script defer src="//use.fontawesome.com/releases/v5.0.8/js/all.js"></script>
+
+
+    
+    
+    
+    
+    
+    
+
+    
+
+
+</head>
+<body>
+    
+<nav class="navbar is-transparent is-fixed-top navbar-main" role="navigation" aria-label="main navigation">
+    <div class="container">
+        <div class="navbar-brand">
+            <a class="navbar-item navbar-logo" href="/">
+                
+                    
+                    My Wiki
+                    
+                
+            </a>
+            <div class="navbar-burger">
+                <span></span>
+                <span></span>
+                <span></span>
+            </div>
+        </div>
+        
+        <div class="navbar-menu navbar-start">
+            
+            <a class="navbar-item "
+               href="/">Home</a>
+            
+            <a class="navbar-item "
+               href="/archives">Archives</a>
+            
+            <a class="navbar-item "
+               href="/about">About</a>
+            
+        </div>
+        
+        <div class="navbar-menu navbar-end">
+            
+            <a class="navbar-item search" title="Search" href="javascript:;">
+                <i class="fas fa-search"></i>
+            </a>
+            
+            
+            
+        </div>
+    </div>
+</nav>
+
+    <section class="section">
+    <div class="container">
+    <article class="article content gallery" itemscope itemprop="blogPost">
+    <h1 class="article-title is-size-3 is-size-4-mobile" itemprop="name">
+        
+            使用直方图(Histograms)
+        
+    </h1>
+    <div class="article-meta columns is-variable is-1 is-multiline is-mobile is-size-7-mobile">
+        <span class="column is-narrow">
+            <time datetime="2013-06-14T16:00:00.000Z" itemprop="datePublished">Jun 14 2013</time>
+        </span>
+        
+        <span class="column is-narrow article-category">
+            <i class="far fa-folder"></i>
+            <a class="article-category-link" href="/categories/oracle/">oracle</a>
+        </span>
+        
+        
+        <span class="column is-narrow">
+            
+            
+            11 minutes read (About 1624 words)
+        </span>
+        
+    </div>
+    <div class="article-entry is-size-6-mobile" itemprop="articleBody">
+    
+        <h3>1.何谓直方图</h3>
+<a id="more"></a>
+<p>在分析表或索引时，直方图用于记录数据的分布。通过获得该信息，基于成本的优化器就可以决定使用将返回少量行的索引，而避免使用基于限制条件返回许多行的索引。直方图的使用不受索引的限制，可以在表的任何列上构建直方图。</p>
+<p>构造直方图最主要的原因就是帮助优化器在表中数据严重偏斜时做出更好的规划：例如，如果一到两个值构成了表中的大部分数据(数据偏斜)，相关的索引就可能无法帮助减少满足查询所需的I/O数量。创建直方图可以让基于成本的优化器知道何时使用索引才最合适，或何时应该根据WHERE子句中的值返回表中80％的记录。</p>
+
+<h3>2.何时使用直方图</h3>
+通常情况下在以下场合中建议使用直方图：
+<li>当Where子句引用了列值分布存在明显偏差的列时：当这种偏差相当明显时，以至于 WHERE 子句中的值将会使优化器选择不同的执行计划。这时应该使用直方图来帮助优化器来修正执行路径。（注意：如果查询不引用该列，则创建直方图没有意义。这种错误很常见，许多 DBA 会在偏差列上创建柱状图，即使没有任何查询引用该列。）</li>
+<li>当列值导致不正确的判断时：这种情况通常会发生在多表连接时，例如，假设我们有一个五项的表联接，其结果集只有 10 行。Oracle 将会以一种使第一个联接的结果集（集合基数）尽可能小的方式将表联接起来。通过在中间结果集中携带更少的负载，查询将会运行得更快。为了使中间结果最小化，优化器尝试在 SQL 执行的分析阶段评估每个结果集的集合基数。在偏差的列上拥有直方图将会极大地帮助优化器作出正确的决策。如优化器对中间结果集的大小作出不正确的判断，它可能会选择一种未达到最优化的表联接方法。因此向该列添加直方图经常会向优化器提供使用最佳联接方法所需的信息。</li>
+
+<h3>3.直方图种类</h3>
+<p>Oracle利用直方图来提高非均匀数据分布的选择率和技术的计算精度。
+但是实际上Oracle会采用另种不同的策略来生成直方图：其中一种是针对包含很少不同值的数据集；另一种是针对包含很多不同的数据集。
+Oracle会针对第一种情况生成频率直方图，针对第二种情况生成高度均衡直方图。
+通常情况下当BUCTET < 表的NUM_DISTINCT值得到的是HEIGHT BALANCED（高度平衡）直方图，而当BUCTET > 表的NUM_DISTINCT值的时候得到的是FREQUENCY（频率）直方图。
+</p>
+<h3>4.如何产生直方图</h3>
+当产生直方图时，指定一个大小，此大小跟BUCKET的数量有关。每一个BUCKET包含了关于栏位值信息及行数。
+<figure class="highlight plain hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">EXECUTE DBMS_STATS.GATHER_TABLE_STATS(&apos;scott&apos;,&apos;company&apos;,METHOD_OPT =&gt;&apos;FOR COLUMNS SIZE 10 company_code&apos;);</span><br></pre></td></tr></table></figure>
+
+The preceding query will create a ten-bucket histogram on the COMPANY table, as shown in Figure 2-2. The values for the COMPANY_CODE column will be divided into the ten buckets as displayed in the figure. This example shows a large number (80 percent) of the company_code is equal to 1430. As is also shown in the figure, most of the width-balanced buckets contain only 3 rows; a single bucket contains 73 rows. In the height-balanced version of this distribution, each bucket has the same number of rows and most of the bucket endpoints are '1430', reflecting the skewed distribution of the data.
+<p><img src="/images/histograms1.png" class="center"></p>
+<h3>5.实验</h3>
+<h4>5.1.1创建实验表</h4>
+<figure class="highlight plain hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line">SQL&gt;createtableobj asselect* from dba_objects;</span><br><span class="line">SQL&gt;createindexobj_id_idx on obj(object_id)onlinenologging;</span><br><span class="line">SQL&gt;SELECTMAX(object_id),MIN(object_id)FROMobj;</span><br><span class="line">MAX(OBJECT_ID)		MIN(OBJECT_ID)</span><br><span class="line">————– 				————–</span><br><span class="line">58410              	2</span><br><span class="line">–制造不均匀数据分布</span><br><span class="line">SQL&gt; UPDATE   obj</span><br><span class="line">        SET   object_id =1000</span><br><span class="line"> WHERE   object_id &gt;100ANDobject_id &lt;54000;</span><br><span class="line">SQL&gt;commit;</span><br></pre></td></tr></table></figure>
+
+<h4>5.1.2创建直方图</h4>
+<figure class="highlight plain hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line">BEGIN</span><br><span class="line">   DBMS_STATS.gather_table_stats(cascade            =&gt;TRUE,</span><br><span class="line">                                  degree             =&gt;2,</span><br><span class="line">                                  estimate_percent   =&gt;100,</span><br><span class="line">                                  force              =&gt;TRUE,</span><br><span class="line">                                  ownname            =&gt;&apos;FUNG&apos;,</span><br><span class="line">                                  tabname            =&gt;&apos;OBJ&apos;);</span><br><span class="line">END;</span><br><span class="line">/</span><br></pre></td></tr></table></figure>
+
+<p>在gather_table_stats方法中，默认的method_opt值为：FOR ALL COLUMNS SIZE AUTO，所以也是会收集直方图的统计信息（和oracle版本相关），其中degree 指定了并行度视主机的CPU 个数而定，estimate_percent 指定了采样比率，
+auto 目的是让oracle 来决定采样收集的比率，绘制直方图时会根据采样的数据分析结果来绘制，当然也可以人为指定采样比率。如： estimate_percent=>20 指定采样比率为20%，cascade=>true 指定收集相关表的索引的统计信息，该参数默认为false，因此
+使用dbms_stats 收集统计信息时默认是不收集表的索引信息的。</p>
+–注意：ENDPOINT_NUMBER ，ENDPOINT_VALUE 的分布情况
+<figure class="highlight plain hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">SQL&gt;SELECT   *</span><br><span class="line">  FROM   user_histograms</span><br><span class="line"> WHERE   table_name =&apos;OBJ&apos;ANDcolumn_name =&apos;OBJECT_ID&apos;;</span><br></pre></td></tr></table></figure>
+
+<p><img src="/images/histograms2.png"></p>
+<figure class="highlight plain hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">SQL&gt;SELECTCOLUMN_NAME,HISTOGRAM FROMUSER_TAB_COLS WHERE TABLE_NAME=&apos;OBJ&apos; AND column_name=&apos;OBJECT_ID&apos;;</span><br><span class="line">COLUMN_NAME          HISTOGRAM</span><br><span class="line">——————– 			——————————</span><br><span class="line">OBJECT_ID            HEIGHT BALANCED</span><br></pre></td></tr></table></figure>
+
+<h4>5.1.3直方图执行计划</h4>
+<pre>SQL>selectobject_name from obj whereobject_id=100;</pre>
+<p><img src="/images/histograms3.png"></p>
+       CBO选择index range scan。
+<pre>SQL>selectobject_name from obj whereobject_id=1000;</pre>
+<p><img src="/images/histograms4.png"></p>
+通过直方图统计信息，Oracle知道object_id为1000的值大概占了数据量总量的80%以上，于是选择了全表扫描。
+<h4>5.1.4删除直方图执行计划</h4>
+<figure class="highlight plain hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br></pre></td><td class="code"><pre><span class="line">BEGIN</span><br><span class="line">   DBMS_STATS.gather_table_stats(</span><br><span class="line">      cascade            =&gt;TRUE,</span><br><span class="line">      degree             =&gt;2,</span><br><span class="line">      estimate_percent   =&gt;100,</span><br><span class="line">      force              =&gt;TRUE,</span><br><span class="line">      ownname            =&gt;&apos;FUNG&apos;,</span><br><span class="line">      tabname            =&gt;&apos;OBJ&apos;,</span><br><span class="line">      method_opt         =&gt;&apos;FOR ALL COLUMNS SIZE 1&apos;</span><br><span class="line">   );</span><br><span class="line">END;</span><br><span class="line">/</span><br></pre></td></tr></table></figure>
+
+删除直方图，设置method_opt：FOR ALL COLUMNS SIZE 1即可
+<p>检查结果</p>
+<p><img src="/images/histograms5.png"></p>
+<figure class="highlight plain hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">SQL&gt;SELECTCOLUMN_NAME,HISTOGRAM FROMUSER_TAB_COLS WHERE TABLE_NAME=&apos;OBJ&apos;ANDcolumn_name=&apos;OBJECT_ID&apos;;</span><br><span class="line">COLUMN_NAME          HISTOGRAM</span><br><span class="line">——————– ——————————</span><br><span class="line">OBJECT_ID            NONE</span><br><span class="line">直方图信息已经被删除</span><br></pre></td></tr></table></figure>
+
+<p><img src="/images/histograms6.png"></p>
+仍然是index range scan，正确的。接下来看id=1000的执行计划：
+<p><img src="/images/histograms7.png"></p>
+ 很明显，这次要全表扫描，结果Oracle仍然傻傻的使用索引扫描。
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+    
+    </div>
+    
+    <div class="columns is-variable is-1 is-multiline is-mobile">
+    
+        <span class="column is-narrow"><a class="tag is-light article-tag" href="/tags/tuning/">#tuning</a></span>
+    
+    </div>
+    
+    
+    <div class="columns is-mobile is-multiline article-nav">
+        <span class="column is-12-mobile is-half-desktop  article-nav-prev">
+            
+            <a href="/detect-and-correct-corruption-in-oracle.html">Detect And Correct Corruption in Oracle</a>
+            
+        </span>
+        <span class="column is-12-mobile is-half-desktop  article-nav-next">
+            
+            <a href="/what-is-rowid.html">Oracle ROWID学习</a>
+            
+        </span>
+    </div>
+    
+</article>
+
+
+
+
+    </div>
+</section>
+    <footer class="footer">
+    <div class="container">
+        <div class="columns content">
+            <div class="column is-narrow has-text-centered">
+                &copy; 2018 Kong&nbsp;
+                Powered by <a href="http://hexo.io/" target="_blank">Hexo</a> & <a
+                        href="http://github.com/ppoffice/hexo-theme-minos">Minos</a>
+            </div>
+            <div class="column is-hidden-mobile"></div>
+
+            
+            
+        </div>
+    </div>
+</footer>
+    <script src="//cdnjs.cloudflare.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
+<script src="//cdnjs.cloudflare.com/ajax/libs/moment.js/2.22.2/moment-with-locales.min.js"></script>
+
+<!-- test if the browser is outdated -->
+<div id="outdated">
+    <h6>Your browser is out-of-date!</h6>
+    <p>Update your browser to view this website correctly. <a id="btnUpdateBrowser" href="http://outdatedbrowser.com/">Update my browser now </a></p>
+    <p class="last"><a href="#" id="btnCloseUpdateBrowser" title="Close">&times;</a></p>
+</div>
+<script src="//cdnjs.cloudflare.com/ajax/libs/outdated-browser/1.1.5/outdatedbrowser.min.js"></script>
+<script>
+    $(document).ready(function () {
+        // plugin function, place inside DOM ready function
+        outdatedBrowser({
+            bgColor: '#f25648',
+            color: '#ffffff',
+            lowerThan: 'flex'
+        })
+    });
+</script>
+
+<script>
+    window.FontAwesomeConfig = {
+        searchPseudoElements: true
+    }
+    moment.locale("en-AU");
+</script>
+
+
+    
+    
+    
+    
+    
+    
+
+    
+
+
+<script src="/js/script.js"></script>
+
+    
+    <div class="searchbox ins-search">
+    <div class="searchbox-mask"></div>
+    <div class="searchbox-container ins-search-container">
+        <div class="searchbox-input-wrapper">
+            <input type="text" class="searchbox-input ins-search-input" placeholder="Type something..." />
+            <span class="searchbox-close ins-close ins-selectable"><i class="fa fa-times-circle"></i></span>
+        </div>
+        <div class="searchbox-result-wrapper ins-section-wrapper">
+            <div class="ins-section-container"></div>
+        </div>
+    </div>
+</div>
+<script>
+    (function (window) {
+        var INSIGHT_CONFIG = {
+            TRANSLATION: {
+                POSTS: 'Posts',
+                PAGES: 'Pages',
+                CATEGORIES: 'Categories',
+                TAGS: 'Tags',
+                UNTITLED: '(Untitled)',
+            },
+            CONTENT_URL: '/content.json',
+        };
+        window.INSIGHT_CONFIG = INSIGHT_CONFIG;
+    })(window);
+</script>
+<script src="/js/insight.js"></script>
+    
+</body>
+</html>

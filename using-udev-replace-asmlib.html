@@ -1,0 +1,329 @@
+<!DOCTYPE html>
+<html class="has-navbar-fixed-top">
+<head>
+    <meta charset="utf-8">
+<title>使用udev代替ASMlib - My Wiki</title>
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+
+<link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/outdated-browser/1.1.5/outdatedbrowser.min.css">
+
+
+
+
+
+
+
+
+
+
+<link rel="icon" href="/images/favicon.ico">
+
+
+<link rel="stylesheet" href="//fonts.googleapis.com/css?family=Ovo|Source+Code+Pro">
+<link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/bulma/0.6.2/css/bulma.min.css">
+
+
+
+<link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/highlight.js/9.12.0/styles/github.min.css">
+
+<link rel="stylesheet" href="/css/style.css">
+
+<script defer src="//use.fontawesome.com/releases/v5.0.8/js/all.js"></script>
+
+
+    
+    
+    
+    
+    
+    
+
+    
+
+
+</head>
+<body>
+    
+<nav class="navbar is-transparent is-fixed-top navbar-main" role="navigation" aria-label="main navigation">
+    <div class="container">
+        <div class="navbar-brand">
+            <a class="navbar-item navbar-logo" href="/">
+                
+                    
+                    My Wiki
+                    
+                
+            </a>
+            <div class="navbar-burger">
+                <span></span>
+                <span></span>
+                <span></span>
+            </div>
+        </div>
+        
+        <div class="navbar-menu navbar-start">
+            
+            <a class="navbar-item "
+               href="/">Home</a>
+            
+            <a class="navbar-item "
+               href="/archives">Archives</a>
+            
+            <a class="navbar-item "
+               href="/about">About</a>
+            
+        </div>
+        
+        <div class="navbar-menu navbar-end">
+            
+            <a class="navbar-item search" title="Search" href="javascript:;">
+                <i class="fas fa-search"></i>
+            </a>
+            
+            
+            
+        </div>
+    </div>
+</nav>
+
+    <section class="section">
+    <div class="container">
+    <article class="article content gallery" itemscope itemprop="blogPost">
+    <h1 class="article-title is-size-3 is-size-4-mobile" itemprop="name">
+        
+            使用udev代替ASMlib
+        
+    </h1>
+    <div class="article-meta columns is-variable is-1 is-multiline is-mobile is-size-7-mobile">
+        <span class="column is-narrow">
+            <time datetime="2013-09-05T16:00:00.000Z" itemprop="datePublished">Sep 5 2013</time>
+        </span>
+        
+        <span class="column is-narrow article-category">
+            <i class="far fa-folder"></i>
+            <a class="article-category-link" href="/categories/linux/">linux</a>
+        </span>
+        
+        
+        <span class="column is-narrow">
+            
+            
+            16 minutes read (About 2347 words)
+        </span>
+        
+    </div>
+    <div class="article-entry is-size-6-mobile" itemprop="articleBody">
+    
+         <h1>1.Introduction</h1>
+在Linux平台，从SAN、NAS或者SCSI设备映射过来的LUN一般识别为/dev/sdX。
+<a id="more"></a>
+如： 
+
+<figure class="highlight plain hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line">[root@orcl1 ~]# ll /dev/sd* </span><br><span class="line">brw-r----- 1 root disk 8,  0 Sep  6 09:33 /dev/sda </span><br><span class="line">brw-r----- 1 root disk 8,  1 Sep  6 09:34 /dev/sda1 </span><br><span class="line">brw-r----- 1 root disk 8,  2 Sep  6 09:33 /dev/sda2 </span><br><span class="line">brw-r----- 1 root disk 8,  3 Sep  6 09:34 /dev/sda3 </span><br><span class="line">brw-r----- 1 root disk 8, 16 Sep  6 09:33 /dev/sdb </span><br><span class="line">brw-r----- 1 root disk 8, 32 Sep  6 09:33 /dev/sdc </span><br><span class="line">brw-r----- 1 root disk 8, 48 Sep  6 09:33 /dev/sdd </span><br><span class="line">brw-r----- 1 root disk 8, 64 Sep  6 09:33 /dev/sde</span><br></pre></td></tr></table></figure>
+
+<p>这样存在一个问题，当一块磁盘因为各种原因从系统移除，就会导致磁盘路径被改变或者修改了磁盘的权限。比如在一个系统中有三块磁盘，sda,sdb,sdc，在下一次重启中sdb损坏了，系统将会只认到两块盘：sda及sdb，但此时的sdb其实是原来的sdc。在RAC或者ASM环境中，LUN mapping过来的名称改变会导致ASM无法识别该磁盘组。</p>
+
+<p>利用ASMLib或者UDEV绑定设备名称可避免这种情况的发生。</p>
+
+<p>本文将示范在RHEL5下如何配置udev，如何利用udev固定设备名称，并且在RAC环境中用udev取代ASMlib。</p>
+
+<h1>2.Configuring udev</h1>
+<p>UDEV能够根据系统中的硬件设备的状态，动态的更新设备文件。包括设备文件的创建及删除等。Udev具体的实现过程本文不深入研究，主要会使用就行了。</p> 
+
+<p>Udev的配置主要有两个组件：规则配置文件及权限配置文件。在RHEL5以后，权限配置文件已经包含在规则配置文件中，本文不予讨论。</p> 
+
+<figure class="highlight plain hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line">[root@orcl1:/etc/udev]# ll </span><br><span class="line">total 32 </span><br><span class="line">drwxr-xr-x 2 root root 4096 Sep  6 00:17 makedev.d </span><br><span class="line">drwxr-xr-x 2 root root 4096 Sep  6 00:40 rules.d </span><br><span class="line">drwxr-xr-x 2 root root 4096 Sep  6 00:22 scripts </span><br><span class="line">-rw-r--r-- 1 root root  226 Feb  3  2012 udev.conf</span><br></pre></td></tr></table></figure>
+
+Udev.conf文档是主要配置文档，它定义了配置文件位置，udev数据库及其他信息。 
+
+<figure class="highlight plain hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line">[root@orcl1:/etc/udev]# cat udev.conf </span><br><span class="line"># udev.conf</span><br><span class="line"></span><br><span class="line"># The initial syslog(3) priority: &quot;err&quot;, &quot;info&quot;, &quot;debug&quot; or its </span><br><span class="line"># numerical equivalent. For runtime debugging, the daemons internal </span><br><span class="line"># state can be changed with: &quot;udevcontrol log_priority=&amp;lt;value&amp;gt;&quot;. </span><br><span class="line">udev_log=&quot;err&quot;</span><br></pre></td></tr></table></figure>
+
+<h2>2.1 Setting rules</h2>
+规则文件基本上决定了磁盘如何被识别，如何在重启或者磁盘替换的时候，分配固定设备名称。规则文件主要包含以下几个栏位： 
+<li>BUS：设备总线类型</li>
+<li>KERNEL：内核设备名称</li> 
+<li>PROGRAM：调用外部命令</li> 
+<li>RESULT：外部命令PROGRAM返回的结果</li> 
+<li>NAME：在/dev下产生的设备文件名</li> 
+<li>OWNER、GROUP及MODE表面此磁盘的权限属主</li> 
+例如： 
+<figure class="highlight plain hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">KERNEL==&quot;sd*&quot;, BUS==&quot;scsi&quot;, PROGRAM==&quot;/sbin/scsi_id -g -u -s %p&quot;, RESULT==&quot;SATA_VBOX_HARDDISK_VB96362bad-ec8eda70_&quot;, NAME=&quot;asm-diske&quot;, OWNER=&quot;grid&quot;, GROUP=&quot;asmadmin&quot;, MODE=&quot;0660&quot;</span><br></pre></td></tr></table></figure>
+
+<p>通过scsi_id命令可获取设备UUID（唯一性），通过此UUID固定设备名称。</p> 
+对于规则文件内容的添加，可用以下脚本产生：
+<figure class="highlight plain hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">for i in b c d e; </span><br><span class="line">do </span><br><span class="line">echo &quot;KERNEL==\&quot;sd*\&quot;, BUS==\&quot;scsi\&quot;, PROGRAM==\&quot;/sbin/scsi_id -g -u -s %p\&quot;, RESULT==\&quot;`scsi_id -g -u -s /block/sd$i`\&quot;, NAME=\&quot;asm-disk$i\&quot;, OWNER=\&quot;grid\&quot;, GROUP=\&quot;asmadmin\&quot;, MODE=\&quot;0660\&quot;&quot; </span><br><span class="line">done</span><br></pre></td></tr></table></figure>
+
+<h1>3．Example</h1>
+<figure class="highlight plain hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line">[root@orcl1:/etc/udev]# for i in b c d e; </span><br><span class="line">do </span><br><span class="line">echo &quot;KERNEL==\&quot;sd*\&quot;, BUS==\&quot;scsi\&quot;, PROGRAM==\&quot;/sbin/scsi_id -g -u -s %p\&quot;, RESULT==\&quot;`scsi_id -g -u -s /block/sd$i`\&quot;, NAME=\&quot;asm-disk$i\&quot;, OWNER=\&quot;grid\&quot;, GROUP=\&quot;asmadmin\&quot;, MODE=\&quot;0660\&quot;&quot; </span><br><span class="line">done</span><br><span class="line"></span><br><span class="line">KERNEL==&quot;sd*&quot;, BUS==&quot;scsi&quot;, PROGRAM==&quot;/sbin/scsi_id -g -u -s %p&quot;, RESULT==&quot;SATA_VBOX_HARDDISK_VBb16974be-5341d251_&quot;, NAME=&quot;asm-diskb&quot;, OWNER=&quot;grid&quot;, GROUP=&quot;asmadmin&quot;, MODE=&quot;0660&quot; </span><br><span class="line">KERNEL==&quot;sd*&quot;, BUS==&quot;scsi&quot;, PROGRAM==&quot;/sbin/scsi_id -g -u -s %p&quot;, RESULT==&quot;SATA_VBOX_HARDDISK_VB6094ba99-e26492cb_&quot;, NAME=&quot;asm-diskc&quot;, OWNER=&quot;grid&quot;, GROUP=&quot;asmadmin&quot;, MODE=&quot;0660&quot; </span><br><span class="line">KERNEL==&quot;sd*&quot;, BUS==&quot;scsi&quot;, PROGRAM==&quot;/sbin/scsi_id -g -u -s %p&quot;, RESULT==&quot;SATA_VBOX_HARDDISK_VB24305be5-421a5edc_&quot;, NAME=&quot;asm-diskd&quot;, OWNER=&quot;grid&quot;, GROUP=&quot;asmadmin&quot;, MODE=&quot;0660&quot; </span><br><span class="line">KERNEL==&quot;sd*&quot;, BUS==&quot;scsi&quot;, PROGRAM==&quot;/sbin/scsi_id -g -u -s %p&quot;, RESULT==&quot;SATA_VBOX_HARDDISK_VB96362bad-ec8eda70_&quot;, NAME=&quot;asm-diske&quot;, OWNER=&quot;grid&quot;, GROUP=&quot;asmadmin&quot;, MODE=&quot;0660&quot;</span><br></pre></td></tr></table></figure>
+
+将以上输出添加入/etc/udev/rules.d/99-oracle-asmdevices.rules文件中，并且重启udev服务，以便识别新添加udev设备：
+<figure class="highlight plain hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">[root@orcl1:/etc/udev/rules.d]# start_udev </span><br><span class="line">Starting udev: [  OK  ]</span><br></pre></td></tr></table></figure>
+
+查询udev设备：
+<figure class="highlight plain hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">[root@orcl1:/etc/udev/rules.d]# ll /dev/asm* </span><br><span class="line">brw-rw---- 1 grid asmadmin 8, 16 Sep  6 10:47 /dev/asm-diskb </span><br><span class="line">brw-rw---- 1 grid asmadmin 8, 32 Sep  6 10:47 /dev/asm-diskc </span><br><span class="line">brw-rw---- 1 grid asmadmin 8, 48 Sep  6 10:47 /dev/asm-diskd </span><br><span class="line">brw-rw---- 1 grid asmadmin 8, 64 Sep  6 10:47 /dev/asm-diske</span><br></pre></td></tr></table></figure>
+
+脚本原创：<a title="http://www.oracledatabase12g.com/archives/utilize-udev-resolve-11gr2-rac-asm-device-name.html" href="http://www.oracledatabase12g.com/archives/utilize-udev-resolve-11gr2-rac-asm-device-name.html" target="_blank" rel="noopener">http://www.oracledatabase12g.com/archives/utilize-udev-resolve-11gr2-rac-asm-device-name.html</a>
+<br>
+在安装RAC设定ASM磁盘组时，根据当前路径即可完成ASM磁盘组的设定。<br> 
+在RHEL 6中，上述脚本已经失效，请参照如下设定：
+<figure class="highlight plain hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br></pre></td><td class="code"><pre><span class="line">--确认版本</span><br><span class="line">[root@linora ~]# cat /etc/redhat-release </span><br><span class="line">Red Hat Enterprise Linux Server release 6.5 (Santiago)</span><br><span class="line">[root@linora ~]# echo &quot;options=--whitelisted --replace-whitespace&quot;  &gt;&gt; /etc/scsi_id.config</span><br><span class="line">[root@linora ~]# cat /etc/scsi_id.config </span><br><span class="line">options=--whitelisted --replace-whitespace</span><br><span class="line">--确认要绑定的设备，这里只有/dev/sdb</span><br><span class="line">[root@linora ~]# ll /dev/sd*</span><br><span class="line">brw-rw---- 1 root disk 8,  0 Sep 16 12:47 /dev/sda</span><br><span class="line">brw-rw---- 1 root disk 8,  1 Sep 16 12:47 /dev/sda1</span><br><span class="line">brw-rw---- 1 root disk 8,  2 Sep 16 12:47 /dev/sda2</span><br><span class="line">brw-rw---- 1 root disk 8,  3 Sep 16 12:47 /dev/sda3</span><br><span class="line">brw-rw---- 1 root disk 8, 16 Sep 16 12:47 /dev/sdb</span><br><span class="line">--执行脚本</span><br><span class="line">for i in b c d e f ;</span><br><span class="line">do</span><br><span class="line">echo &quot;KERNEL==\&quot;sd*\&quot;, BUS==\&quot;scsi\&quot;, PROGRAM==\&quot;/sbin/scsi_id --whitelisted --replace-whitespace --device=/dev/\$name\&quot;, RESULT==\&quot;`/sbin/scsi_id --whitelisted --replace-whitespace --device=/dev/sd$i`\&quot;, NAME=\&quot;asm-disk$i\&quot;, OWNER=\&quot;grid\&quot;, GROUP=\&quot;asmadmin\&quot;, MODE=\&quot;0660\&quot;&quot;      </span><br><span class="line">done</span><br><span class="line">--将以上输出写入/etc/udev/rules.d/99-oracle-asmdevices.rules</span><br><span class="line">--启动udev</span><br><span class="line">[root@linora ~]# start_udev</span><br><span class="line">Starting udev: [  OK  ]</span><br></pre></td></tr></table></figure>
+
+<h1>4、关于多路径及udev的使用(RHEL6.X)</h1>
+<h2>4.1 EMC PowerPath</h2>
+PowerPath跟linux自带的DM-Multipath是冲突的，如果要使用powerpath必需要关闭掉mpath：
+<figure class="highlight plain hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">[root@db01 ~]# powermt display dev=all</span><br><span class="line"></span><br><span class="line">ERROR: Cannot open PowerPath. Initialization error</span><br></pre></td></tr></table></figure>
+
+删除multipath配置文件，关闭后台进程，并且禁止随机启动
+<figure class="highlight plain hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">rm -rf /etc/multipath.com</span><br><span class="line">/etc/init.d/multipathd stop</span><br><span class="line">chkconfig multipathd off</span><br><span class="line">[root@db02 ~]# mpathconf --disable</span><br></pre></td></tr></table></figure>
+
+重启后：
+<figure class="highlight plain hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br></pre></td><td class="code"><pre><span class="line">[root@db02 ~]# powermt display dev=all</span><br><span class="line">Pseudo name=emcpowera</span><br><span class="line">VNX ID=CKM00144603151 [db_0_1_share]</span><br><span class="line">Logical device ID=6006016060703A00851B09E01B0FE511 [db_0_1_share_lun8]</span><br><span class="line">state=alive; policy=CLAROpt; queued-IOs=0</span><br><span class="line">Owner: default=SP A, current=SP A       Array failover mode: 4</span><br><span class="line">==============================================================================</span><br><span class="line">--------------- Host ---------------   - Stor -  -- I/O Path --   -- Stats ---</span><br><span class="line">###  HW Path               I/O Paths    Interf.  Mode     State   Q-IOs Errors</span><br><span class="line">==============================================================================</span><br><span class="line">   0 qla2xxx                sdi        SP A1     active   alive      0      0</span><br><span class="line">   0 qla2xxx                sdr        SP B1     active   alive      0      0</span><br><span class="line">   2 qla2xxx                sdaa       SP A0     active   alive      0      0</span><br><span class="line">   2 qla2xxx                sdaj       SP B0     active   alive      0      0</span><br><span class="line">...</span><br></pre></td></tr></table></figure>
+
+由于设备名称已经绑定，只需要在udev中赋予相关的授权即可
+<figure class="highlight plain hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br></pre></td><td class="code"><pre><span class="line">[root@db01 rules.d]# touch 99-oracle-asmdevices.rules</span><br><span class="line">[root@db01 rules.d]# ls -l /dev/emc*</span><br><span class="line">crw-r--r-- 1 root root  10,  56 6月  10 15:22 /dev/emcpower</span><br><span class="line">brw-rw---- 1 root disk 120,   0 6月  10 15:22 /dev/emcpowera</span><br><span class="line">brw-rw---- 1 root disk 120,  16 6月  10 15:22 /dev/emcpowerb</span><br><span class="line">brw-rw---- 1 root disk 120,  32 6月  10 15:22 /dev/emcpowerc</span><br><span class="line">brw-rw---- 1 root disk 120,  48 6月  10 15:22 /dev/emcpowerd</span><br><span class="line">brw-rw---- 1 root disk 120,  64 6月  10 15:22 /dev/emcpowere</span><br><span class="line">brw-rw---- 1 root disk 120,  80 6月  10 15:22 /dev/emcpowerf</span><br><span class="line">brw-rw---- 1 root disk 120,  96 6月  10 15:22 /dev/emcpowerg</span><br><span class="line">brw-rw---- 1 root disk 120, 112 6月  10 15:22 /dev/emcpowerh</span><br><span class="line">brw-rw---- 1 root disk 120, 128 6月  10 15:22 /dev/emcpoweri</span><br><span class="line">[root@db01 rules.d]# vi 99-oracle-asmdevices.rules </span><br><span class="line">SUBSYSTEM==&quot;block&quot;, KERNEL==&quot;emcpowera&quot;, GROUP=&quot;dba&quot;, OWNER=&quot;grid&quot;, MODE=&quot;0660&quot;</span><br><span class="line">SUBSYSTEM==&quot;block&quot;, KERNEL==&quot;emcpowerb&quot;, GROUP=&quot;dba&quot;, OWNER=&quot;grid&quot;, MODE=&quot;0660&quot;</span><br><span class="line">SUBSYSTEM==&quot;block&quot;, KERNEL==&quot;emcpowerc&quot;, GROUP=&quot;dba&quot;, OWNER=&quot;grid&quot;, MODE=&quot;0660&quot;</span><br><span class="line">SUBSYSTEM==&quot;block&quot;, KERNEL==&quot;emcpowerd&quot;, GROUP=&quot;dba&quot;, OWNER=&quot;grid&quot;, MODE=&quot;0660&quot;</span><br><span class="line">SUBSYSTEM==&quot;block&quot;, KERNEL==&quot;emcpowere&quot;, GROUP=&quot;dba&quot;, OWNER=&quot;grid&quot;, MODE=&quot;0660&quot;</span><br><span class="line">SUBSYSTEM==&quot;block&quot;, KERNEL==&quot;emcpowerf&quot;, GROUP=&quot;dba&quot;, OWNER=&quot;grid&quot;, MODE=&quot;0660&quot;</span><br><span class="line">SUBSYSTEM==&quot;block&quot;, KERNEL==&quot;emcpowerg&quot;, GROUP=&quot;dba&quot;, OWNER=&quot;grid&quot;, MODE=&quot;0660&quot;</span><br><span class="line">SUBSYSTEM==&quot;block&quot;, KERNEL==&quot;emcpowerh&quot;, GROUP=&quot;dba&quot;, OWNER=&quot;grid&quot;, MODE=&quot;0660&quot;</span><br><span class="line">SUBSYSTEM==&quot;block&quot;, KERNEL==&quot;emcpoweri&quot;, GROUP=&quot;dba&quot;, OWNER=&quot;grid&quot;, MODE=&quot;0660&quot;</span><br><span class="line">[root@db01 rules.d]# start_udev </span><br><span class="line">正在启动 udev：[确定]</span><br><span class="line">crw-rw---- 1 root root  10,  56 6月  10 15:30 /dev/emcpower</span><br><span class="line">brw-rw---- 1 grid dba  120,   0 6月  10 15:30 /dev/emcpowera</span><br><span class="line">brw-rw---- 1 grid dba  120,  16 6月  10 15:30 /dev/emcpowerb</span><br><span class="line">brw-rw---- 1 grid dba  120,  32 6月  10 15:30 /dev/emcpowerc</span><br><span class="line">brw-rw---- 1 grid dba  120,  48 6月  10 15:30 /dev/emcpowerd</span><br><span class="line">brw-rw---- 1 grid dba  120,  64 6月  10 15:30 /dev/emcpowere</span><br><span class="line">brw-rw---- 1 grid dba  120,  80 6月  10 15:30 /dev/emcpowerf</span><br><span class="line">brw-rw---- 1 grid dba  120,  96 6月  10 15:30 /dev/emcpowerg</span><br><span class="line">brw-rw---- 1 grid dba  120, 112 6月  10 15:30 /dev/emcpowerh</span><br><span class="line">brw-rw---- 1 grid dba  120, 128 6月  10 15:30 /dev/emcpoweri</span><br></pre></td></tr></table></figure>
+
+集群安装完成后查看voting disk
+<figure class="highlight plain hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line">[grid@db02:/u01/app/11gr2/grid/log/db02]$ crsctl query css votedisk</span><br><span class="line">##  STATE    File Universal Id                File Name Disk group</span><br><span class="line">--  -----    -----------------                --------- ---------</span><br><span class="line"> 1. ONLINE   037f0dd1fc9e4fb5bff478a6d5d448d5 (/dev/emcpowera) [OCR]</span><br><span class="line"> 2. ONLINE   3b7395481c8b4ff1bfd04007f05e0106 (/dev/emcpowerb) [OCR]</span><br><span class="line"> 3. ONLINE   3c82301f45724f36bfa2dae4af73338f (/dev/emcpowerc) [OCR]</span><br><span class="line">Located 3 voting disk(s).</span><br></pre></td></tr></table></figure>
+
+<h2>4.2 dm-multipath with udev</h2>
+通过脚本查找出设备wwid
+<figure class="highlight plain hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">for i in c d;</span><br><span class="line">do </span><br><span class="line">/sbin/scsi_id --whitelisted --replace-whitespace --device=/dev/sd$i</span><br><span class="line">done</span><br></pre></td></tr></table></figure>
+
+将设备wwid映射到配置文件中，在实际环境中，这一步可以省略，默认的multipath.conf文件会自动聚合出来，同时给出wwid：
+<figure class="highlight plain hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br></pre></td><td class="code"><pre><span class="line">[root@db01 ~]# multipath -ll</span><br><span class="line">mpathe (36006016060703a003b8427f0790ee511) dm-3 DGC,VRAID</span><br><span class="line">size=304G features=&apos;1 queue_if_no_path&apos; hwhandler=&apos;1 emc&apos; wp=rw</span><br><span class="line">|-+- policy=&apos;round-robin 0&apos; prio=1 status=active</span><br><span class="line">| |- 0:0:1:3  sdm  8:192  active ready running</span><br><span class="line">| `- 2:0:1:3  sdae 65:224 active ready running</span><br><span class="line">`-+- policy=&apos;round-robin 0&apos; prio=0 status=enabled</span><br><span class="line">  |- 0:0:0:3  sdd  8:48   active ready running</span><br><span class="line">  `- 2:0:0:3  sdv  65:80  active ready running</span><br><span class="line">mpathd (36006016060703a006f80e2e4790ee511) dm-2 DGC,VRAID</span><br><span class="line">size=303G features=&apos;1 queue_if_no_path&apos; hwhandler=&apos;1 emc&apos; wp=rw</span><br><span class="line">|-+- policy=&apos;round-robin 0&apos; prio=1 status=active</span><br><span class="line">| |- 0:0:0:2  sdc  8:32   active ready running</span><br><span class="line">| `- 2:0:0:2  sdu  65:64  active ready running</span><br><span class="line">`-+- policy=&apos;round-robin 0&apos; prio=0 status=enabled</span><br><span class="line">  |- 0:0:1:2  sdl  8:176  active ready running</span><br><span class="line">  `- 2:0:1:2  sdad 65:208 active ready running</span><br></pre></td></tr></table></figure>
+
+下面是测试时自己编辑的配置文件：
+<figure class="highlight plain hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br></pre></td><td class="code"><pre><span class="line">[root@oel6 rules.d]# cat /etc/multipath.conf | grep -v ^# | grep -v ^$ </span><br><span class="line">blacklist &#123;</span><br><span class="line">        #devnode &quot;^(ram|raw|loop|fd|md|dm-|sr|scd|st)[0-9]*&quot;</span><br><span class="line">        #devnode &quot;^hd[a-z]&quot;</span><br><span class="line">        devnode &quot;sd[a-b]&quot;</span><br><span class="line">        #wwid 1ATA_VBOX_HARDDISK_VB2314099c-4ddf514a </span><br><span class="line">        #wwid 1ATA_VBOX_HARDDISK_VB9b70e1bb-9ea5e71b</span><br><span class="line">&#125;</span><br><span class="line">defaults &#123;</span><br><span class="line">        user_friendly_names no</span><br><span class="line">        getuid_callout &quot;/sbin/scsi_id --whitelisted --replace-whitespace --device=/dev/%n&quot;</span><br><span class="line">&#125;</span><br><span class="line">multipaths &#123;</span><br><span class="line">    multipath &#123;</span><br><span class="line">        wwid 1ATA_VBOX_HARDDISK_VB0d3ee45b-3ed72c0c</span><br><span class="line">        alias data_mpath1</span><br><span class="line">    &#125;</span><br><span class="line">    multipath &#123;</span><br><span class="line">        wwid 1ATA_VBOX_HARDDISK_VB3dc9cda2-488673dc</span><br><span class="line">        alias data_mpath2</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+重启multipathd进程，并且查看结果
+<figure class="highlight plain hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br></pre></td><td class="code"><pre><span class="line">[root@oel6 ~]# /etc/init.d/multipathd restart</span><br><span class="line">ok</span><br><span class="line">Stopping multipathd daemon: [  OK  ]</span><br><span class="line">Starting multipathd daemon: [  OK  ]</span><br><span class="line">[root@oel6 ~]# multipath -v2</span><br><span class="line">[root@oel6 ~]# multipath -ll</span><br><span class="line">data_mpath2 (1ATA_VBOX_HARDDISK_VB3dc9cda2-488673dc) dm-3 ATA,VBOX HARDDISK</span><br><span class="line">size=3.0G features=&apos;0&apos; hwhandler=&apos;0&apos; wp=rw</span><br><span class="line">`-+- policy=&apos;round-robin 0&apos; prio=1 status=active</span><br><span class="line">  `- 5:0:0:0 sdd 8:48 active ready running</span><br><span class="line">data_mpath1 (1ATA_VBOX_HARDDISK_VB0d3ee45b-3ed72c0c) dm-2 ATA,VBOX HARDDISK</span><br><span class="line">size=3.0G features=&apos;0&apos; hwhandler=&apos;0&apos; wp=rw</span><br><span class="line">`-+- policy=&apos;round-robin 0&apos; prio=1 status=active</span><br><span class="line">  `- 4:0:0:0 sdc 8:32 active ready running</span><br></pre></td></tr></table></figure>
+
+用udev进行设备名称绑定
+<figure class="highlight plain hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br></pre></td><td class="code"><pre><span class="line">[root@oel6 rules.d]# cat 12-dm-permissions.rules </span><br><span class="line">ENV&#123;DM_NAME&#125;==&quot;data_mpath1&quot;,NAME=&quot;asmdisk1&quot;, OWNER:=&quot;grid&quot;, GROUP:=&quot;oinstall&quot;, MODE:=&quot;660&quot;</span><br><span class="line">ENV&#123;DM_NAME&#125;==&quot;data_mpath2&quot;,NAME=&quot;asmdisk2&quot;, OWNER:=&quot;grid&quot;, GROUP:=&quot;oinstall&quot;, MODE:=&quot;660&quot;</span><br><span class="line">[root@oel6 rules.d]# cat 99-oracle-asmdevices.rules </span><br><span class="line">KERNEL==&quot;sd*&quot;, SUBSYSTEM==&quot;block&quot;, ENV&#123;DEVTYPE&#125;==&quot;disk&quot;, ENV&#123;ID_SERIAL&#125;==&quot;1ATA_VBOX_HARDDISK_VB0d3ee45b-3ed72c0c&quot;, OWNER=&quot;grid&quot;, GROUP=&quot;oinstall&quot;, MODE=&quot;0660&quot;</span><br><span class="line">KERNEL==&quot;sd*&quot;, SUBSYSTEM==&quot;block&quot;, ENV&#123;DEVTYPE&#125;==&quot;disk&quot;, ENV&#123;ID_SERIAL&#125;==&quot;1ATA_VBOX_HARDDISK_VB3dc9cda2-488673dc&quot;, OWNER=&quot;grid&quot;, GROUP=&quot;oinstall&quot;, MODE=&quot;0660&quot;</span><br><span class="line">#restart udev</span><br><span class="line">udevadm control --reload-rules</span><br><span class="line">start_udev</span><br><span class="line">[root@oel6 rules.d]# ll /dev/asmdisk*</span><br><span class="line">brw-rw---- 1 grid oinstall 252, 2 Jun 10 20:50 /dev/asmdisk1</span><br><span class="line">brw-rw---- 1 grid oinstall 252, 3 Jun 10 20:50 /dev/asmdisk2</span><br></pre></td></tr></table></figure>
+
+<h1>5、 RHEL 7 udev</h1>
+
+<figure class="highlight plain hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line">#RHEL7.4 ASM udev加盘</span><br><span class="line">/usr/bin/scsi-rescan</span><br><span class="line">multipath -ll</span><br><span class="line">vi /etc/udev/rule.d/99-oracle-asmdevices.rules</span><br><span class="line">--restart udev</span><br><span class="line">/sbin/udevadm trigger --type=devices --action=change</span><br></pre></td></tr></table></figure>
+
+ <b>EOF</b> 
+
+    
+    </div>
+    
+    <div class="columns is-variable is-1 is-multiline is-mobile">
+    
+        <span class="column is-narrow"><a class="tag is-light article-tag" href="/tags/udev/">#udev</a></span>
+    
+        <span class="column is-narrow"><a class="tag is-light article-tag" href="/tags/asm/">#asm</a></span>
+    
+    </div>
+    
+    
+    <div class="columns is-mobile is-multiline article-nav">
+        <span class="column is-12-mobile is-half-desktop  article-nav-prev">
+            
+            <a href="/deletenodes-in-11g-rac.html">11gr2 RAC删除节点</a>
+            
+        </span>
+        <span class="column is-12-mobile is-half-desktop  article-nav-next">
+            
+            <a href="/addnodes-in-11g-rac.html">11gr2 RAC增加节点</a>
+            
+        </span>
+    </div>
+    
+</article>
+
+
+
+
+    </div>
+</section>
+    <footer class="footer">
+    <div class="container">
+        <div class="columns content">
+            <div class="column is-narrow has-text-centered">
+                &copy; 2018 Kong&nbsp;
+                Powered by <a href="http://hexo.io/" target="_blank">Hexo</a> & <a
+                        href="http://github.com/ppoffice/hexo-theme-minos">Minos</a>
+            </div>
+            <div class="column is-hidden-mobile"></div>
+
+            
+            
+        </div>
+    </div>
+</footer>
+    <script src="//cdnjs.cloudflare.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
+<script src="//cdnjs.cloudflare.com/ajax/libs/moment.js/2.22.2/moment-with-locales.min.js"></script>
+
+<!-- test if the browser is outdated -->
+<div id="outdated">
+    <h6>Your browser is out-of-date!</h6>
+    <p>Update your browser to view this website correctly. <a id="btnUpdateBrowser" href="http://outdatedbrowser.com/">Update my browser now </a></p>
+    <p class="last"><a href="#" id="btnCloseUpdateBrowser" title="Close">&times;</a></p>
+</div>
+<script src="//cdnjs.cloudflare.com/ajax/libs/outdated-browser/1.1.5/outdatedbrowser.min.js"></script>
+<script>
+    $(document).ready(function () {
+        // plugin function, place inside DOM ready function
+        outdatedBrowser({
+            bgColor: '#f25648',
+            color: '#ffffff',
+            lowerThan: 'flex'
+        })
+    });
+</script>
+
+<script>
+    window.FontAwesomeConfig = {
+        searchPseudoElements: true
+    }
+    moment.locale("en-AU");
+</script>
+
+
+    
+    
+    
+    
+    
+    
+
+    
+
+
+<script src="/js/script.js"></script>
+
+    
+    <div class="searchbox ins-search">
+    <div class="searchbox-mask"></div>
+    <div class="searchbox-container ins-search-container">
+        <div class="searchbox-input-wrapper">
+            <input type="text" class="searchbox-input ins-search-input" placeholder="Type something..." />
+            <span class="searchbox-close ins-close ins-selectable"><i class="fa fa-times-circle"></i></span>
+        </div>
+        <div class="searchbox-result-wrapper ins-section-wrapper">
+            <div class="ins-section-container"></div>
+        </div>
+    </div>
+</div>
+<script>
+    (function (window) {
+        var INSIGHT_CONFIG = {
+            TRANSLATION: {
+                POSTS: 'Posts',
+                PAGES: 'Pages',
+                CATEGORIES: 'Categories',
+                TAGS: 'Tags',
+                UNTITLED: '(Untitled)',
+            },
+            CONTENT_URL: '/content.json',
+        };
+        window.INSIGHT_CONFIG = INSIGHT_CONFIG;
+    })(window);
+</script>
+<script src="/js/insight.js"></script>
+    
+</body>
+</html>

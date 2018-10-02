@@ -1,0 +1,259 @@
+<!DOCTYPE html>
+<html class="has-navbar-fixed-top">
+<head>
+    <meta charset="utf-8">
+<title>Oracle修改数据库名称 - My Wiki</title>
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+
+<link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/outdated-browser/1.1.5/outdatedbrowser.min.css">
+
+
+<meta name="description" content="how to change database name or dbid in oracle by using nid and re-create controlfile,使用NID或者重建控制文件修改Oracle数据库名称">
+
+
+
+<meta name="keywords" content="nid,change oracle database name and dbid">
+
+
+
+
+
+
+
+<link rel="icon" href="/images/favicon.ico">
+
+
+<link rel="stylesheet" href="//fonts.googleapis.com/css?family=Ovo|Source+Code+Pro">
+<link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/bulma/0.6.2/css/bulma.min.css">
+
+
+
+<link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/highlight.js/9.12.0/styles/github.min.css">
+
+<link rel="stylesheet" href="/css/style.css">
+
+<script defer src="//use.fontawesome.com/releases/v5.0.8/js/all.js"></script>
+
+
+    
+    
+    
+    
+    
+    
+
+    
+
+
+</head>
+<body>
+    
+<nav class="navbar is-transparent is-fixed-top navbar-main" role="navigation" aria-label="main navigation">
+    <div class="container">
+        <div class="navbar-brand">
+            <a class="navbar-item navbar-logo" href="/">
+                
+                    
+                    My Wiki
+                    
+                
+            </a>
+            <div class="navbar-burger">
+                <span></span>
+                <span></span>
+                <span></span>
+            </div>
+        </div>
+        
+        <div class="navbar-menu navbar-start">
+            
+            <a class="navbar-item "
+               href="/">Home</a>
+            
+            <a class="navbar-item "
+               href="/archives">Archives</a>
+            
+            <a class="navbar-item "
+               href="/about">About</a>
+            
+        </div>
+        
+        <div class="navbar-menu navbar-end">
+            
+            <a class="navbar-item search" title="Search" href="javascript:;">
+                <i class="fas fa-search"></i>
+            </a>
+            
+            
+            
+        </div>
+    </div>
+</nav>
+
+    <section class="section">
+    <div class="container">
+    <article class="article content gallery" itemscope itemprop="blogPost">
+    <h1 class="article-title is-size-3 is-size-4-mobile" itemprop="name">
+        
+            Oracle修改数据库名称
+        
+    </h1>
+    <div class="article-meta columns is-variable is-1 is-multiline is-mobile is-size-7-mobile">
+        <span class="column is-narrow">
+            <time datetime="2014-05-21T07:45:24.000Z" itemprop="datePublished">May 21 2014</time>
+        </span>
+        
+        <span class="column is-narrow article-category">
+            <i class="far fa-folder"></i>
+            <a class="article-category-link" href="/categories/oracle/">oracle</a>
+        </span>
+        
+        
+        <span class="column is-narrow">
+            
+            
+            15 minutes read (About 2177 words)
+        </span>
+        
+    </div>
+    <div class="article-entry is-size-6-mobile" itemprop="articleBody">
+    
+        <p>在DBA日常维护中，有时候会遇到需要修改数据库名称或者dbid的情况，可利用<code>nid</code>的工具对dbid和db_name进行修改，在某些情况下，还可以利用重建控制文件对db_name进行修改。<br><a id="more"></a></p>
+<p></p><h3>1. nid工具</h3><p></p>
+<p></p><h4>1.1 nid修改dbid</h4><br>查询当前dbid<br><figure class="highlight plain hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line">SQL&gt; select dbid from v$database;</span><br><span class="line"></span><br><span class="line">      DBID</span><br><span class="line">----------</span><br><span class="line">1375890310</span><br><span class="line"></span><br><span class="line">SQL&gt;</span><br></pre></td></tr></table></figure><p></p>
+<p><code>nid</code>工具语法<br><figure class="highlight plain hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br></pre></td><td class="code"><pre><span class="line">[oracle@:/home/oracle]$ nid help=y</span><br><span class="line"></span><br><span class="line">DBNEWID: Release 11.2.0.3.0 - Production on Sat Jun 28 07:19:12 2014</span><br><span class="line"></span><br><span class="line">Copyright (c) 1982, 2011, Oracle and/or its affiliates.  All rights reserved.</span><br><span class="line"></span><br><span class="line">Keyword     Description                    (Default)</span><br><span class="line">----------------------------------------------------</span><br><span class="line">TARGET      Username/Password              (NONE)</span><br><span class="line">DBNAME      New database name              (NONE)</span><br><span class="line">LOGFILE     Output Log                     (NONE)</span><br><span class="line">REVERT      Revert failed change           NO</span><br><span class="line">SETNAME     Set a new database name only   NO</span><br><span class="line">APPEND      Append to output log           NO</span><br><span class="line">HELP        Displays these messages        NO</span><br></pre></td></tr></table></figure></p>
+<p>启动数据库至mount状态：<br><figure class="highlight plain hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br></pre></td><td class="code"><pre><span class="line">SQL&gt; startup mount pfile=&apos;/oracle/test/pfile.ora&apos;;</span><br><span class="line">ORACLE instance started.</span><br><span class="line"></span><br><span class="line">Total System Global Area 1570009088 bytes</span><br><span class="line">Fixed Size                  2221840 bytes</span><br><span class="line">Variable Size             922749168 bytes</span><br><span class="line">Database Buffers          637534208 bytes</span><br><span class="line">Redo Buffers                7503872 bytes</span><br><span class="line">Database mounted.</span><br><span class="line">SQL&gt; select dbid,name,open_mode,activation#,created from v$database;</span><br><span class="line"></span><br><span class="line">      DBID NAME      OPEN_MODE            ACTIVATION# CREATED</span><br><span class="line">---------- --------- -------------------- ----------- ---------</span><br><span class="line">1375890310 ORCLTEST  MOUNTED               2598928391 28-JUN-14</span><br></pre></td></tr></table></figure></p>
+<p>调用nid修改dbid<br><figure class="highlight plain hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br></pre></td><td class="code"><pre><span class="line">[oracle@:/oracle]$ nid TARGET=sys</span><br><span class="line"></span><br><span class="line">DBNEWID: Release 11.2.0.3.0 - Production on Sat Jun 28 07:37:11 2014</span><br><span class="line"></span><br><span class="line">Copyright (c) 1982, 2011, Oracle and/or its affiliates.  All rights reserved.</span><br><span class="line"></span><br><span class="line">Password: </span><br><span class="line">Connected to database ORCLTEST (DBID=1375890310)</span><br><span class="line"></span><br><span class="line">Connected to server version 11.2.0</span><br><span class="line"></span><br><span class="line">Control Files in database:</span><br><span class="line">    /oracle/oradata/orcltest/control01.ctl</span><br><span class="line">    /oracle/oradata/orcltest/control02.ctl</span><br><span class="line"></span><br><span class="line">Change database ID of database ORCLTEST? (Y/[N]) =&gt; y</span><br><span class="line"></span><br><span class="line">Proceeding with operation</span><br><span class="line">Changing database ID from 1375890310 to 2598911656</span><br><span class="line">    Control File /oracle/oradata/orcltest/control01.ctl - modified</span><br><span class="line">    Control File /oracle/oradata/orcltest/control02.ctl - modified</span><br><span class="line">    Datafile /oracle/oradata/orcltest/system01.db - dbid changed</span><br><span class="line">    Datafile /oracle/oradata/orcltest/sysaux01.db - dbid changed</span><br><span class="line">    Datafile /oracle/oradata/orcltest/undotbs01.db - dbid changed</span><br><span class="line">    Datafile /oracle/oradata/orcltest/users01.db - dbid changed</span><br><span class="line">    Control File /oracle/oradata/orcltest/control01.ctl - dbid changed</span><br><span class="line">    Control File /oracle/oradata/orcltest/control02.ctl - dbid changed</span><br><span class="line">    Instance shut down</span><br><span class="line"></span><br><span class="line">Database ID for database ORCLTEST changed to 2598911656.</span><br><span class="line">All previous backups and archived redo logs for this database are unusable.</span><br><span class="line">Database has been shutdown, open database with RESETLOGS option.</span><br><span class="line">Succesfully changed database ID.</span><br><span class="line">DBNEWID - Completed succesfully.</span><br></pre></td></tr></table></figure></p>
+<p>查看dbid，发现已经改变。<br><figure class="highlight plain hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br></pre></td><td class="code"><pre><span class="line">SQL&gt; startup</span><br><span class="line">ORACLE instance started.</span><br><span class="line"></span><br><span class="line">Total System Global Area 1570009088 bytes</span><br><span class="line">Fixed Size                  2221840 bytes</span><br><span class="line">Variable Size             922749168 bytes</span><br><span class="line">Database Buffers          637534208 bytes</span><br><span class="line">Redo Buffers                7503872 bytes</span><br><span class="line">Database mounted.</span><br><span class="line">ORA-01589: must use RESETLOGS or NORESETLOGS option for database open</span><br><span class="line"></span><br><span class="line"></span><br><span class="line">SQL&gt; alter database open resetlogs;</span><br><span class="line"></span><br><span class="line">Database altered.</span><br><span class="line"></span><br><span class="line">SQL&gt; select dbid,name,open_mode,activation#,created from v$database;</span><br><span class="line"></span><br><span class="line">      DBID NAME      OPEN_MODE            ACTIVATION# CREATED</span><br><span class="line">---------- --------- -------------------- ----------- ---------</span><br><span class="line">2598911656 ORCLTEST  READ WRITE            2598914511 28-JUN-14</span><br></pre></td></tr></table></figure></p>
+<p>注意，使用nid需要在mount状态下，且上一次关闭必须是干净的shutdown，否则会报<code>NID-00135: There are 1 active threads</code>的错误。</p>
+<p></p><h4>1.2 nid修改dbname</h4><br>同样启动至mount状态进行修改<br><figure class="highlight plain hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br></pre></td><td class="code"><pre><span class="line">[oracle@:/home/oracle]$ nid TARGET=sys/oracle DBNAME=oratest SETNAME=yes</span><br><span class="line"></span><br><span class="line">DBNEWID: Release 11.2.0.3.0 - Production on Sat Jun 28 07:43:44 2014</span><br><span class="line"></span><br><span class="line">Copyright (c) 1982, 2011, Oracle and/or its affiliates.  All rights reserved.</span><br><span class="line"></span><br><span class="line">Connected to database ORCLTEST (DBID=2598911656)</span><br><span class="line"></span><br><span class="line">Connected to server version 11.2.0</span><br><span class="line"></span><br><span class="line">Control Files in database:</span><br><span class="line">    /oracle/oradata/orcltest/control01.ctl</span><br><span class="line">    /oracle/oradata/orcltest/control02.ctl</span><br><span class="line"></span><br><span class="line">Change database name of database ORCLTEST to ORATEST? (Y/[N]) =&gt; y</span><br><span class="line"></span><br><span class="line">Proceeding with operation</span><br><span class="line">Changing database name from ORCLTEST to ORATEST</span><br><span class="line">    Control File /oracle/oradata/orcltest/control01.ctl - modified</span><br><span class="line">    Control File /oracle/oradata/orcltest/control02.ctl - modified</span><br><span class="line">    Datafile /oracle/oradata/orcltest/system01.db - wrote new name</span><br><span class="line">    Datafile /oracle/oradata/orcltest/sysaux01.db - wrote new name</span><br><span class="line">    Datafile /oracle/oradata/orcltest/undotbs01.db - wrote new name</span><br><span class="line">    Datafile /oracle/oradata/orcltest/users01.db - wrote new name</span><br><span class="line">    Control File /oracle/oradata/orcltest/control01.ctl - wrote new name</span><br><span class="line">    Control File /oracle/oradata/orcltest/control02.ctl - wrote new name</span><br><span class="line">    Instance shut down</span><br><span class="line"></span><br><span class="line">Database name changed to ORATEST.</span><br><span class="line">Modify parameter file and generate a new password file before restarting.</span><br><span class="line">Succesfully changed database name.</span><br><span class="line">DBNEWID - Completed succesfully.</span><br></pre></td></tr></table></figure><p></p>
+<p>修改原有的pfile，将dbname改为目前的，至修改dbname，不需要resetlogs开启。<br><figure class="highlight plain hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">SQL&gt; select dbid,name,open_mode,activation#,created from v$database;</span><br><span class="line"></span><br><span class="line">      DBID NAME      OPEN_MODE            ACTIVATION# CREATED</span><br><span class="line">---------- --------- -------------------- ----------- ---------</span><br><span class="line">2598911656 ORATEST   READ WRITE            2598914511 28-JUN-14</span><br></pre></td></tr></table></figure></p>
+<p>如果需要同时修改dbname及dbid，则在<code>nid TARGET=sys/oracle DBNAME=oratest SETNAME=yes</code>中取消掉<code>setname=yes</code>即可。</p>
+<p></p><h3>2. 修改控制文件</h3><br>通过修改控制文件去修改dbname，在这里模拟一种极端情况：7*24关键系统中，用户早上8点误删除数据，在下午5点发现，要求DBA恢复出8点误删除的数据，再没有多余的机器下，又不可能直接还原，只能通过备份还原到本机的不同目录，然后将丢失的数据重新插入。<br>首先在生产库查找原有备份，并且恢复spfile到指定目录。<br><figure class="highlight plain hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br></pre></td><td class="code"><pre><span class="line">RMAN&gt; list backup of spfile;</span><br><span class="line"></span><br><span class="line">using target database control file instead of recovery catalog</span><br><span class="line"></span><br><span class="line">List of Backup Sets</span><br><span class="line">===================</span><br><span class="line"></span><br><span class="line"></span><br><span class="line">BS Key  Type LV Size       Device Type Elapsed Time Completion Time    </span><br><span class="line">------- ---- -- ---------- ----------- ------------ -------------------</span><br><span class="line">9       Full    7.42M      DISK        00:00:01     2014-06-28 07:03:01</span><br><span class="line">        BP Key: 9   Status: AVAILABLE  Compressed: NO  Tag: HOT_DB_BK_LEVEL0</span><br><span class="line">        Piece Name: /oracle/backup/bk_9_1_851410980_ORCL</span><br><span class="line">  SPFILE Included: Modification time: 2014-06-28 02:46:09</span><br><span class="line">  SPFILE db_unique_name: ORCL</span><br><span class="line">RMAN&gt; restore spfile to &apos;/oracle/test/spfile.ora&apos; from &apos;/oracle/backup/bk_9_1_851410980_ORCL&apos;;</span><br><span class="line"></span><br><span class="line">Starting restore at 2014-06-28 08:14:54</span><br><span class="line">allocated channel: ORA_DISK_1</span><br><span class="line">channel ORA_DISK_1: SID=136 device type=DISK</span><br><span class="line"></span><br><span class="line">channel ORA_DISK_1: restoring spfile from AUTOBACKUP /oracle/backup/bk_9_1_851410980_ORCL</span><br><span class="line">channel ORA_DISK_1: SPFILE restore from AUTOBACKUP complete</span><br><span class="line">Finished restore at 2014-06-28 08:14:55</span><br><span class="line">[oracle@:/home/oracle]$ export ORACLE_SID=orcltest</span><br><span class="line">SQL&gt; create pfile from spfile=&apos;/oracle/test/spfile.ora&apos;;</span><br><span class="line"></span><br><span class="line">File created.</span><br></pre></td></tr></table></figure><p></p>
+<p>使用vi编辑pfile，调整相应参数，包括db_name，控制文件存放路径及dump，adr存放目录，同时创建相关目录并且授权。<br>从生产端备份控制文件至trace file。<br><figure class="highlight plain hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">SQL&gt; alter database backup controlfile to trace as &apos;/oracle/test/ctl.txt&apos;;</span><br><span class="line"></span><br><span class="line">Database altered.</span><br></pre></td></tr></table></figure></p>
+<p>ctl.txt的关键内容<br><figure class="highlight plain hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br></pre></td><td class="code"><pre><span class="line">CREATE CONTROLFILE REUSE DATABASE &quot;ORCL&quot; RESETLOGS  ARCHIVELOG</span><br><span class="line">    MAXLOGFILES 16</span><br><span class="line">    MAXLOGMEMBERS 3</span><br><span class="line">    MAXDATAFILES 100</span><br><span class="line">    MAXINSTANCES 8</span><br><span class="line">    MAXLOGHISTORY 292</span><br><span class="line">LOGFILE</span><br><span class="line">  GROUP 1 &apos;/oracle/oradata/orcl/redo01.log&apos;  SIZE 50M BLOCKSIZE 512,</span><br><span class="line">  GROUP 2 &apos;/oracle/oradata/orcl/redo02.log&apos;  SIZE 50M BLOCKSIZE 512,</span><br><span class="line">  GROUP 3 &apos;/oracle/oradata/orcl/redo03.log&apos;  SIZE 50M BLOCKSIZE 512</span><br><span class="line">-- STANDBY LOGFILE</span><br><span class="line">DATAFILE</span><br><span class="line">  &apos;/oracle/oradata/orcl/system01.dbf&apos;,</span><br><span class="line">  &apos;/oracle/oradata/orcl/sysaux01.dbf&apos;,</span><br><span class="line">  &apos;/oracle/oradata/orcl/undotbs01.dbf&apos;,</span><br><span class="line">  &apos;/oracle/oradata/orcl/users01.dbf&apos;,</span><br><span class="line">  &apos;/oracle/oradata/orcl/fung01.dbf&apos;</span><br><span class="line">CHARACTER SET AL32UTF8</span><br><span class="line">;</span><br></pre></td></tr></table></figure></p>
+<p>需要修改为如下内容<br><figure class="highlight plain hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br></pre></td><td class="code"><pre><span class="line">CREATE CONTROLFILE set DATABASE &quot;ORCLTEST&quot; RESETLOGS  ARCHIVELOG</span><br><span class="line">    MAXLOGFILES 16</span><br><span class="line">    MAXLOGMEMBERS 3</span><br><span class="line">    MAXDATAFILES 100</span><br><span class="line">    MAXINSTANCES 8</span><br><span class="line">    MAXLOGHISTORY 292</span><br><span class="line">LOGFILE</span><br><span class="line">  GROUP 1 &apos;/oracle/oradata/orcltest/redo01.log&apos;  SIZE 50M BLOCKSIZE 512,</span><br><span class="line">  GROUP 2 &apos;/oracle/oradata/orcltest/redo02.log&apos;  SIZE 50M BLOCKSIZE 512,</span><br><span class="line">  GROUP 3 &apos;/oracle/oradata/orcltest/redo03.log&apos;  SIZE 50M BLOCKSIZE 512</span><br><span class="line">-- STANDBY LOGFILE</span><br><span class="line">DATAFILE</span><br><span class="line">  &apos;/oracle/oradata/orcltest/system01.dbf&apos;,</span><br><span class="line">  &apos;/oracle/oradata/orcltest/sysaux01.dbf&apos;,</span><br><span class="line">  &apos;/oracle/oradata/orcltest/undotbs01.dbf&apos;,</span><br><span class="line">  &apos;/oracle/oradata/orcltest/users01.dbf&apos;,</span><br><span class="line">  &apos;/oracle/oradata/orcltest/fung01.dbf&apos;</span><br><span class="line">CHARACTER SET AL32UTF8</span><br><span class="line">;</span><br></pre></td></tr></table></figure></p>
+<p>在执行创建语句之前，需要创建好相应的目录，并且利用rman在生产的SID上restore数据文件至相应目录，此例中为<code>/oracle/oradata/orcltest</code>。<br><figure class="highlight plain hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br></pre></td><td class="code"><pre><span class="line">RMAN&gt; run&#123;</span><br><span class="line">2&gt; allocate channel c1 type disk;</span><br><span class="line">3&gt; set newname for datafile 1 to &apos;/oracle/oradata/orcltest/system01.dbf&apos;;</span><br><span class="line">4&gt; set newname for datafile 2 to &apos;/oracle/oradata/orcltest/sysaux01.dbf&apos;;</span><br><span class="line">5&gt; set newname for datafile 3 to &apos;/oracle/oradata/orcltest/undotbs01.dbf&apos;;</span><br><span class="line">6&gt; set newname for datafile 4 to &apos;/oracle/oradata/orcltest/users01.dbf&apos;;</span><br><span class="line">7&gt; set newname for datafile 5 to &apos;/oracle/oradata/orcltest/fung01.dbf&apos;;</span><br><span class="line">8&gt; restore database;</span><br><span class="line">9&gt; release channel c1;</span><br><span class="line">10&gt; &#125;</span><br><span class="line"></span><br><span class="line">allocated channel: c1</span><br><span class="line">channel c1: SID=72 device type=DISK</span><br><span class="line"></span><br><span class="line">executing command: SET NEWNAME</span><br><span class="line"></span><br><span class="line">executing command: SET NEWNAME</span><br><span class="line"></span><br><span class="line">executing command: SET NEWNAME</span><br><span class="line"></span><br><span class="line">executing command: SET NEWNAME</span><br><span class="line"></span><br><span class="line">executing command: SET NEWNAME</span><br><span class="line"></span><br><span class="line">Starting restore at 2014-06-28 08:30:41</span><br><span class="line"></span><br><span class="line">channel c1: starting datafile backup set restore</span><br><span class="line">channel c1: specifying datafile(s) to restore from backup set</span><br><span class="line">channel c1: restoring datafile 00001 to /oracle/oradata/orcltest/system01.dbf</span><br><span class="line">channel c1: restoring datafile 00002 to /oracle/oradata/orcltest/sysaux01.dbf</span><br><span class="line">channel c1: restoring datafile 00003 to /oracle/oradata/orcltest/undotbs01.dbf</span><br><span class="line">channel c1: restoring datafile 00004 to /oracle/oradata/orcltest/users01.dbf</span><br><span class="line">channel c1: restoring datafile 00005 to /oracle/oradata/orcltest/fung01.dbf</span><br><span class="line">channel c1: reading from backup piece /oracle/backup/bk_8_1_851410965_ORCL</span><br><span class="line">channel c1: piece handle=/oracle/backup/bk_8_1_851410965_ORCL tag=HOT_DB_BK_LEVEL0</span><br><span class="line">channel c1: restored backup piece 1</span><br><span class="line">channel c1: restore complete, elapsed time: 00:00:25</span><br><span class="line">Finished restore at 2014-06-28 08:31:06</span><br><span class="line"></span><br><span class="line">released channel: c1</span><br></pre></td></tr></table></figure></p>
+<p>注意上述语句，不要执行<code>switch datafile</code>命令，因为我们仅仅需要还原数据文件，recover的动作交由后续创建好了的control file去完成。restore完后，在sid=orcltest上创建控制文件，之后进行恢复。<br><figure class="highlight plain hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br></pre></td><td class="code"><pre><span class="line">SQL&gt; CREATE CONTROLFILE set DATABASE &quot;ORCLTEST&quot; RESETLOGS  ARCHIVELOG</span><br><span class="line">  2      MAXLOGFILES 16</span><br><span class="line">  3      MAXLOGMEMBERS 3</span><br><span class="line">  4      MAXDATAFILES 100</span><br><span class="line">  5      MAXINSTANCES 8</span><br><span class="line">  6      MAXLOGHISTORY 292</span><br><span class="line">  7  LOGFILE</span><br><span class="line">  8    GROUP 1 &apos;/oracle/oradata/orcltest/redo01.log&apos;  SIZE 50M BLOCKSIZE 512,</span><br><span class="line">  9    GROUP 2 &apos;/oracle/oradata/orcltest/redo02.log&apos;  SIZE 50M BLOCKSIZE 512,</span><br><span class="line"> 10    GROUP 3 &apos;/oracle/oradata/orcltest/redo03.log&apos;  SIZE 50M BLOCKSIZE 512</span><br><span class="line"> 11  -- STANDBY LOGFILE</span><br><span class="line"> 12  DATAFILE</span><br><span class="line"> 13    &apos;/oracle/oradata/orcltest/system01.dbf&apos;,</span><br><span class="line"> 14    &apos;/oracle/oradata/orcltest/sysaux01.dbf&apos;,</span><br><span class="line"> 15    &apos;/oracle/oradata/orcltest/undotbs01.dbf&apos;,</span><br><span class="line"> 16    &apos;/oracle/oradata/orcltest/users01.dbf&apos;,</span><br><span class="line"> 17    &apos;/oracle/oradata/orcltest/fung01.dbf&apos;</span><br><span class="line"> 18  CHARACTER SET AL32UTF8</span><br><span class="line"> 19  ;</span><br><span class="line"></span><br><span class="line">Control file created.</span><br></pre></td></tr></table></figure></p>
+<p>创建完成后，数据库会自动进入mount状态，执行recover。<br><figure class="highlight plain hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br></pre></td><td class="code"><pre><span class="line">RMAN&gt; recover database until time &quot;to_date(&apos;2014-07-24 05:20:00&apos;,&apos;yyyy-mm-dd HH24:mi:ss&apos;)&quot;;</span><br><span class="line">Starting recover at 2014-06-28 08:40:33</span><br><span class="line">using channel ORA_DISK_1</span><br><span class="line"></span><br><span class="line">starting media recovery</span><br><span class="line"></span><br><span class="line">archived log for thread 1 with sequence 25 is already on disk as file /oracle/arch/1_25_848109574.arc</span><br><span class="line">archived log for thread 1 with sequence 26 is already on disk as file /oracle/arch/1_26_848109574.arc</span><br><span class="line">archived log for thread 1 with sequence 27 is already on disk as file /oracle/arch/1_27_848109574.arc</span><br><span class="line">archived log for thread 1 with sequence 28 is already on disk as file /oracle/arch/1_28_848109574.arc</span><br><span class="line">archived log for thread 1 with sequence 29 is already on disk as file /oracle/arch/1_29_848109574.arc</span><br><span class="line">archived log for thread 1 with sequence 30 is already on disk as file /oracle/arch/1_30_848109574.arc</span><br><span class="line">archived log for thread 1 with sequence 31 is already on disk as file /oracle/arch/1_31_848109574.arc</span><br><span class="line">archived log for thread 1 with sequence 32 is already on disk as file /oracle/arch/1_32_848109574.arc</span><br><span class="line">archived log for thread 1 with sequence 33 is already on disk as file /oracle/arch/1_33_848109574.arc</span><br><span class="line">archived log for thread 1 with sequence 34 is already on disk as file /oracle/arch/1_34_848109574.arc</span><br><span class="line">archived log file name=/oracle/arch/1_25_848109574.arc thread=1 sequence=25</span><br><span class="line">archived log file name=/oracle/arch/1_26_848109574.arc thread=1 sequence=26</span><br><span class="line">archived log file name=/oracle/arch/1_27_848109574.arc thread=1 sequence=27</span><br><span class="line">archived log file name=/oracle/arch/1_28_848109574.arc thread=1 sequence=28</span><br><span class="line">archived log file name=/oracle/arch/1_29_848109574.arc thread=1 sequence=29</span><br><span class="line">archived log file name=/oracle/arch/1_30_848109574.arc thread=1 sequence=30</span><br><span class="line">archived log file name=/oracle/arch/1_31_848109574.arc thread=1 sequence=31</span><br><span class="line">archived log file name=/oracle/arch/1_32_848109574.arc thread=1 sequence=32</span><br><span class="line">archived log file name=/oracle/arch/1_33_848109574.arc thread=1 sequence=33</span><br><span class="line">archived log file name=/oracle/arch/1_34_848109574.arc thread=1 sequence=34</span><br><span class="line">unable to find archived log</span><br><span class="line">archived log thread=1 sequence=35</span><br><span class="line">RMAN-00571: ===========================================================</span><br><span class="line">RMAN-00569: =============== ERROR MESSAGE STACK FOLLOWS ===============</span><br><span class="line">RMAN-00571: ===========================================================</span><br><span class="line">RMAN-03002: failure of recover command at 06/28/2014 08:40:36</span><br><span class="line">RMAN-06054: media recovery requesting unknown archived log for thread 1 with sequence 35 and starting SCN of 328834</span><br><span class="line">RMAN&gt; sql &apos;alter database open resetlogs&apos;;</span><br><span class="line"></span><br><span class="line">sql statement: alter database open resetlogs</span><br><span class="line">SQL&gt; select dbid,name,open_mode,activation#,created from v$database;</span><br><span class="line"></span><br><span class="line">      DBID NAME      OPEN_MODE            ACTIVATION# CREATED</span><br><span class="line">---------- --------- -------------------- ----------- ---------</span><br><span class="line">1375890310 ORCLTEST  READ WRITE            2598924579 28-JUN-14</span><br></pre></td></tr></table></figure></p>
+<p>对于新库，需要的话可用以下命令创建密码文件。<br><figure class="highlight plain hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">orapwd file=$ORACLE_HOME/dbs/orapw$ORACLE_SID password=oracle entries=5 force=y</span><br></pre></td></tr></table></figure></p>
+<p><b>在以上所有操作中，特别是生产环境下，oracle对所有open resetlogs的操作都有个建议：先备份数据库，在执行修改，修改完成后立即再次执行全备。</b><br>Reference:<br><a href="https://support.oracle.com/epmos/faces/DocumentDisplay?id=224266.1" target="_blank" rel="noopener">ID 224266.1</a><br><a href="https://support.oracle.com/epmos/faces/DocumentDisplay?id=136183.1" target="_blank" rel="noopener">ID 136183.1</a><br><a href="https://support.oracle.com/epmos/faces/DocumentDisplay?id=15390.1" target="_blank" rel="noopener">ID 15390.1</a><br><a href="https://support.oracle.com/epmos/faces/DocumentDisplay?id=18070.1" target="_blank" rel="noopener">ID 18070.1</a><br><a href="http://docs.oracle.com/cd/E11882_01/server.112/e22490/dbnewid.htm" target="_blank" rel="noopener">Oracle® Database Utilities 11g Release 2 (11.2)</a></p>
+
+    
+    </div>
+    
+    <div class="columns is-variable is-1 is-multiline is-mobile">
+    
+        <span class="column is-narrow"><a class="tag is-light article-tag" href="/tags/nid/">#nid</a></span>
+    
+    </div>
+    
+    
+    <div class="columns is-mobile is-multiline article-nav">
+        <span class="column is-12-mobile is-half-desktop  article-nav-prev">
+            
+            <a href="/duplicate-database-with-rman.html">Duplicate Database With RMAN</a>
+            
+        </span>
+        <span class="column is-12-mobile is-half-desktop  article-nav-next">
+            
+            <a href="/oracle-data-pump.html">Oracle Data Pump</a>
+            
+        </span>
+    </div>
+    
+</article>
+
+
+
+
+    </div>
+</section>
+    <footer class="footer">
+    <div class="container">
+        <div class="columns content">
+            <div class="column is-narrow has-text-centered">
+                &copy; 2018 Kong&nbsp;
+                Powered by <a href="http://hexo.io/" target="_blank">Hexo</a> & <a
+                        href="http://github.com/ppoffice/hexo-theme-minos">Minos</a>
+            </div>
+            <div class="column is-hidden-mobile"></div>
+
+            
+            
+        </div>
+    </div>
+</footer>
+    <script src="//cdnjs.cloudflare.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
+<script src="//cdnjs.cloudflare.com/ajax/libs/moment.js/2.22.2/moment-with-locales.min.js"></script>
+
+<!-- test if the browser is outdated -->
+<div id="outdated">
+    <h6>Your browser is out-of-date!</h6>
+    <p>Update your browser to view this website correctly. <a id="btnUpdateBrowser" href="http://outdatedbrowser.com/">Update my browser now </a></p>
+    <p class="last"><a href="#" id="btnCloseUpdateBrowser" title="Close">&times;</a></p>
+</div>
+<script src="//cdnjs.cloudflare.com/ajax/libs/outdated-browser/1.1.5/outdatedbrowser.min.js"></script>
+<script>
+    $(document).ready(function () {
+        // plugin function, place inside DOM ready function
+        outdatedBrowser({
+            bgColor: '#f25648',
+            color: '#ffffff',
+            lowerThan: 'flex'
+        })
+    });
+</script>
+
+<script>
+    window.FontAwesomeConfig = {
+        searchPseudoElements: true
+    }
+    moment.locale("en-AU");
+</script>
+
+
+    
+    
+    
+    
+    
+    
+
+    
+
+
+<script src="/js/script.js"></script>
+
+    
+    <div class="searchbox ins-search">
+    <div class="searchbox-mask"></div>
+    <div class="searchbox-container ins-search-container">
+        <div class="searchbox-input-wrapper">
+            <input type="text" class="searchbox-input ins-search-input" placeholder="Type something..." />
+            <span class="searchbox-close ins-close ins-selectable"><i class="fa fa-times-circle"></i></span>
+        </div>
+        <div class="searchbox-result-wrapper ins-section-wrapper">
+            <div class="ins-section-container"></div>
+        </div>
+    </div>
+</div>
+<script>
+    (function (window) {
+        var INSIGHT_CONFIG = {
+            TRANSLATION: {
+                POSTS: 'Posts',
+                PAGES: 'Pages',
+                CATEGORIES: 'Categories',
+                TAGS: 'Tags',
+                UNTITLED: '(Untitled)',
+            },
+            CONTENT_URL: '/content.json',
+        };
+        window.INSIGHT_CONFIG = INSIGHT_CONFIG;
+    })(window);
+</script>
+<script src="/js/insight.js"></script>
+    
+</body>
+</html>

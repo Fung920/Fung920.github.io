@@ -1,0 +1,258 @@
+<!DOCTYPE html>
+<html class="has-navbar-fixed-top">
+<head>
+    <meta charset="utf-8">
+<title>Virtual Index虚拟索引的使用 - My Wiki</title>
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+
+<link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/outdated-browser/1.1.5/outdatedbrowser.min.css">
+
+
+
+
+
+
+
+
+
+
+<link rel="icon" href="/images/favicon.ico">
+
+
+<link rel="stylesheet" href="//fonts.googleapis.com/css?family=Ovo|Source+Code+Pro">
+<link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/bulma/0.6.2/css/bulma.min.css">
+
+
+
+<link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/highlight.js/9.12.0/styles/github.min.css">
+
+<link rel="stylesheet" href="/css/style.css">
+
+<script defer src="//use.fontawesome.com/releases/v5.0.8/js/all.js"></script>
+
+
+    
+    
+    
+    
+    
+    
+
+    
+
+
+</head>
+<body>
+    
+<nav class="navbar is-transparent is-fixed-top navbar-main" role="navigation" aria-label="main navigation">
+    <div class="container">
+        <div class="navbar-brand">
+            <a class="navbar-item navbar-logo" href="/">
+                
+                    
+                    My Wiki
+                    
+                
+            </a>
+            <div class="navbar-burger">
+                <span></span>
+                <span></span>
+                <span></span>
+            </div>
+        </div>
+        
+        <div class="navbar-menu navbar-start">
+            
+            <a class="navbar-item "
+               href="/">Home</a>
+            
+            <a class="navbar-item "
+               href="/archives">Archives</a>
+            
+            <a class="navbar-item "
+               href="/about">About</a>
+            
+        </div>
+        
+        <div class="navbar-menu navbar-end">
+            
+            <a class="navbar-item search" title="Search" href="javascript:;">
+                <i class="fas fa-search"></i>
+            </a>
+            
+            
+            
+        </div>
+    </div>
+</nav>
+
+    <section class="section">
+    <div class="container">
+    <article class="article content gallery" itemscope itemprop="blogPost">
+    <h1 class="article-title is-size-3 is-size-4-mobile" itemprop="name">
+        
+            Virtual Index虚拟索引的使用
+        
+    </h1>
+    <div class="article-meta columns is-variable is-1 is-multiline is-mobile is-size-7-mobile">
+        <span class="column is-narrow">
+            <time datetime="2013-06-24T16:00:00.000Z" itemprop="datePublished">Jun 24 2013</time>
+        </span>
+        
+        <span class="column is-narrow article-category">
+            <i class="far fa-folder"></i>
+            <a class="article-category-link" href="/categories/oracle/">oracle</a>
+        </span>
+        
+        
+        <span class="column is-narrow">
+            
+            
+            2 minutes read (About 281 words)
+        </span>
+        
+    </div>
+    <div class="article-entry is-size-6-mobile" itemprop="articleBody">
+    
+         <div><span lang="EN-US">    10g</span><span>以后，可以在表中创建虚拟索引，以用来测试</span><span lang="EN-US">SQL</span><span>走索引是否能提高性能。虚拟索引不包含数据，因此不会对数据及存储空间造成影响，基本上作为</span><span lang="EN-US">SQL</span><span>调优的一种手段。测试如下：</span></div>
+<div></div>
+<a id="more"></a>
+<figure class="highlight plain hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br></pre></td><td class="code"><pre><span class="line">SH@linora&gt;</span><br><span class="line">SELECT * FROM sh.sales WHERE quantity_sold &gt; 10000; </span><br><span class="line">Execution Plan </span><br><span class="line">---------------------------------------------------------- </span><br><span class="line">Plan hash value: 1550251865 </span><br><span class="line"></span><br><span class="line">--------------------------------------------------------------------------------------------- </span><br><span class="line">| Id  | Operation           | Name  | Rows  | Bytes | Cost (%CPU)| Time     | Pstart| Pstop | </span><br><span class="line">--------------------------------------------------------------------------------------------- </span><br><span class="line">|   0 | SELECT STATEMENT    |       |     1 |    29 |  4978   (2)| 00:01:00 |       |       | </span><br><span class="line">|   1 |  PARTITION RANGE ALL|       |     1 |    29 |  4978   (2)| 00:01:00 |     1 |    64 | </span><br><span class="line">|*  2 |   TABLE ACCESS FULL | SALES |     1 |    29 |  4978   (2)| 00:01:00 |     1 |    64 | </span><br><span class="line">--------------------------------------------------------------------------------------------- </span><br><span class="line"></span><br><span class="line">Predicate Information (identified by operation id): </span><br><span class="line">--------------------------------------------------- </span><br><span class="line"></span><br><span class="line">    2 - filter(&quot;QUANTITY_SOLD&quot;&gt;10000)</span><br></pre></td></tr></table></figure>
+
+<div><span>    全表扫描，</span><span lang="EN-US">cost</span><span>为</span><span lang="EN-US">4978.</span></div>
+<div>
+<a name="more"></a><span>    创建虚拟索引：</span></div>
+<figure class="highlight plain hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">SH@linora&gt;</span><br><span class="line">ALTER SESSION SET &quot;_use_nosegment_indexes&quot;=TRUE; </span><br><span class="line">CREATE INDEX sh.sales_vi1 ON sh.sales(quantity_sold) NOSEGMENT;</span><br></pre></td></tr></table></figure>
+
+<div><span>再次执行</span><span lang="EN-US">sql</span><span>，查看执行计划</span></div>
+<div></div>
+<figure class="highlight plain hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br></pre></td><td class="code"><pre><span class="line">SH@linora&gt;</span><br><span class="line">SELECT * FROM sh.sales WHERE quantity_sold &gt; 10000; </span><br><span class="line"></span><br><span class="line"> Execution Plan </span><br><span class="line">---------------------------------------------------------- </span><br><span class="line">Plan hash value: 3712353291 </span><br><span class="line"></span><br><span class="line"> ---------------------------------------------------------------------------------------------------------------- </span><br><span class="line">| Id  | Operation                          | Name      | Rows  | Bytes | Cost (%CPU)| Time     | Pstart| Pstop | </span><br><span class="line">---------------------------------------------------------------------------------------------------------------- </span><br><span class="line">|   0 | SELECT STATEMENT                   |           |     1 |    29 |     3   (0)| 00:00:01 |       |       | </span><br><span class="line">|   1 |  TABLE ACCESS BY GLOBAL INDEX ROWID| SALES     |     1 |    29 |     3   (0)| 00:00:01 | ROWID | ROWID | </span><br><span class="line">|*  2 |   INDEX RANGE SCAN                 | SALES_VI1 |     1 |       |     2   (0)| 00:00:01 |       |       | </span><br><span class="line">---------------------------------------------------------------------------------------------------------------- </span><br><span class="line"></span><br><span class="line"> Predicate Information (identified by operation id): </span><br><span class="line">--------------------------------------------------- </span><br><span class="line"></span><br><span class="line">    2 - access(&quot;QUANTITY_SOLD&quot;&gt;10000)</span><br></pre></td></tr></table></figure>
+
+<div><span>    采用了索引扫描，且</span><span lang="EN-US">cost</span><span>降为</span><span lang="EN-US">3.</span></div>
+<div><span>    查看虚拟索引：</span></div>
+<div></div>
+<figure class="highlight plain hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">SELECT   index_owner, index_name </span><br><span class="line">  FROM   dba_ind_columns </span><br><span class="line"> WHERE   index_name NOT LIKE &apos;BIN$%&apos; </span><br><span class="line">MINUS </span><br><span class="line">SELECT   owner, index_name FROM dba_indexes;</span><br></pre></td></tr></table></figure>
+
+<div><span>删除方法跟正常索引删除一样：</span></div>
+<div></div>
+<figure class="highlight plain hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">SH@linora&gt;</span><br><span class="line">drop index sales_vi1; </span><br><span class="line">Index dropped.</span><br></pre></td></tr></table></figure>
+
+
+    
+    </div>
+    
+    <div class="columns is-variable is-1 is-multiline is-mobile">
+    
+        <span class="column is-narrow"><a class="tag is-light article-tag" href="/tags/tuning/">#tuning</a></span>
+    
+    </div>
+    
+    
+    <div class="columns is-mobile is-multiline article-nav">
+        <span class="column is-12-mobile is-half-desktop  article-nav-prev">
+            
+            <a href="/clustering-factor.html">Clustering Factor聚簇因子</a>
+            
+        </span>
+        <span class="column is-12-mobile is-half-desktop  article-nav-next">
+            
+            <a href="/detect-and-correct-corruption-in-oracle.html">Detect And Correct Corruption in Oracle</a>
+            
+        </span>
+    </div>
+    
+</article>
+
+
+
+
+    </div>
+</section>
+    <footer class="footer">
+    <div class="container">
+        <div class="columns content">
+            <div class="column is-narrow has-text-centered">
+                &copy; 2018 Kong&nbsp;
+                Powered by <a href="http://hexo.io/" target="_blank">Hexo</a> & <a
+                        href="http://github.com/ppoffice/hexo-theme-minos">Minos</a>
+            </div>
+            <div class="column is-hidden-mobile"></div>
+
+            
+            
+        </div>
+    </div>
+</footer>
+    <script src="//cdnjs.cloudflare.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
+<script src="//cdnjs.cloudflare.com/ajax/libs/moment.js/2.22.2/moment-with-locales.min.js"></script>
+
+<!-- test if the browser is outdated -->
+<div id="outdated">
+    <h6>Your browser is out-of-date!</h6>
+    <p>Update your browser to view this website correctly. <a id="btnUpdateBrowser" href="http://outdatedbrowser.com/">Update my browser now </a></p>
+    <p class="last"><a href="#" id="btnCloseUpdateBrowser" title="Close">&times;</a></p>
+</div>
+<script src="//cdnjs.cloudflare.com/ajax/libs/outdated-browser/1.1.5/outdatedbrowser.min.js"></script>
+<script>
+    $(document).ready(function () {
+        // plugin function, place inside DOM ready function
+        outdatedBrowser({
+            bgColor: '#f25648',
+            color: '#ffffff',
+            lowerThan: 'flex'
+        })
+    });
+</script>
+
+<script>
+    window.FontAwesomeConfig = {
+        searchPseudoElements: true
+    }
+    moment.locale("en-AU");
+</script>
+
+
+    
+    
+    
+    
+    
+    
+
+    
+
+
+<script src="/js/script.js"></script>
+
+    
+    <div class="searchbox ins-search">
+    <div class="searchbox-mask"></div>
+    <div class="searchbox-container ins-search-container">
+        <div class="searchbox-input-wrapper">
+            <input type="text" class="searchbox-input ins-search-input" placeholder="Type something..." />
+            <span class="searchbox-close ins-close ins-selectable"><i class="fa fa-times-circle"></i></span>
+        </div>
+        <div class="searchbox-result-wrapper ins-section-wrapper">
+            <div class="ins-section-container"></div>
+        </div>
+    </div>
+</div>
+<script>
+    (function (window) {
+        var INSIGHT_CONFIG = {
+            TRANSLATION: {
+                POSTS: 'Posts',
+                PAGES: 'Pages',
+                CATEGORIES: 'Categories',
+                TAGS: 'Tags',
+                UNTITLED: '(Untitled)',
+            },
+            CONTENT_URL: '/content.json',
+        };
+        window.INSIGHT_CONFIG = INSIGHT_CONFIG;
+    })(window);
+</script>
+<script src="/js/insight.js"></script>
+    
+</body>
+</html>

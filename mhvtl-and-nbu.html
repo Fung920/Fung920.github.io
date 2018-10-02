@@ -1,0 +1,267 @@
+<!DOCTYPE html>
+<html class="has-navbar-fixed-top">
+<head>
+    <meta charset="utf-8">
+<title>MHVTL and NBU - My Wiki</title>
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+
+<link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/outdated-browser/1.1.5/outdatedbrowser.min.css">
+
+
+<meta name="description" content="how to setup mhvtl in rhel6.5 and using nbu">
+
+
+
+<meta name="keywords" content="vtl,nbu">
+
+
+
+
+
+
+
+<link rel="icon" href="/images/favicon.ico">
+
+
+<link rel="stylesheet" href="//fonts.googleapis.com/css?family=Ovo|Source+Code+Pro">
+<link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/bulma/0.6.2/css/bulma.min.css">
+
+
+
+<link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/highlight.js/9.12.0/styles/github.min.css">
+
+<link rel="stylesheet" href="/css/style.css">
+
+<script defer src="//use.fontawesome.com/releases/v5.0.8/js/all.js"></script>
+
+
+    
+    
+    
+    
+    
+    
+
+    
+
+
+</head>
+<body>
+    
+<nav class="navbar is-transparent is-fixed-top navbar-main" role="navigation" aria-label="main navigation">
+    <div class="container">
+        <div class="navbar-brand">
+            <a class="navbar-item navbar-logo" href="/">
+                
+                    
+                    My Wiki
+                    
+                
+            </a>
+            <div class="navbar-burger">
+                <span></span>
+                <span></span>
+                <span></span>
+            </div>
+        </div>
+        
+        <div class="navbar-menu navbar-start">
+            
+            <a class="navbar-item "
+               href="/">Home</a>
+            
+            <a class="navbar-item "
+               href="/archives">Archives</a>
+            
+            <a class="navbar-item "
+               href="/about">About</a>
+            
+        </div>
+        
+        <div class="navbar-menu navbar-end">
+            
+            <a class="navbar-item search" title="Search" href="javascript:;">
+                <i class="fas fa-search"></i>
+            </a>
+            
+            
+            
+        </div>
+    </div>
+</nav>
+
+    <section class="section">
+    <div class="container">
+    <article class="article content gallery" itemscope itemprop="blogPost">
+    <h1 class="article-title is-size-3 is-size-4-mobile" itemprop="name">
+        
+            MHVTL and NBU
+        
+    </h1>
+    <div class="article-meta columns is-variable is-1 is-multiline is-mobile is-size-7-mobile">
+        <span class="column is-narrow">
+            <time datetime="2015-07-20T03:19:54.000Z" itemprop="datePublished">Jul 19 2015</time>
+        </span>
+        
+        <span class="column is-narrow article-category">
+            <i class="far fa-folder"></i>
+            <a class="article-category-link" href="/categories/linux/">linux</a>
+        </span>
+        
+        
+        <span class="column is-narrow">
+            
+            
+            19 minutes read (About 2801 words)
+        </span>
+        
+    </div>
+    <div class="article-entry is-size-6-mobile" itemprop="articleBody">
+    
+        <p>MHVTL 为开源虚拟带库软件，下载地址为：<a href="https://sites.google.com/site/linuxvtl2" target="_blank" rel="noopener">MHVTL</a>，搭配上gui可模拟多款厂商带库，我唯一管理过的带库为HP MSL6000，而备份软件则为Netbackup。本文以这两种产品为例，对一些简单的配置进行说明。<br><a id="more"></a></p>
+<h3 id="1、安装MHVTL"><a href="#1、安装MHVTL" class="headerlink" title="1、安装MHVTL"></a>1、安装MHVTL</h3><p>OS版本为RHEL6.5，以最小安装，通过配置yum本地源安装其他所需的包，其中，有三个rpm包需要自行下载，可从<a href="http://rpmfind.net/linux/rpm2html/search.php?query=lzo" target="_blank" rel="noopener">http://rpmfind.net/linux/rpm2html/search.php?query=lzo</a>这里搜索对应版本或者在本站下载：<a href="/download/mhvtl/rpm/lzo-2.03-3.1.el6_5.1.x86_64.rpm">lzo-2.03-3.1.el6_5.1.x86_64.rpm</a>,<a href="/download/mhvtl/rpm/lzo-devel-2.03-3.1.el6_5.1.x86_64.rpm">lzo-devel-2.03-3.1.el6_5.1.x86_64.rpm</a>,<a href="/download/mhvtl/rpm/lzo-minilzo-2.03-3.1.el6_5.1.x86_64.rpm">lzo-minilzo-2.03-3.1.el6_5.1.x86_64.rpm</a></p>
+<h4 id="1-1关闭firewall和selinux"><a href="#1-1关闭firewall和selinux" class="headerlink" title="1.1关闭firewall和selinux"></a>1.1关闭firewall和selinux</h4><figure class="highlight plain hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br></pre></td><td class="code"><pre><span class="line">#关闭防火墙</span><br><span class="line">[root@mhvtl ~]# /etc/init.d/iptables stop</span><br><span class="line">iptables: Setting chains to policy ACCEPT: filter          [  OK  ]</span><br><span class="line">iptables: Flushing firewall rules:                         [  OK  ]</span><br><span class="line">iptables: Unloading modules:                               [  OK  ]</span><br><span class="line">[root@mhvtl ~]# /etc/init.d/ip6tables stop</span><br><span class="line">ip6tables: Setting chains to policy ACCEPT: filter         [  OK  ]</span><br><span class="line">ip6tables: Flushing firewall rules:                        [  OK  ]</span><br><span class="line">ip6tables: Unloading modules:                              [  OK  ]</span><br><span class="line">[root@mhvtl ~]# chkconfig iptables off</span><br><span class="line">[root@mhvtl ~]# chkconfig ip6tables off</span><br><span class="line">#关闭selinux</span><br><span class="line">[root@mhvtl ~]# sed -i &apos;/^SELINUX/s/enforcing/disabled/g&apos; /etc/selinux/config</span><br><span class="line">[root@mhvtl ~]# cat /etc/selinux/config </span><br><span class="line"># This file controls the state of SELinux on the system.</span><br><span class="line"># SELINUX= can take one of these three values:</span><br><span class="line">#     enforcing - SELinux security policy is enforced.</span><br><span class="line">#     permissive - SELinux prints warnings instead of enforcing.</span><br><span class="line">#     disabled - No SELinux policy is loaded.</span><br><span class="line">SELINUX=disabled</span><br><span class="line"># SELINUXTYPE= can take one of these two values:</span><br><span class="line">#     targeted - Targeted processes are protected,</span><br><span class="line">#     mls - Multi Level Security protection.</span><br><span class="line">SELINUXTYPE=targeted </span><br><span class="line">[root@mhvtl ~]# shutdown -ry 0</span><br></pre></td></tr></table></figure>
+<h4 id="1-2配置yum本地源"><a href="#1-2配置yum本地源" class="headerlink" title="1.2配置yum本地源"></a>1.2配置yum本地源</h4><figure class="highlight plain hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">[Server] </span><br><span class="line">name=Server </span><br><span class="line">baseurl=file:///mnt/Server </span><br><span class="line">enabled=1 </span><br><span class="line">gpgcheck=0</span><br></pre></td></tr></table></figure>
+<p>挂载光盘，安装所需软件包<br><figure class="highlight plain hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br></pre></td><td class="code"><pre><span class="line">[root@mhvtl ~]# mount /dev/sr1 /mnt</span><br><span class="line">mount: block device /dev/sr1 is write-protected, mounting read-only</span><br><span class="line">[root@mhvtl ~]# yum -y install zlib-devel mtx mt-st lsscsi kernel-devel kernel-headers sg3_utils gcc perl unzip</span><br><span class="line">[root@mhvtl worktmp]# ls -ltr</span><br><span class="line">total 708</span><br><span class="line">-rw-r--r--. 1 root root 283656 Jul 16 14:12 mhvtl-2015-04-14.tgz</span><br><span class="line">-rw-r--r--. 1 root root  12876 Jul 16 15:14 lzo-minilzo-2.03-3.1.el6_5.1.x86_64.rpm</span><br><span class="line">-rw-r--r--. 1 root root  31784 Jul 16 15:17 lzo-devel-2.03-3.1.el6_5.1.x86_64.rpm</span><br><span class="line">-rw-r--r--. 1 root root  56308 Jul 16 15:20 lzo-2.03-3.1.el6_5.1.x86_64.rpm</span><br><span class="line">-rw-r--r--. 1 root root 329355 Jul 16 15:54 mhvtl-gui-master.zip</span><br><span class="line">[root@mhvtl worktmp]# rpm -ivh *.rpm</span><br><span class="line">warning: lzo-2.03-3.1.el6_5.1.x86_64.rpm: Header V3 RSA/SHA1 Signature, key ID c105b9de: NOKEY</span><br><span class="line">Preparing...                ########################################### [100%]</span><br><span class="line">   1:lzo-minilzo            ########################################### [ 33%]</span><br><span class="line">   2:lzo                    ########################################### [ 67%]</span><br><span class="line">   3:lzo-devel              ########################################### [100%]</span><br><span class="line">[root@mhvtl worktmp]#</span><br></pre></td></tr></table></figure></p>
+<h4 id="1-3编译安装MHVTL"><a href="#1-3编译安装MHVTL" class="headerlink" title="1.3编译安装MHVTL"></a>1.3编译安装MHVTL</h4><p>创建vtl相关用户：<br><figure class="highlight plain hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">[root@mhvtl mhvtl-1.5]# groupadd vtl -g 600</span><br><span class="line">[root@mhvtl mhvtl-1.5]# useradd -g vtl -u 600 vtl</span><br><span class="line">[root@mhvtl mhvtl-1.5]# echo &quot;oracle&quot; | passwd vtl --stdin &gt; /dev/null 2&gt;&amp;1</span><br></pre></td></tr></table></figure></p>
+<p>编译安装vtl<br><figure class="highlight plain hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line">[root@mhvtl mhvtl-1.5]# pwd</span><br><span class="line">/worktmp/mhvtl-1.5</span><br><span class="line">[root@mhvtl mhvtl-1.5]# cd kernel/</span><br><span class="line">[root@mhvtl kernel]# make</span><br><span class="line">[root@mhvtl kernel]# make install</span><br><span class="line">[root@mhvtl kernel]#</span><br><span class="line">[root@mhvtl kernel]# cd ../</span><br><span class="line">[root@mhvtl mhvtl-1.5]# make </span><br><span class="line">[root@mhvtl mhvtl-1.5]# make install</span><br></pre></td></tr></table></figure></p>
+<p>启动服务，并且查看虚拟磁带：<br><figure class="highlight plain hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br></pre></td><td class="code"><pre><span class="line">[root@mhvtl mhvtl-1.5]# mkdir -p /opt/mhvtl</span><br><span class="line">[root@mhvtl mhvtl-1.5]# chown vtl:vtl /opt/mhvtl/</span><br><span class="line">[root@mhvtl mhvtl-1.5]# /etc/init.d/mhvtl start</span><br><span class="line">vtllibrary process PID is 3722</span><br><span class="line">vtllibrary process PID is 3725</span><br><span class="line">[root@mhvtl mhvtl-1.5]# ll /opt/mhvtl/</span><br><span class="line">total 288</span><br><span class="line">drwxrwx--- 2 vtl vtl 4096 Jul 20 12:39 CLN101L4</span><br><span class="line">drwxrwx--- 2 vtl vtl 4096 Jul 20 12:39 CLN102L5</span><br><span class="line">drwxrwx--- 2 vtl vtl 4096 Jul 20 12:39 CLN303TA</span><br><span class="line">drwxrwx--- 2 vtl vtl 4096 Jul 20 12:39 E01001L4</span><br><span class="line">drwxrwx--- 2 vtl vtl 4096 Jul 20 12:39 E01002L4</span><br><span class="line">drwxrwx--- 2 vtl vtl 4096 Jul 20 12:39 E01003L4</span><br><span class="line">drwxrwx--- 2 vtl vtl 4096 Jul 20 12:39 E01004L4</span><br><span class="line">[root@mhvtl mhvtl-1.5]# lsscsi -g</span><br><span class="line">[0:0:0:0]    cd/dvd  VBOX     CD-ROM           1.0   /dev/sr0   /dev/sg0</span><br><span class="line">[0:0:1:0]    cd/dvd  VBOX     CD-ROM           1.0   /dev/sr1   /dev/sg1</span><br><span class="line">[1:0:0:0]    cd/dvd  VBOX     CD-ROM           1.0   /dev/sr2   /dev/sg2</span><br><span class="line">[2:0:0:0]    disk    ATA      VBOX HARDDISK    1.0   /dev/sda   /dev/sg3</span><br><span class="line">[3:0:0:0]    mediumx STK      L700             0105  /dev/sch0  /dev/sg12</span><br><span class="line">[3:0:1:0]    tape    IBM      ULT3580-TD5      0105  /dev/st0   /dev/sg4</span><br><span class="line">[3:0:2:0]    tape    IBM      ULT3580-TD5      0105  /dev/st1   /dev/sg5</span><br><span class="line">[3:0:3:0]    tape    IBM      ULT3580-TD4      0105  /dev/st2   /dev/sg6</span><br><span class="line">[3:0:4:0]    tape    IBM      ULT3580-TD4      0105  /dev/st3   /dev/sg7</span><br><span class="line">[3:0:8:0]    mediumx STK      L80              0105  /dev/sch1  /dev/sg13</span><br><span class="line">[3:0:9:0]    tape    STK      T10000B          0105  /dev/st4   /dev/sg8</span><br><span class="line">[3:0:10:0]   tape    STK      T10000B          0105  /dev/st5   /dev/sg9</span><br><span class="line">[3:0:11:0]   tape    STK      T10000B          0105  /dev/st6   /dev/sg10</span><br><span class="line">[3:0:12:0]   tape    STK      T10000B          0105  /dev/st7   /dev/sg11</span><br></pre></td></tr></table></figure></p>
+<p>从lssci可以看到，默认配置是两台带库，STK的L700和STK的L80。我们能够通过gui进行添加和删除带库，但最后一个带库不能被删除。</p>
+<h3 id="2、GUI配置"><a href="#2、GUI配置" class="headerlink" title="2、GUI配置"></a>2、GUI配置</h3><p>GUI下载及安装说明：<a href="https://github.com/walterfrs/mhvtl-gui" target="_blank" rel="noopener">https://github.com/walterfrs/mhvtl-gui</a>，也可以从本站下载：<a href="/download/mhvtl/gui/mhvtl-gui-master.zip">MHVL-GUI</a>。</p>
+<h4 id="2-1-设置http"><a href="#2-1-设置http" class="headerlink" title="2.1. 设置http"></a>2.1. 设置http</h4><figure class="highlight plain hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br></pre></td><td class="code"><pre><span class="line">[root@mhvtl mhvtl-gui-master]# pwd</span><br><span class="line">/worktmp/mhvtl-gui-master</span><br><span class="line">[root@mhvtl mhvtl-gui-master]# ls -l</span><br><span class="line">total 64</span><br><span class="line">-rw-r--r-- 1 root root  1150 Nov 28  2012 favicon.ico</span><br><span class="line">-rwxr-xr-x 1 root root   750 Nov 28  2012 go.php</span><br><span class="line">drwxr-xr-x 3 root root 12288 Nov 28  2012 html</span><br><span class="line">-rw-r--r-- 1 root root   343 Nov 28  2012 index.php</span><br><span class="line">-rw-r--r-- 1 root root 18006 Nov 28  2012 LICENSE</span><br><span class="line">-rw-r--r-- 1 root root  2961 Nov 28  2012 login.php</span><br><span class="line">-rw-r--r-- 1 root root  2379 Nov 28  2012 mhvtl.cfg.db</span><br><span class="line">-rw-r--r-- 1 root root  2931 Nov 28  2012 README</span><br><span class="line">drwxr-xr-x 2 root root  4096 Nov 28  2012 scripts</span><br><span class="line">-rw-r--r-- 1 root root    14 Nov 28  2012 version</span><br><span class="line">[root@mhvtl mhvtl-gui-master]# yum install httpd -y</span><br><span class="line">[root@mhvtl mhvtl-gui-master]# chkconfig httpd on</span><br><span class="line">[root@mhvtl mhvtl-gui-master]# cp -r * /var/www/html/</span><br></pre></td></tr></table></figure>
+<h4 id="2-2-设置GUI"><a href="#2-2-设置GUI" class="headerlink" title="2.2.设置GUI"></a>2.2.设置GUI</h4><figure class="highlight plain hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">[root@mhvtl mhvtl-gui-master]# echo &quot;apache ALL=(ALL) NOPASSWD: ALL&quot; &gt;&gt;/etc/sudoers</span><br></pre></td></tr></table></figure>
+<p>屏蔽掉/et/sudoers中的”Defaults requiretty”<br><figure class="highlight plain hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">[root@mhvtl mhvtl-gui-master]# grep &apos;Defaults    requiretty&apos; /etc/sudoers</span><br><span class="line">Defaults    requiretty</span><br><span class="line">[root@mhvtl mhvtl-gui-master]# sed -i &apos;/^Defaults    requiretty/s/^/#/g&apos; /etc/sudoers</span><br><span class="line">[root@mhvtl mhvtl-gui-master]# grep &apos;Defaults    requiretty&apos; /etc/sudoers</span><br><span class="line">#Defaults    requiretty</span><br></pre></td></tr></table></figure></p>
+<p>安装所需rpm包：<br><figure class="highlight plain hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">[root@mhvtl mhvtl-gui-master]# yum install php sysstat git iscsi-initiator-utils* scsi-target-utils -y</span><br><span class="line">[root@mhvtl mhvtl-gui-master]# yum groupinstall &quot;Desktop&quot; -y</span><br></pre></td></tr></table></figure></p>
+<p>配置html网站的alias,将如下内容添加到<code>/etc/httpd/conf/httpd.conf</code><br><figure class="highlight plain hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line">Alias /mhvtl &quot;/var/www/html/mhvtl&quot;</span><br><span class="line">&lt;Directory &quot;/var/www/html/mhvtl&quot;&gt;</span><br><span class="line">   Options None</span><br><span class="line">   AllowOverride None</span><br><span class="line">   Order allow,deny</span><br><span class="line">   Allow from all</span><br><span class="line">&lt;/Directory&gt;</span><br></pre></td></tr></table></figure></p>
+<p>创建所需目录<br><figure class="highlight plain hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">[root@mhvtl mhvtl-gui-master]# mkdir -p /var/www/html/mhvtl</span><br></pre></td></tr></table></figure></p>
+<p>OK，httpd服务，并测试连接：<br><figure class="highlight plain hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">[root@mhvtl mhvtl-gui-master]# /etc/init.d/httpd restart</span><br><span class="line">Stopping httpd:                                            [FAILED]</span><br><span class="line">Starting httpd: httpd: apr_sockaddr_info_get() failed for mhvtl</span><br><span class="line">httpd: Could not reliably determine the server&apos;s fully qualified domain name, using 127.0.0.1 for ServerName</span><br><span class="line">                                                           [  OK  ]</span><br></pre></td></tr></table></figure></p>
+<p>上述报错是忘记在<code>/etc/hosts</code>添加主机名及IP了，添加后重启httpd服务正常。<br><img src="/images/mhvtl-gui1.png" alt="mhvtl-gui1"><br>默认密码为mhvtl<br><img src="/images/mhvtl-gui2.png" alt="mhvtl-gui2"><br>图中红框处为默认两台带库，下面开始配置自己的带库。   </p>
+<h3 id="3、配置带库及iscsi-target"><a href="#3、配置带库及iscsi-target" class="headerlink" title="3、配置带库及iscsi target"></a>3、配置带库及iscsi target</h3><p>点击setup=&gt;Remove,选中要删除的带库，同时删除磁带：<br><img src="/images/rm-lib1.png" alt="rm-lib1"><br>完成后，因为最后一个带库不能被删除，因此，添加一个我们所需的带库，然后再删除默认带库。<br>点击setup=&gt;Add=&gt;Standard=&gt;Next，在brand选中HP，最后我的配置如下，只选了LTO3的磁带<br><img src="/images/add-lib1.png" alt="add-lib1"><br>然后可以将默认磁带库删除了。同时，在vtl主机端可以看到设备类型：<br><figure class="highlight plain hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br></pre></td><td class="code"><pre><span class="line">[root@mhvtl html]# cat /etc/mhvtl/device.conf</span><br><span class="line"></span><br><span class="line">VERSION: 5</span><br><span class="line"></span><br><span class="line"># VPD page format:</span><br><span class="line"># &lt;page #&gt; &lt;Length&gt; &lt;x&gt; &lt;x+1&gt;... &lt;x+n&gt;</span><br><span class="line"># NAA format is an 8 hex byte value seperated by &apos;:&apos;</span><br><span class="line"># Note: NAA is part of inquiry VPD 0x83</span><br><span class="line">#</span><br><span class="line"># Each &apos;record&apos; is separated by one (or more) blank lines.</span><br><span class="line"># Each &apos;record&apos; starts at column 1</span><br><span class="line"># Serial num max len is 10.</span><br><span class="line"># Compression: factor X enabled 0|1</span><br><span class="line">#     Where X is zlib compression factor        1 = Fastest compression</span><br><span class="line">#                                               9 = Best compression</span><br><span class="line">#     enabled 0 == off, 1 == on</span><br><span class="line">#</span><br><span class="line"># fifo: /var/tmp/mhvtl</span><br><span class="line"># If enabled, data must be read from fifo, otherwise daemon will block</span><br><span class="line"># trying to write.</span><br><span class="line"># e.g. cat /var/tmp/mhvtl (in another terminal)</span><br><span class="line"></span><br><span class="line">Library: 50 CHANNEL: 1 TARGET: 00 LUN: 00</span><br><span class="line"> Vendor identification: HP</span><br><span class="line"> Product identification: MSL6000 Series	--带库型号</span><br><span class="line"> Product revision level: 2.00</span><br><span class="line"> Unit serial number: 80000050</span><br><span class="line"> NAA: 50:11:22:33:ab:1:00:00</span><br><span class="line"> Home directory: /opt/mhvtl</span><br><span class="line"> Backoff: 400</span><br><span class="line"></span><br><span class="line">Drive: 51 CHANNEL: 1 TARGET: 00 LUN: 01</span><br><span class="line"> Library ID: 50 Slot: 01</span><br><span class="line"> Vendor identification: HP</span><br><span class="line"> Product identification: Ultrium 3-SCSI	--driver型号</span><br><span class="line"> Product revision level: N11G</span><br><span class="line"> Unit serial number: 80000051</span><br><span class="line"> NAA: 50:11:22:33:ab:1:00:01</span><br><span class="line"> Compression: factor 1 enabled 1</span><br><span class="line"> Compression type: lzo</span><br><span class="line"> Backoff: 400</span><br><span class="line">...</span><br></pre></td></tr></table></figure></p>
+<p>最后状态如图：<br><img src="/images/add-lib2.png" alt="add-lib2"><br>可以看到，iscsi target是offline的状态，下面开始配置iscsi target:<br>点击iscsi，将打叉的服务全部安装或enable<br><img src="/images/iscsi-setup1.png" alt="iscsi-setup1"><br>最后状态如图：<br><img src="/images/iscsi-setup2.png" alt="iscsi-setup2"><br>配置iscsi target，点击new，然后点击create，名字可以自己取，如下图：<br><img src="/images/iscsi-setup3.png" alt="iscsi-setup3"><br>至此，gui界面配置完毕，在vtl主机端，可以看到iscsi target：<br><figure class="highlight plain hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br></pre></td><td class="code"><pre><span class="line">[root@mhvtl html]# tgtadm --lld iscsi --op show --mode target</span><br><span class="line">Target 1: iqn.1994-05.com.redhat:mhvtl:mhvtl:tgt:1</span><br><span class="line">    System information:</span><br><span class="line">        Driver: iscsi</span><br><span class="line">        State: ready</span><br><span class="line">    I_T nexus information:</span><br><span class="line">    LUN information:</span><br><span class="line">        LUN: 0</span><br><span class="line">            Type: controller</span><br><span class="line">            SCSI ID: IET     00010000</span><br><span class="line">            SCSI SN: beaf10</span><br><span class="line">            Size: 0 MB, Block size: 1</span><br><span class="line">            Online: Yes</span><br><span class="line">            Removable media: No</span><br><span class="line">            Prevent removal: No</span><br><span class="line">            Readonly: No</span><br><span class="line">            Backing store type: null</span><br><span class="line">            Backing store path: None</span><br><span class="line">            Backing store flags: </span><br><span class="line">    Account information:</span><br><span class="line">    ACL information:</span><br></pre></td></tr></table></figure></p>
+<p>最后，尚须手动添加磁带机及drivers信息到iscsi target中：<br><figure class="highlight plain hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line">[root@mhvtl html]# lsscsi -g</span><br><span class="line">[0:0:0:0]    cd/dvd  VBOX     CD-ROM           1.0   /dev/sr0   /dev/sg0</span><br><span class="line">[0:0:1:0]    cd/dvd  VBOX     CD-ROM           1.0   /dev/sr1   /dev/sg1</span><br><span class="line">[1:0:0:0]    cd/dvd  VBOX     CD-ROM           1.0   /dev/sr2   /dev/sg2</span><br><span class="line">[2:0:0:0]    disk    ATA      VBOX HARDDISK    1.0   /dev/sda   /dev/sg3</span><br><span class="line">[3:1:0:0]    mediumx HP       MSL6000 Series   2.00  /dev/sch0  /dev/sg8</span><br><span class="line">[3:1:0:1]    tape    HP       Ultrium 3-SCSI   N11G  /dev/st0   /dev/sg4</span><br><span class="line">[3:1:0:2]    tape    HP       Ultrium 3-SCSI   N11G  /dev/st1   /dev/sg5</span><br><span class="line">[3:1:0:3]    tape    HP       Ultrium 3-SCSI   N11G  /dev/st2   /dev/sg6</span><br><span class="line">[3:1:0:4]    tape    HP       Ultrium 3-SCSI   N11G  /dev/st3   /dev/sg7</span><br></pre></td></tr></table></figure></p>
+<p>将标记有HP的设备信息写入<code>/etc/tgt/targets.conf</code>，如下：<br><figure class="highlight plain hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line">&lt;target iqn.1994-05.com.redhat:mhvtl:mhvtl:tgt:1&gt;</span><br><span class="line">backing-store /dev/sg8</span><br><span class="line">backing-store /dev/sg4</span><br><span class="line">backing-store /dev/sg5</span><br><span class="line">backing-store /dev/sg6</span><br><span class="line">backing-store /dev/sg7</span><br><span class="line">device-type pt</span><br><span class="line">bs-type sg</span><br><span class="line">&lt;/target&gt;</span><br><span class="line">initiator-address ALL</span><br></pre></td></tr></table></figure></p>
+<p>重启iscsi target服务，并且验证<br><figure class="highlight plain hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br><span class="line">69</span><br><span class="line">70</span><br><span class="line">71</span><br><span class="line">72</span><br><span class="line">73</span><br><span class="line">74</span><br><span class="line">75</span><br><span class="line">76</span><br><span class="line">77</span><br><span class="line">78</span><br><span class="line">79</span><br><span class="line">80</span><br><span class="line">81</span><br><span class="line">82</span><br><span class="line">83</span><br><span class="line">84</span><br><span class="line">85</span><br><span class="line">86</span><br></pre></td><td class="code"><pre><span class="line">[root@mhvtl html]# /etc/init.d/tgtd restart</span><br><span class="line">Stopping SCSI target daemon:                               [  OK  ]</span><br><span class="line">Starting SCSI target daemon:                               [  OK  ]</span><br><span class="line">[root@mhvtl html]# chkconfig tgtd on</span><br><span class="line">[root@mhvtl html]# tgtadm --lld iscsi --op show --mode target</span><br><span class="line">Target 1: iqn.1994-05.com.redhat:mhvtl:mhvtl:tgt:1</span><br><span class="line">    System information:</span><br><span class="line">        Driver: iscsi</span><br><span class="line">        State: ready</span><br><span class="line">    I_T nexus information:</span><br><span class="line">    LUN information:</span><br><span class="line">        LUN: 0</span><br><span class="line">            Type: controller</span><br><span class="line">            SCSI ID: IET     00010000</span><br><span class="line">            SCSI SN: beaf10</span><br><span class="line">            Size: 0 MB, Block size: 1</span><br><span class="line">            Online: Yes</span><br><span class="line">            Removable media: No</span><br><span class="line">            Prevent removal: No</span><br><span class="line">            Readonly: No</span><br><span class="line">            Backing store type: null</span><br><span class="line">            Backing store path: None</span><br><span class="line">            Backing store flags: </span><br><span class="line">        LUN: 1</span><br><span class="line">            Type: passthrough</span><br><span class="line">            SCSI ID: IET     00010001</span><br><span class="line">            SCSI SN: beaf11</span><br><span class="line">            Size: 0 MB, Block size: 1</span><br><span class="line">            Online: Yes</span><br><span class="line">            Removable media: No</span><br><span class="line">            Prevent removal: No</span><br><span class="line">            Readonly: No</span><br><span class="line">            Backing store type: sg</span><br><span class="line">            Backing store path: /dev/sg4</span><br><span class="line">            Backing store flags: </span><br><span class="line">        LUN: 2</span><br><span class="line">            Type: passthrough</span><br><span class="line">            SCSI ID: IET     00010002</span><br><span class="line">            SCSI SN: beaf12</span><br><span class="line">            Size: 0 MB, Block size: 1</span><br><span class="line">            Online: Yes</span><br><span class="line">            Removable media: No</span><br><span class="line">            Prevent removal: No</span><br><span class="line">            Readonly: No</span><br><span class="line">            Backing store type: sg</span><br><span class="line">            Backing store path: /dev/sg5</span><br><span class="line">            Backing store flags: </span><br><span class="line">        LUN: 3</span><br><span class="line">            Type: passthrough</span><br><span class="line">            SCSI ID: IET     00010003</span><br><span class="line">            SCSI SN: beaf13</span><br><span class="line">            Size: 0 MB, Block size: 1</span><br><span class="line">            Online: Yes</span><br><span class="line">            Removable media: No</span><br><span class="line">            Prevent removal: No</span><br><span class="line">            Readonly: No</span><br><span class="line">            Backing store type: sg</span><br><span class="line">            Backing store path: /dev/sg6</span><br><span class="line">            Backing store flags: </span><br><span class="line">        LUN: 4</span><br><span class="line">            Type: passthrough</span><br><span class="line">            SCSI ID: IET     00010004</span><br><span class="line">            SCSI SN: beaf14</span><br><span class="line">            Size: 0 MB, Block size: 1</span><br><span class="line">            Online: Yes</span><br><span class="line">            Removable media: No</span><br><span class="line">            Prevent removal: No</span><br><span class="line">            Readonly: No</span><br><span class="line">            Backing store type: sg</span><br><span class="line">            Backing store path: /dev/sg7</span><br><span class="line">            Backing store flags: </span><br><span class="line">        LUN: 5</span><br><span class="line">            Type: passthrough</span><br><span class="line">            SCSI ID: IET     00010005</span><br><span class="line">            SCSI SN: beaf15</span><br><span class="line">            Size: 0 MB, Block size: 1</span><br><span class="line">            Online: Yes</span><br><span class="line">            Removable media: No</span><br><span class="line">            Prevent removal: No</span><br><span class="line">            Readonly: No</span><br><span class="line">            Backing store type: sg</span><br><span class="line">            Backing store path: /dev/sg8</span><br><span class="line">            Backing store flags: </span><br><span class="line">    Account information:</span><br><span class="line">    ACL information:</span><br><span class="line">        ALL</span><br></pre></td></tr></table></figure></p>
+<h3 id="4、windows-server端配置iscsi"><a href="#4、windows-server端配置iscsi" class="headerlink" title="4、windows server端配置iscsi"></a>4、windows server端配置iscsi</h3><p>本例中，NBU服务器为windows2008r2，配置好主机名及etc/hosts后，设置发现iscsi，如下图，在发现门户中输入虚拟带库IP地址<br><img src="/images/win-iscsi1.png" alt="win-iscsi1"><br>然后在目标中连接目标iscsi target。<br><img src="/images/win-iscsi2.png" alt="win-iscsi2"><br>此时，在设备管理器中能够发现磁带库驱动及磁带：<br><img src="/images/drivers1.png" alt="drivers1"></p>
+<h3 id="5、安装NBU-Master-Server"><a href="#5、安装NBU-Master-Server" class="headerlink" title="5、安装NBU Master Server"></a>5、安装NBU Master Server</h3><p>点击安装文件中的Browser，有安装前预览及其他任务，针对于7.5以上版本的NBU，建议内存大于等于8GB，且安装的时候不要用terminal登陆。<br><img src="/images/nbu-inst1.png" alt="nbu-inst1"><br>下面几步可以一直下一步，在选择安装类型的时候可以选择typical或者custom，这里选择typical即可，custom可以指定各个进程的端口号及安装路径。<br><img src="/images/nbu-inst2.png" alt="nbu-inst2"><br>输入license，点击master server安装<br><img src="/images/nbu-inst3.png" alt="nbu-inst3"><br>等待NBU安装完成。</p>
+<h3 id="6、配置NBU机械臂及driver等设备"><a href="#6、配置NBU机械臂及driver等设备" class="headerlink" title="6、配置NBU机械臂及driver等设备"></a>6、配置NBU机械臂及driver等设备</h3><p>启动NBU Admin console，点击getting start开始配置drivers和robots：<br><img src="/images/nbu-conf1.png" alt="nbu-conf1"><br>直接下一步，扫描完会发现VTL中配置的4个drivers和一个robot<br><img src="/images/nbu-conf2.png" alt="nbu-conf2"><br>在driver的配置中，有可能会发生drivers出现在standalone里面，需要我们手动将四个drivers拖拽到robot 0里面：<br><img src="/images/nbu-conf3.png" alt="nbu-conf3"><br>完成后，如图：<br><img src="/images/nbu-conf4.png" alt="nbu-conf4"><br>配置完storage devices后，开始配置volume：<br><img src="/images/nbu-conf5.png" alt="nbu-conf5"><br>在下面这个页面中，选中TLD，NBU会扫描带库中所有磁带，并添加到NBU的inventory中：<br><img src="/images/nbu-conf6.png" alt="nbu-conf6"><br><img src="/images/nbu-conf7.png" alt="nbu-conf7"><br><img src="/images/nbu-conf8.png" alt="nbu-conf8"><br>catalog的policy及backup policy在后面手动配置。至此，NBU基于磁带的主要配置已经完成。</p>
+<h3 id="7、本地磁盘配置"><a href="#7、本地磁盘配置" class="headerlink" title="7、本地磁盘配置"></a>7、本地磁盘配置</h3><p>在某些环境下，有些master server挂载了一些存储，我们可以直接配置NBU，将数据备份在local disk：<br><img src="/images/nbu-conf9.png" alt="nbu-conf9"><br>配置完成后，在policy中，可以选择基于disk的storage units，将备份放在本地硬盘。</p>
+<p><br><br><b>EOF</b><br><br></p>
+
+    
+    </div>
+    
+    <div class="columns is-variable is-1 is-multiline is-mobile">
+    
+        <span class="column is-narrow"><a class="tag is-light article-tag" href="/tags/vtl/">#vtl</a></span>
+    
+    </div>
+    
+    
+    <div class="columns is-mobile is-multiline article-nav">
+        <span class="column is-12-mobile is-half-desktop  article-nav-prev">
+            
+            <a href="/install-db2-in-linux.html">Install DB2 in Linux</a>
+            
+        </span>
+        <span class="column is-12-mobile is-half-desktop  article-nav-next">
+            
+            <a href="/asm-utilities.html">ASM utilities</a>
+            
+        </span>
+    </div>
+    
+</article>
+
+
+
+
+    </div>
+</section>
+    <footer class="footer">
+    <div class="container">
+        <div class="columns content">
+            <div class="column is-narrow has-text-centered">
+                &copy; 2018 Kong&nbsp;
+                Powered by <a href="http://hexo.io/" target="_blank">Hexo</a> & <a
+                        href="http://github.com/ppoffice/hexo-theme-minos">Minos</a>
+            </div>
+            <div class="column is-hidden-mobile"></div>
+
+            
+            
+        </div>
+    </div>
+</footer>
+    <script src="//cdnjs.cloudflare.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
+<script src="//cdnjs.cloudflare.com/ajax/libs/moment.js/2.22.2/moment-with-locales.min.js"></script>
+
+<!-- test if the browser is outdated -->
+<div id="outdated">
+    <h6>Your browser is out-of-date!</h6>
+    <p>Update your browser to view this website correctly. <a id="btnUpdateBrowser" href="http://outdatedbrowser.com/">Update my browser now </a></p>
+    <p class="last"><a href="#" id="btnCloseUpdateBrowser" title="Close">&times;</a></p>
+</div>
+<script src="//cdnjs.cloudflare.com/ajax/libs/outdated-browser/1.1.5/outdatedbrowser.min.js"></script>
+<script>
+    $(document).ready(function () {
+        // plugin function, place inside DOM ready function
+        outdatedBrowser({
+            bgColor: '#f25648',
+            color: '#ffffff',
+            lowerThan: 'flex'
+        })
+    });
+</script>
+
+<script>
+    window.FontAwesomeConfig = {
+        searchPseudoElements: true
+    }
+    moment.locale("en-AU");
+</script>
+
+
+    
+    
+    
+    
+    
+    
+
+    
+
+
+<script src="/js/script.js"></script>
+
+    
+    <div class="searchbox ins-search">
+    <div class="searchbox-mask"></div>
+    <div class="searchbox-container ins-search-container">
+        <div class="searchbox-input-wrapper">
+            <input type="text" class="searchbox-input ins-search-input" placeholder="Type something..." />
+            <span class="searchbox-close ins-close ins-selectable"><i class="fa fa-times-circle"></i></span>
+        </div>
+        <div class="searchbox-result-wrapper ins-section-wrapper">
+            <div class="ins-section-container"></div>
+        </div>
+    </div>
+</div>
+<script>
+    (function (window) {
+        var INSIGHT_CONFIG = {
+            TRANSLATION: {
+                POSTS: 'Posts',
+                PAGES: 'Pages',
+                CATEGORIES: 'Categories',
+                TAGS: 'Tags',
+                UNTITLED: '(Untitled)',
+            },
+            CONTENT_URL: '/content.json',
+        };
+        window.INSIGHT_CONFIG = INSIGHT_CONFIG;
+    })(window);
+</script>
+<script src="/js/insight.js"></script>
+    
+</body>
+</html>

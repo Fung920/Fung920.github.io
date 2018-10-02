@@ -1,0 +1,248 @@
+<!DOCTYPE html>
+<html class="has-navbar-fixed-top">
+<head>
+    <meta charset="utf-8">
+<title>Oracle Enterprise Management failed with locale failed - My Wiki</title>
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+
+<link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/outdated-browser/1.1.5/outdatedbrowser.min.css">
+
+
+<meta name="description" content="emctl invoke perl warning:Setting locale failed">
+
+
+
+<meta name="keywords" content="em, Enterprise Management,UNIX,Locale">
+
+
+
+
+
+
+
+<link rel="icon" href="/images/favicon.ico">
+
+
+<link rel="stylesheet" href="//fonts.googleapis.com/css?family=Ovo|Source+Code+Pro">
+<link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/bulma/0.6.2/css/bulma.min.css">
+
+
+
+<link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/highlight.js/9.12.0/styles/github.min.css">
+
+<link rel="stylesheet" href="/css/style.css">
+
+<script defer src="//use.fontawesome.com/releases/v5.0.8/js/all.js"></script>
+
+
+    
+    
+    
+    
+    
+    
+
+    
+
+
+</head>
+<body>
+    
+<nav class="navbar is-transparent is-fixed-top navbar-main" role="navigation" aria-label="main navigation">
+    <div class="container">
+        <div class="navbar-brand">
+            <a class="navbar-item navbar-logo" href="/">
+                
+                    
+                    My Wiki
+                    
+                
+            </a>
+            <div class="navbar-burger">
+                <span></span>
+                <span></span>
+                <span></span>
+            </div>
+        </div>
+        
+        <div class="navbar-menu navbar-start">
+            
+            <a class="navbar-item "
+               href="/">Home</a>
+            
+            <a class="navbar-item "
+               href="/archives">Archives</a>
+            
+            <a class="navbar-item "
+               href="/about">About</a>
+            
+        </div>
+        
+        <div class="navbar-menu navbar-end">
+            
+            <a class="navbar-item search" title="Search" href="javascript:;">
+                <i class="fas fa-search"></i>
+            </a>
+            
+            
+            
+        </div>
+    </div>
+</nav>
+
+    <section class="section">
+    <div class="container">
+    <article class="article content gallery" itemscope itemprop="blogPost">
+    <h1 class="article-title is-size-3 is-size-4-mobile" itemprop="name">
+        
+            Oracle Enterprise Management failed with locale failed
+        
+    </h1>
+    <div class="article-meta columns is-variable is-1 is-multiline is-mobile is-size-7-mobile">
+        <span class="column is-narrow">
+            <time datetime="2014-04-29T06:29:37.000Z" itemprop="datePublished">Apr 29 2014</time>
+        </span>
+        
+        <span class="column is-narrow article-category">
+            <i class="far fa-folder"></i>
+            <a class="article-category-link" href="/categories/oracle/">oracle</a>
+        </span>
+        
+        
+        <span class="column is-narrow">
+            
+            
+            5 minutes read (About 754 words)
+        </span>
+        
+    </div>
+    <div class="article-entry is-size-6-mobile" itemprop="articleBody">
+    
+        <p></p><h3>1.SYMPTOMS</h3><br>调用<code>emctl</code>发生以下错误：<br><a id="more"></a><br><figure class="highlight plain hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line">scc:oracle $emctl status dbconsole</span><br><span class="line">perl: warning: Setting locale failed.</span><br><span class="line">perl: warning: Please check that your locale settings:</span><br><span class="line">        LC_ALL = (unset),</span><br><span class="line">        LC__FASTMSG = &quot;true&quot;,</span><br><span class="line">        LC_MESSAGES = &quot;&quot;,</span><br><span class="line">        LANG = &quot;en_UN&quot;</span><br><span class="line">    are supported and installed on your system.</span><br><span class="line">perl: warning: Falling back to the standard locale (&quot;C&quot;).</span><br><span class="line">OC4J Configuration issue. /u01/app/oracle/db_1/oc4j/j2ee/OC4J_DBConsole_scc_qffh not found.</span><br></pre></td></tr></table></figure><p></p>
+<p></p><h3>2.CAUSE</h3><br>跟用户环境变量lang设置有关，这个变量设置不正确导致。oracle用户环境变量中：<code>export NLS_LANG=American_America.ZHS16GBK </code>，怀疑OS没安装中文包。<p></p>
+<p></p><h3>3.SOLUTION</h3><br><code>exoport LC_ALL=C</code><br>“C”是指 US7ASCII，这意味着仅可显示 a-z、A-Z 和 0-9。<br>注意上述报错，<code>OC4J Configuration issue. /u01/app/oracle/db_1/oc4j/j2ee/OC4J_DBConsole_scc_qffh not found.</code>，怀疑修改过主机名或者IP。<br>通过emca重新创建EM：<br><figure class="highlight plain hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">emca -deconfig dbcontrol db -repos drop</span><br><span class="line">emca -config dbcontrol db -repos create</span><br></pre></td></tr></table></figure><p></p>
+<p>create的时候又报错：<br><figure class="highlight plain hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">SEVERE: Failed to allocate port(s) in the specified range(s) for the following process(es): JMS [5540-5559],RMI [5520-5539],Database Control [5500-5519],EM Agent [3938] | [1830-1849]</span><br><span class="line">Refer to the log file at /u01/app/oracle/db_1/cfgtoollogs/emca/qffh/emca_2014-04-28_04-50-05-PM.log for more details.</span><br></pre></td></tr></table></figure></p>
+<p>通过指定端口，终于重新创建EM，并且能登录管理：<br><figure class="highlight plain hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">emca -config dbcontrol db -repos create -DBCONTROL_HTTP_PORT 5508 -AGENT_PORT 3940 -RMI_PORT 5524 -JMS_PORT 5545</span><br></pre></td></tr></table></figure></p>
+<p></p><h3>4.EXPLANATION</h3><br>对于Linux/UNIX下locale的解析：<br>在linux/UNIX上Locales用来定义用户所使用的语言。因为locales还定义了用户使用的字符集，所以，当语言中含有非ASCIIA字符时，设定好正确的locale就显得非常重要了。Locales是用以下的格式来定义的：<br><figure class="highlight plain hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">&lt;lang&gt;_&lt;territory&gt;.&lt;codeset&gt;[@&lt;modifiers&gt;]</span><br></pre></td></tr></table></figure><p></p>
+<p>要查看当前设置，请使用 “locale” 命令，如下所示：<br><code>$ locale</code><br>输出示例：<br><figure class="highlight plain hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br></pre></td><td class="code"><pre><span class="line">[root@oel1:/root]# locale</span><br><span class="line">LANG=en_US.UTF-8</span><br><span class="line">LC_CTYPE=&quot;en_US.UTF-8&quot;</span><br><span class="line">LC_NUMERIC=&quot;en_US.UTF-8&quot;</span><br><span class="line">LC_TIME=&quot;en_US.UTF-8&quot;</span><br><span class="line">LC_COLLATE=&quot;en_US.UTF-8&quot;</span><br><span class="line">LC_MONETARY=&quot;en_US.UTF-8&quot;</span><br><span class="line">LC_MESSAGES=&quot;en_US.UTF-8&quot;</span><br><span class="line">LC_PAPER=&quot;en_US.UTF-8&quot;</span><br><span class="line">LC_NAME=&quot;en_US.UTF-8&quot;</span><br><span class="line">LC_ADDRESS=&quot;en_US.UTF-8&quot;</span><br><span class="line">LC_TELEPHONE=&quot;en_US.UTF-8&quot;</span><br><span class="line">LC_MEASUREMENT=&quot;en_US.UTF-8&quot;</span><br><span class="line">LC_IDENTIFICATION=&quot;en_US.UTF-8&quot;</span><br><span class="line">LC_ALL=</span><br></pre></td></tr></table></figure></p>
+<p>Oracle建议，local尽量使用uft-8。<br>如果要查看所有安装了的locale，可以-a的参数，以下为部分输出：<br><figure class="highlight plain hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br></pre></td><td class="code"><pre><span class="line">[root@oel1:/root]# locale -a</span><br><span class="line">zh_CN</span><br><span class="line">zh_CN.gb18030</span><br><span class="line">zh_CN.gb2312</span><br><span class="line">zh_CN.gbk</span><br><span class="line">zh_CN.utf8</span><br><span class="line">zh_HK</span><br><span class="line">zh_HK.big5hkscs</span><br><span class="line">zh_HK.utf8</span><br><span class="line">zh_SG</span><br><span class="line">zh_SG.gb2312</span><br><span class="line">zh_SG.gbk</span><br><span class="line">zh_SG.utf8</span><br><span class="line">zh_TW</span><br><span class="line">zh_TW.big5</span><br><span class="line">zh_TW.euctw</span><br><span class="line">zh_TW.utf8</span><br></pre></td></tr></table></figure></p>
+<p>针对环境变量 <code>NLS_LANG</code> :<br><code>NLS_LANG</code> 的构成为：<code>NLS_LANG=&lt;NLS_LANGUAGE&gt;_&lt;NLS_TERRITORY&gt;.<clients characterset=""></clients></code><br>以 locale “en_US.UTF-8”为例，这意味着应该将 <code>NLS_LANG</code> 设置为 <code>=AMERICAN_AMERICA.AL32UTF8</code>；如果 <code>locale</code> 设置为<code>fr_FR.UTF-8</code>，则相应的 <code>NLS_LANG</code> 设置将为 <code>FRENCH_FRANCE.AL32UTF8</code>。<br><code>Locale</code> 和 <code>NLS_LANG</code> 设置（如果适用，还包括 telnet/ssh config）需要互相匹配，但从技术角度看它们均与数据库字符集无关，并且它们仅针对该客户端环境相关。<br>参照：<br><a href="http://docs.oracle.com/cd/E23824_01/html/E26033/glmbx.html" target="_blank" rel="noopener">International Language Environment Guide</a><br><a href="https://support.oracle.com/epmos/faces/DocumentDisplay?_afrLoop=853836115233131&amp;id=1548858.1&amp;_afrWindowMode=0&amp;_adf.ctrl-state=w2woxsr5c_81" target="_blank" rel="noopener">1548858.1</a><br><a href="https://support.oracle.com/epmos/faces/SearchDocDisplay?_adf.ctrl-state=w2woxsr5c_9&amp;_afrLoop=853966831115856" target="_blank" rel="noopener">1602518.1</a></p>
+
+    
+    </div>
+    
+    <div class="columns is-variable is-1 is-multiline is-mobile">
+    
+        <span class="column is-narrow"><a class="tag is-light article-tag" href="/tags/em/">#em</a></span>
+    
+    </div>
+    
+    
+    <div class="columns is-mobile is-multiline article-nav">
+        <span class="column is-12-mobile is-half-desktop  article-nav-prev">
+            
+            <a href="/aix-basic-operations.html">AIX基本操作</a>
+            
+        </span>
+        <span class="column is-12-mobile is-half-desktop  article-nav-next">
+            
+            <a href="/nbu-lanfree-issue.html">nbu lanfree issue</a>
+            
+        </span>
+    </div>
+    
+</article>
+
+
+
+
+    </div>
+</section>
+    <footer class="footer">
+    <div class="container">
+        <div class="columns content">
+            <div class="column is-narrow has-text-centered">
+                &copy; 2018 Kong&nbsp;
+                Powered by <a href="http://hexo.io/" target="_blank">Hexo</a> & <a
+                        href="http://github.com/ppoffice/hexo-theme-minos">Minos</a>
+            </div>
+            <div class="column is-hidden-mobile"></div>
+
+            
+            
+        </div>
+    </div>
+</footer>
+    <script src="//cdnjs.cloudflare.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
+<script src="//cdnjs.cloudflare.com/ajax/libs/moment.js/2.22.2/moment-with-locales.min.js"></script>
+
+<!-- test if the browser is outdated -->
+<div id="outdated">
+    <h6>Your browser is out-of-date!</h6>
+    <p>Update your browser to view this website correctly. <a id="btnUpdateBrowser" href="http://outdatedbrowser.com/">Update my browser now </a></p>
+    <p class="last"><a href="#" id="btnCloseUpdateBrowser" title="Close">&times;</a></p>
+</div>
+<script src="//cdnjs.cloudflare.com/ajax/libs/outdated-browser/1.1.5/outdatedbrowser.min.js"></script>
+<script>
+    $(document).ready(function () {
+        // plugin function, place inside DOM ready function
+        outdatedBrowser({
+            bgColor: '#f25648',
+            color: '#ffffff',
+            lowerThan: 'flex'
+        })
+    });
+</script>
+
+<script>
+    window.FontAwesomeConfig = {
+        searchPseudoElements: true
+    }
+    moment.locale("en-AU");
+</script>
+
+
+    
+    
+    
+    
+    
+    
+
+    
+
+
+<script src="/js/script.js"></script>
+
+    
+    <div class="searchbox ins-search">
+    <div class="searchbox-mask"></div>
+    <div class="searchbox-container ins-search-container">
+        <div class="searchbox-input-wrapper">
+            <input type="text" class="searchbox-input ins-search-input" placeholder="Type something..." />
+            <span class="searchbox-close ins-close ins-selectable"><i class="fa fa-times-circle"></i></span>
+        </div>
+        <div class="searchbox-result-wrapper ins-section-wrapper">
+            <div class="ins-section-container"></div>
+        </div>
+    </div>
+</div>
+<script>
+    (function (window) {
+        var INSIGHT_CONFIG = {
+            TRANSLATION: {
+                POSTS: 'Posts',
+                PAGES: 'Pages',
+                CATEGORIES: 'Categories',
+                TAGS: 'Tags',
+                UNTITLED: '(Untitled)',
+            },
+            CONTENT_URL: '/content.json',
+        };
+        window.INSIGHT_CONFIG = INSIGHT_CONFIG;
+    })(window);
+</script>
+<script src="/js/insight.js"></script>
+    
+</body>
+</html>

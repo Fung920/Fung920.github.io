@@ -1,0 +1,403 @@
+<!DOCTYPE html>
+<html class="has-navbar-fixed-top">
+<head>
+    <meta charset="utf-8">
+<title>Step by step install 11gr2 RAC in silent mode - My Wiki</title>
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+
+<link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/outdated-browser/1.1.5/outdatedbrowser.min.css">
+
+
+
+
+
+
+
+
+
+
+<link rel="icon" href="/images/favicon.ico">
+
+
+<link rel="stylesheet" href="//fonts.googleapis.com/css?family=Ovo|Source+Code+Pro">
+<link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/bulma/0.6.2/css/bulma.min.css">
+
+
+
+<link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/highlight.js/9.12.0/styles/github.min.css">
+
+<link rel="stylesheet" href="/css/style.css">
+
+<script defer src="//use.fontawesome.com/releases/v5.0.8/js/all.js"></script>
+
+
+    
+    
+    
+    
+    
+    
+
+    
+
+
+</head>
+<body>
+    
+<nav class="navbar is-transparent is-fixed-top navbar-main" role="navigation" aria-label="main navigation">
+    <div class="container">
+        <div class="navbar-brand">
+            <a class="navbar-item navbar-logo" href="/">
+                
+                    
+                    My Wiki
+                    
+                
+            </a>
+            <div class="navbar-burger">
+                <span></span>
+                <span></span>
+                <span></span>
+            </div>
+        </div>
+        
+        <div class="navbar-menu navbar-start">
+            
+            <a class="navbar-item "
+               href="/">Home</a>
+            
+            <a class="navbar-item "
+               href="/archives">Archives</a>
+            
+            <a class="navbar-item "
+               href="/about">About</a>
+            
+        </div>
+        
+        <div class="navbar-menu navbar-end">
+            
+            <a class="navbar-item search" title="Search" href="javascript:;">
+                <i class="fas fa-search"></i>
+            </a>
+            
+            
+            
+        </div>
+    </div>
+</nav>
+
+    <section class="section">
+    <div class="container">
+    <article class="article content gallery" itemscope itemprop="blogPost">
+    <h1 class="article-title is-size-3 is-size-4-mobile" itemprop="name">
+        
+            Step by step install 11gr2 RAC in silent mode
+        
+    </h1>
+    <div class="article-meta columns is-variable is-1 is-multiline is-mobile is-size-7-mobile">
+        <span class="column is-narrow">
+            <time datetime="2013-09-11T16:00:00.000Z" itemprop="datePublished">Sep 11 2013</time>
+        </span>
+        
+        <span class="column is-narrow article-category">
+            <i class="far fa-folder"></i>
+            <a class="article-category-link" href="/categories/oracle/">oracle</a>
+        </span>
+        
+        
+        <span class="column is-narrow">
+            
+            
+            26 minutes read (About 3879 words)
+        </span>
+        
+    </div>
+    <div class="article-entry is-size-6-mobile" itemprop="articleBody">
+    
+        本文实验环境以vbox虚拟机，OEL5.8 X64下完成，ASM底层采取udev管理。以下为详细实验步骤，留给以后参考。OS安装及共享设备设置略过。非明确指出，即表明所做操作为两个节点。
+<a id="more"></a>
+<h1>1.安装前准备</h1>
+<h2>1.1.关闭非必要进程</h2>
+<pre>
+chkconfig acpid off 
+chkconfig autofs off 
+chkconfig avahi-daemon off 
+chkconfig bluetooth off 
+chkconfig hidd off 
+chkconfig cups off 
+chkconfig cpuspeed off 
+chkconfig --level 245 gpm off 
+chkconfig hplip off 
+chkconfig ip6tables off 
+chkconfig iptables off 
+chkconfig irqbalance off 
+chkconfig isdn off 
+chkconfig lm_sensors off 
+chkconfig mcstrans off 
+chkconfig netfs off 
+chkconfig nfslock off 
+chkconfig pcscd off 
+chkconfig portmap off 
+chkconfig restorecond off 
+chkconfig rpcgssd off 
+chkconfig rpcidmapd off 
+chkconfig sendmail off 
+chkconfig smartd off 
+chkconfig yum-updatesd off 
+chkconfig xfs off 
+chkconfig microcode_ctl off 
+chkconfig iscsi off 
+chkconfig iscsid off
+</pre>
+<h2>1.2.安装oracle-validated</h2>
+Oracle-validated是OEL自带的oracle安装环境部署设置，包括内核参数、用户设置等。首先配置yum本地源，先将光盘mount至/mnt，再通过yum设置/mnt为本地源：
+<figure class="highlight plain hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line">[root@node1 app]# cd /etc/yum.repos.d/ </span><br><span class="line">[root@node1 app]# vi  rhel-debuginfo.repo </span><br><span class="line">[root@node1 app]# cat /etc/yum.repos.d/rhel-debuginfo.repo  </span><br><span class="line">[Server] </span><br><span class="line">name=Server </span><br><span class="line">baseurl=file:///mnt/Server </span><br><span class="line">enabled=1 </span><br><span class="line">gpgcheck=0 </span><br><span class="line">[root@node1 app]# yum search oracle </span><br><span class="line">[root@node1 app]# yum install oracle-validated</span><br></pre></td></tr></table></figure>
+
+<h2>1.3.创建用户环境</h2>
+由于oracle-validated只是增加了oracle用户，GI拥有着gird用户需要我们自己创建，
+<figure class="highlight plain hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line">[root@node1 app]# id oracle </span><br><span class="line">uid=54321(oracle) gid=54321(oinstall) groups=54321(oinstall),54322(dba) </span><br><span class="line">[root@node1 app]# useradd -u 54322 -g oinstall grid </span><br><span class="line">[root@node1:/root]# groupadd -g 54323 asmdba </span><br><span class="line">[root@node1:/root]# groupadd -g 54324 asmadmin </span><br><span class="line">[root@node1:/root]# usermod -G oinstall,asmadmin,asmdba,dba grid </span><br><span class="line">[root@node1:/root]# usermod -G oinstall,asmdba,dba oracle</span><br></pre></td></tr></table></figure>
+
+修改密码：
+<figure class="highlight plain hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">#passwd oracle </span><br><span class="line">#passwd grid</span><br></pre></td></tr></table></figure>
+
+添加环境变量：
+<figure class="highlight plain hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br></pre></td><td class="code"><pre><span class="line">[root@node2 u01]# cat /home/grid/.bash_profile  </span><br><span class="line">... </span><br><span class="line">export TMP=/tmp </span><br><span class="line">export TMPDIR=$TMP </span><br><span class="line">export ORACLE_SID=+ASM2 </span><br><span class="line">export ORACLE_BASE=/u01/app/grid </span><br><span class="line">export ORACLE_HOME=/u01/app/11gr2/grid </span><br><span class="line">export JAVA_HOME=$ORACLE_HOME/jdk </span><br><span class="line">export ORACLE_TERM=xterm </span><br><span class="line">export NLS_DATE_FORMAT=&quot;yyyy-mm-dd HH24:MI:SS&quot; </span><br><span class="line">export ORA_NLS11=$ORACLE_HOME/nls/data </span><br><span class="line">export LD_LIBRARY_PATH=$ORACLE_HOME/lib:/lib:/usr/lib </span><br><span class="line">export CLASSPATH=$ORACLE_HOME/JRE:$ORACLE_HOME/jlib:$ORACLE_HOME/rdbms/jlib </span><br><span class="line">export PATH=/usr/sbin:$ORACLE_HOME/bin:$JAVA_HOME:$PATH </span><br><span class="line">export PS1=&apos;[$LOGNAME@$HOSTNAME:$PWD]$ &apos; </span><br><span class="line">umask 022 </span><br><span class="line">export DISPLAY=192.168.56.1:0.0 </span><br><span class="line">[root@node2 u01]# cat /home/oracle/.bash_profile  </span><br><span class="line">…</span><br><span class="line">export EDITOR=vi </span><br><span class="line">export TMP=/tmp </span><br><span class="line">export TMPDIR=$TMP </span><br><span class="line">export ORACLE_BASE=/u01/app/oracle  </span><br><span class="line">export ORACLE_HOME=$ORACLE_BASE/product/11gr2/ </span><br><span class="line">export JAVA_HOME=$ORACLE_HOME/jdk </span><br><span class="line">export ORACLE_SID=racdb2 </span><br><span class="line">export ORACLE_TERM=xterm </span><br><span class="line">export PATH=/usr/sbin:$ORACLE_HOME/bin:$JAVA_HOME:$PATH </span><br><span class="line">export ORA_NLS11=$ORACLE_HOME/nls/data </span><br><span class="line">export LD_LIBRARY_PATH=$ORACLE_HOME/lib:/lib:/usr/lib </span><br><span class="line">export CLASSPATH=$ORACLE_HOME/JRE:$ORACLE_HOME/jlib:$ORACLE_HOME/rdbms/jlib </span><br><span class="line">export NLS_DATE_FORMAT=&quot;yyyy-mm-dd HH24:MI:SS&quot; </span><br><span class="line">export NLS_LANG=AMERICAN_AMERICA.ZHS16GBK </span><br><span class="line">export PS1=&apos;[$LOGNAME@$HOSTNAME:$PWD]$ &apos; </span><br><span class="line">umask 022 </span><br><span class="line">export DISPLAY=192.168.56.1:0.0</span><br></pre></td></tr></table></figure>
+
+创建相关目录：
+<figure class="highlight plain hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line">[root@node1 app]# mkdir -p /u01/app/grid </span><br><span class="line">[root@node1 app]# mkdir -p /u01/app/11gr2/grid </span><br><span class="line">[root@node1 app]# chown -R grid:oinstall /u01/app/ </span><br><span class="line">[root@node1 app]# chmod -R 775 /u01/app </span><br><span class="line">[root@node1 app]# chown -R grid:oinstall /u01/app/grid </span><br><span class="line">[root@node1 app]# chmod -R 775 /u01/app/grid </span><br><span class="line">[root@node1 app]# mkdir -p /u01/app/oracle/product/11gr2 </span><br><span class="line">[root@node1 app]# chown -R oracle:oinstall /u01/app/oracle </span><br><span class="line">[root@node1 app]# chmod -R 775 /u01/app/oracle</span><br></pre></td></tr></table></figure>
+
+移除ntp及dns设置：
+<figure class="highlight plain hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">[root@node1 app]# mv /etc/ntp.conf /etc/ntp.conf_bk </span><br><span class="line">[root@node1 app]# mv /etc/resolv.conf /etc/resolv.conf_bk</span><br></pre></td></tr></table></figure>
+
+最后需要在<code>/etc/security/limits.conf</code>将grid用户资源添加进去。
+
+主机IP配置：
+<pre>
+#public IP 
+192.168.56.111         node1 
+192.168.56.112          node2
+
+#priv 
+10.10.10.111            racdb1-priv 
+10.10.10.112            racdb2-priv
+
+#Virtual IP 
+192.168.56.113         racdb1-vip 
+192.168.56.114
+
+#SCAN 
+192.168.56.100         racdb-scan
+</pre>
+<h2>1.4.ssh等效性设置</h2>
+两个节点oracle用户及grid用户的信任机制配置：
+<figure class="highlight plain hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">[grid@node1 app]$ mkdir -p ~/.ssh </span><br><span class="line">[grid@node1 app]$ chmod 700 ~/.ssh </span><br><span class="line">[grid@node1 app]$ ssh-keygen -t rsa </span><br><span class="line">[grid@node1 app]$ ssh-keygen -t dsa</span><br></pre></td></tr></table></figure>
+
+以下操作只需其中一节点完成即可：
+<figure class="highlight plain hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line">[grid@node1 app]$ cd .ssh  </span><br><span class="line">[grid@node1 app]$ touch authorized_keys </span><br><span class="line">[grid@node1 app]$ cat ~/.ssh/*.pub &gt;&gt;authorized_keys  </span><br><span class="line">[grid@node1 app]$ ssh node1 cat ~/.ssh/id_rsa.pub &gt;&gt;authorized_keys </span><br><span class="line">[grid@node1 app]$ ssh node2 cat ~/.ssh/id_dsa.pub &gt;&gt;authorized_keys </span><br><span class="line">[grid@node1 app]$ scp authorized_keys node2:.ssh/authorized_keys</span><br></pre></td></tr></table></figure>
+
+<h2>1.5.udev共享存储设置</h2>
+创建规则文件：
+<figure class="highlight plain hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">[root@node1 app]# touch /etc/udev/rules.d/ 99-oracle-asmdevices.rules</span><br></pre></td></tr></table></figure>
+
+使用fdisk -l扫描磁盘，并将识别出来的路径取代以下代码中的变量：
+<figure class="highlight plain hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">[root@node1 app]# for i in b c d e; </span><br><span class="line">&gt; do </span><br><span class="line">&gt; echo &quot;KERNEL==\&quot;sd*\&quot;, BUS==\&quot;scsi\&quot;, PROGRAM==\&quot;/sbin/scsi_id -g -u -s %p\&quot;, RESULT==\&quot;`scsi_id -g -u -s /block/sd$i`\&quot;, NAME=\&quot;asm-disk$i\&quot;, OWNER=\&quot;grid\&quot;, GROUP=\&quot;asmadmin\&quot;, MODE=\&quot;0660\&quot;&quot; </span><br><span class="line">&gt; done</span><br></pre></td></tr></table></figure>
+
+将以上输出内容添加进规则文件中，重启udev，并且验证：
+<figure class="highlight plain hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line">[root@node1 app]# start_udev </span><br><span class="line">Starting udev: [  OK  ] </span><br><span class="line">[root@node1 app]# ll /dev/asm* </span><br><span class="line">brw-rw---- 1 grid dba 8, 16 Sep 12 11:02 /dev/asm-diskb </span><br><span class="line">brw-rw---- 1 grid dba 8, 32 Sep 12 11:02 /dev/asm-diskc </span><br><span class="line">brw-rw---- 1 grid dba 8, 48 Sep 12 11:02 /dev/asm-diskd </span><br><span class="line">brw-rw---- 1 grid dba 8, 64 Sep 12 11:02 /dev/asm-diske</span><br></pre></td></tr></table></figure>
+
+<h1>2.安装GI</h1>
+安装前检查：
+<figure class="highlight plain hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line">[grid@node1:/worktmp/11g/grid]$ ./runcluvfy.sh stage -pre crsinst -n node1,node2 -verbose </span><br><span class="line">Performing pre-checks for cluster services setup</span><br><span class="line"></span><br><span class="line">Checking node reachability... </span><br><span class="line">...省略部分输出</span><br><span class="line"></span><br><span class="line"> Check: Time zone consistency </span><br><span class="line">Result: Time zone consistency check passed </span><br><span class="line"></span><br><span class="line"> Pre-check for cluster services setup was successful.</span><br></pre></td></tr></table></figure>
+
+有不通过的地方要先fixup完才能继续安装。 
+
+ 修改默认响应文件，可以用以下命令提取必要的东西出来，需要了解各项参数含义，请详细阅读默认响应文件：
+<figure class="highlight plain hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">[grid@node1:/worktmp/11g/grid/response]$ ll </span><br><span class="line">total 28 </span><br><span class="line">-rw-r--r-- 1 root root 24632 Aug 26 22:01 grid_install.rsp </span><br><span class="line">[grid@node1:/worktmp/11g/grid/response]$ cat grid_install.rsp | grep -v ^# | grep -v ^$ &gt; ~/gi.rsp</span><br></pre></td></tr></table></figure>
+
+修改后的响应文件如下：
+<figure class="highlight plain hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br></pre></td><td class="code"><pre><span class="line">[grid@node1:/worktmp/11g/grid/response]$ cat ~/gi.rsp </span><br><span class="line">oracle.install.responseFileVersion=/oracle/install/rspfmt_crsinstall_response_schema_v11_2_0 </span><br><span class="line">ORACLE_HOSTNAME=node1 </span><br><span class="line">INVENTORY_LOCATION=/u01/app/oraInventory </span><br><span class="line">SELECTED_LANGUAGES=en,zh_CN </span><br><span class="line">oracle.install.option=CRS_CONFIG </span><br><span class="line">ORACLE_BASE=/u01/app/grid </span><br><span class="line">ORACLE_HOME=/u01/app/11gr2/grid </span><br><span class="line">oracle.install.asm.OSDBA=asmdba </span><br><span class="line">oracle.install.asm.OSOPER= </span><br><span class="line">oracle.install.asm.OSASM=asmadmin </span><br><span class="line">oracle.install.crs.config.gpnp.scanName=racdb-scan </span><br><span class="line">oracle.install.crs.config.gpnp.scanPort=1521 </span><br><span class="line">oracle.install.crs.config.clusterName=racdb </span><br><span class="line">oracle.install.crs.config.gpnp.configureGNS=false </span><br><span class="line">oracle.install.crs.config.gpnp.gnsSubDomain= </span><br><span class="line">oracle.install.crs.config.gpnp.gnsVIPAddress= </span><br><span class="line">oracle.install.crs.config.autoConfigureClusterNodeVIP=false </span><br><span class="line">oracle.install.crs.config.clusterNodes=node1:racdb1-vip,node2:racdb2-vip </span><br><span class="line">oracle.install.crs.config.networkInterfaceList=eth0:192.168.56.0:1,eth1:10.10.10.0:2 </span><br><span class="line">oracle.install.crs.config.storageOption=ASM_STORAGE </span><br><span class="line">oracle.install.crs.config.sharedFileSystemStorage.diskDriveMapping= </span><br><span class="line">oracle.install.crs.config.sharedFileSystemStorage.votingDiskLocations= </span><br><span class="line">oracle.install.crs.config.sharedFileSystemStorage.votingDiskRedundancy=NORMAL </span><br><span class="line">oracle.install.crs.config.sharedFileSystemStorage.ocrLocations= </span><br><span class="line">oracle.install.crs.config.sharedFileSystemStorage.ocrRedundancy=NORMAL </span><br><span class="line">oracle.install.crs.config.useIPMI=false </span><br><span class="line">oracle.install.crs.config.ipmi.bmcUsername= </span><br><span class="line">oracle.install.crs.config.ipmi.bmcPassword= </span><br><span class="line">oracle.install.asm.SYSASMPassword=Password123 </span><br><span class="line">oracle.install.asm.diskGroup.name=CRS </span><br><span class="line">oracle.install.asm.diskGroup.redundancy=NORMAL </span><br><span class="line">oracle.install.asm.diskGroup.AUSize=1 </span><br><span class="line">oracle.install.asm.diskGroup.disks=/dev/asm-diskb,/dev/asm-diskc,/dev/asm-diskd </span><br><span class="line">oracle.install.asm.diskGroup.diskDiscoveryString=/dev/asm* </span><br><span class="line">oracle.install.asm.monitorPassword=Password123 </span><br><span class="line">oracle.install.crs.upgrade.clusterNodes= </span><br><span class="line">oracle.install.asm.upgradeASM=false </span><br><span class="line">oracle.installer.autoupdates.option=SKIP_UPDATES </span><br><span class="line">oracle.installer.autoupdates.downloadUpdatesLoc= </span><br><span class="line">AUTOUPDATES_MYORACLESUPPORT_USERNAME= </span><br><span class="line">AUTOUPDATES_MYORACLESUPPORT_PASSWORD= </span><br><span class="line">PROXY_HOST= </span><br><span class="line">PROXY_PORT= </span><br><span class="line">PROXY_USER= </span><br><span class="line">PROXY_PWD= </span><br><span class="line">PROXY_REALM=</span><br></pre></td></tr></table></figure>
+
+执行安装程序：
+<figure class="highlight plain hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br></pre></td><td class="code"><pre><span class="line">[grid@node1:/worktmp/11g/grid]$ ./runInstaller -ignorePrereq -silent -force -responseFile ~/gi.rsp </span><br><span class="line">Starting Oracle Universal Installer...</span><br><span class="line"></span><br><span class="line"> Checking Temp space: must be greater than 120 MB.   Actual 16102 MB    Passed </span><br><span class="line">Checking swap space: must be greater than 150 MB.   Actual 4094 MB    Passed </span><br><span class="line">Preparing to launch Oracle Universal Installer from /tmp/OraInstall2013-09-12_12-17-53PM.  </span><br><span class="line">Please wait ... </span><br><span class="line">[grid@node1:/worktmp/11g/grid]$ You can find the log of this install session at: </span><br><span class="line"> /u01/app/oraInventory/logs/installActions2013-09-12_12-17-53PM.log </span><br><span class="line">The installation of Oracle Grid Infrastructure 11g was successful. </span><br><span class="line">Please check &apos;/u01/app/oraInventory/logs/silentInstall2013-09-12_12-17-53PM.log&apos; for more details. </span><br><span class="line"></span><br><span class="line"> As a root user, execute the following script(s): </span><br><span class="line">        1. /u01/app/oraInventory/orainstRoot.sh </span><br><span class="line">        2. /u01/app/11gr2/grid/root.sh </span><br><span class="line"></span><br><span class="line"> Execute /u01/app/oraInventory/orainstRoot.sh on the following nodes:  </span><br><span class="line">[node1, node2] </span><br><span class="line">Execute /u01/app/11gr2/grid/root.sh on the following nodes:  </span><br><span class="line">[node1, node2] </span><br><span class="line"></span><br><span class="line"> As install user, execute the following script to complete the configuration. </span><br><span class="line">        1. /u01/app/11gr2/grid/cfgtoollogs/configToolAllCommands RESPONSE_FILE=&lt;response_file /&gt; </span><br><span class="line"></span><br><span class="line">         Note: </span><br><span class="line">        1. This script must be run on the same host from where installer was run.  </span><br><span class="line">        2. This script needs a small password properties file for configuration assistants  </span><br><span class="line">that require passwords (refer to install guide documentation). </span><br><span class="line"></span><br><span class="line"> Successfully Setup Software.</span><br></pre></td></tr></table></figure>
+
+ 按照提示，分别在两个节点执行以下脚本：
+<figure class="highlight plain hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br><span class="line">69</span><br><span class="line">70</span><br><span class="line">71</span><br><span class="line">72</span><br><span class="line">73</span><br><span class="line">74</span><br><span class="line">75</span><br><span class="line">76</span><br><span class="line">77</span><br><span class="line">78</span><br><span class="line">79</span><br><span class="line">80</span><br><span class="line">81</span><br><span class="line">82</span><br><span class="line">83</span><br><span class="line">84</span><br><span class="line">85</span><br><span class="line">86</span><br><span class="line">87</span><br></pre></td><td class="code"><pre><span class="line">[root@node1:/home/grid]# /u01/app/oraInventory/orainstRoot.sh </span><br><span class="line">Changing permissions of /u01/app/oraInventory. </span><br><span class="line">Adding read,write permissions for group. </span><br><span class="line">Removing read,write,execute permissions for world.</span><br><span class="line"></span><br><span class="line"> Changing groupname of /u01/app/oraInventory to oinstall. </span><br><span class="line">The execution of the script is complete.</span><br><span class="line"></span><br><span class="line">[root@node1:/home/grid]# /u01/app/11gr2/grid/root.sh </span><br><span class="line">Performing root user operation for Oracle 11g </span><br><span class="line"></span><br><span class="line"> The following environment variables are set as: </span><br><span class="line">    ORACLE_OWNER= grid </span><br><span class="line">    ORACLE_HOME=  /u01/app/11gr2/grid </span><br><span class="line">   Copying dbhome to /usr/local/bin ... </span><br><span class="line">   Copying oraenv to /usr/local/bin ... </span><br><span class="line">   Copying coraenv to /usr/local/bin ... </span><br><span class="line"></span><br><span class="line"> Creating /etc/oratab file... </span><br><span class="line">Entries will be added to the /etc/oratab file as needed by </span><br><span class="line">Database Configuration Assistant when a database is created </span><br><span class="line">Finished running generic part of root script. </span><br><span class="line">Now product-specific root actions will be performed. </span><br><span class="line">Using configuration parameter file: /u01/app/11gr2/grid/crs/install/crsconfig_params </span><br><span class="line">Creating trace directory </span><br><span class="line">User ignored Prerequisites during installation </span><br><span class="line">Installing Trace File Analyzer </span><br><span class="line">OLR initialization - successful </span><br><span class="line">  root wallet </span><br><span class="line">  root wallet cert </span><br><span class="line">  root cert export </span><br><span class="line">  peer wallet </span><br><span class="line">  profile reader wallet </span><br><span class="line">  pa wallet </span><br><span class="line">  peer wallet keys </span><br><span class="line">  pa wallet keys </span><br><span class="line">  peer cert request </span><br><span class="line">  pa cert request </span><br><span class="line">  peer cert </span><br><span class="line">  pa cert </span><br><span class="line">  peer root cert TP </span><br><span class="line">  profile reader root cert TP </span><br><span class="line">  pa root cert TP </span><br><span class="line">  peer pa cert TP </span><br><span class="line">  pa peer cert TP </span><br><span class="line">  profile reader pa cert TP </span><br><span class="line">  profile reader peer cert TP </span><br><span class="line">  peer user cert </span><br><span class="line">  pa user cert </span><br><span class="line">Adding Clusterware entries to inittab </span><br><span class="line">CRS-2672: Attempting to start &apos;ora.mdnsd&apos; on &apos;node1&apos; </span><br><span class="line">CRS-2676: Start of &apos;ora.mdnsd&apos; on &apos;node1&apos; succeeded </span><br><span class="line">CRS-2672: Attempting to start &apos;ora.gpnpd&apos; on &apos;node1&apos; </span><br><span class="line">CRS-2676: Start of &apos;ora.gpnpd&apos; on &apos;node1&apos; succeeded </span><br><span class="line">CRS-2672: Attempting to start &apos;ora.cssdmonitor&apos; on &apos;node1&apos; </span><br><span class="line">CRS-2672: Attempting to start &apos;ora.gipcd&apos; on &apos;node1&apos; </span><br><span class="line">CRS-2676: Start of &apos;ora.gipcd&apos; on &apos;node1&apos; succeeded </span><br><span class="line">CRS-2676: Start of &apos;ora.cssdmonitor&apos; on &apos;node1&apos; succeeded </span><br><span class="line">CRS-2672: Attempting to start &apos;ora.cssd&apos; on &apos;node1&apos; </span><br><span class="line">CRS-2672: Attempting to start &apos;ora.diskmon&apos; on &apos;node1&apos; </span><br><span class="line">CRS-2676: Start of &apos;ora.diskmon&apos; on &apos;node1&apos; succeeded </span><br><span class="line">CRS-2676: Start of &apos;ora.cssd&apos; on &apos;node1&apos; succeeded </span><br><span class="line"></span><br><span class="line"> ASM created and started successfully. </span><br><span class="line"></span><br><span class="line"> Disk Group CRS created successfully. </span><br><span class="line"></span><br><span class="line"> clscfg: -install mode specified </span><br><span class="line">Successfully accumulated necessary OCR keys. </span><br><span class="line">Creating OCR keys for user &apos;root&apos;, privgrp &apos;root&apos;.. </span><br><span class="line">Operation successful. </span><br><span class="line">CRS-4256: Updating the profile </span><br><span class="line">Successful addition of voting disk 013aab2ab1bf4f2ebf1b13f7237c2ecc. </span><br><span class="line">Successful addition of voting disk 5c947e9d03514f3ebf7a7486ab10a8f3. </span><br><span class="line">Successful addition of voting disk 5190c7747b184f64bf2ef35e520ea52c. </span><br><span class="line">Successfully replaced voting disk group with +CRS. </span><br><span class="line">CRS-4256: Updating the profile </span><br><span class="line">CRS-4266: Voting file(s) successfully replaced </span><br><span class="line">##  STATE    File Universal Id                File Name Disk group </span><br><span class="line">--  -----    -----------------                --------- --------- </span><br><span class="line"> 1. ONLINE   013aab2ab1bf4f2ebf1b13f7237c2ecc (/dev/asm-diskb) [CRS] </span><br><span class="line"> 2. ONLINE   5c947e9d03514f3ebf7a7486ab10a8f3 (/dev/asm-diskc) [CRS] </span><br><span class="line"> 3. ONLINE   5190c7747b184f64bf2ef35e520ea52c (/dev/asm-diskd) [CRS] </span><br><span class="line">Located 3 voting disk(s). </span><br><span class="line">CRS-2672: Attempting to start &apos;ora.CRS.dg&apos; on &apos;node1&apos; </span><br><span class="line">CRS-2676: Start of &apos;ora.CRS.dg&apos; on &apos;node1&apos; succeeded </span><br><span class="line">Configure Oracle Grid Infrastructure for a Cluster ... succeeded</span><br></pre></td></tr></table></figure>
+
+<figure class="highlight plain hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br></pre></td><td class="code"><pre><span class="line">[root@node2 11gr2]# /u01/app/11gr2/grid/root.sh </span><br><span class="line">Performing root user operation for Oracle 11g </span><br><span class="line"></span><br><span class="line"> The following environment variables are set as: </span><br><span class="line">    ORACLE_OWNER= grid </span><br><span class="line">    ORACLE_HOME=  /u01/app/11gr2/grid </span><br><span class="line">   Copying dbhome to /usr/local/bin ... </span><br><span class="line">   Copying oraenv to /usr/local/bin ... </span><br><span class="line">   Copying coraenv to /usr/local/bin ... </span><br><span class="line"></span><br><span class="line"> Creating /etc/oratab file... </span><br><span class="line">Entries will be added to the /etc/oratab file as needed by </span><br><span class="line">Database Configuration Assistant when a database is created </span><br><span class="line">Finished running generic part of root script. </span><br><span class="line">Now product-specific root actions will be performed. </span><br><span class="line">Using configuration parameter file: /u01/app/11gr2/grid/crs/install/crsconfig_params </span><br><span class="line">Creating trace directory </span><br><span class="line">User ignored Prerequisites during installation </span><br><span class="line">Installing Trace File Analyzer </span><br><span class="line">OLR initialization - successful </span><br><span class="line">Adding Clusterware entries to inittab </span><br><span class="line">CRS-4402: The CSS daemon was started in exclusive mode but found an active CSS daemon on node node1, number 1, and is terminating </span><br><span class="line">An active cluster was found during exclusive startup, restarting to join the cluster </span><br><span class="line">Configure Oracle Grid Infrastructure for a Cluster ... succeeded</span><br></pre></td></tr></table></figure>
+
+最后，在安装节点node1以grid用户执行configToolAllCommands命令，此命令是为了创建密码（此命令propetites文件属性请参照<a href="http://docs.oracle.com/cd/E11882_01/install.112/e22489/app_nonint.htm" target="_blank" rel="noopener">Grid Infrastructure Installation Guide 11g Release 2 (11.2) for Linux</a>-- B Installing and Configuring Oracle Database Using Response Files）。
+<figure class="highlight plain hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line">[root@node1:/home/grid]# su - grid </span><br><span class="line">[grid@node1:/home/grid]$ cd $ORACLE_HOME/cfgtoollogs </span><br><span class="line">[grid@node1:/u01/app/11gr2/grid/cfgtoollogs]$ touch cfgrsp.properties </span><br><span class="line">[grid@node1:/u01/app/11gr2/grid/cfgtoollogs]$ cat cfgrsp.properties  </span><br><span class="line">oracle.assistants.asm|S_ASMPASSWORD=Password123 </span><br><span class="line">oracle.assistants.asm|S_ASMMONITORPASSWORD=Password123 </span><br><span class="line">[grid@node1:/u01/app/11gr2/grid/cfgtoollogs]$ chmod 600 cfgrsp.properties </span><br><span class="line">[grid@node1:/u01/app/11gr2/grid/cfgtoollogs]$ ./configToolAllCommands RESPONSE_FILE=./cfgrsp.properties</span><br></pre></td></tr></table></figure>
+
+执行完后检测GI状态：
+<figure class="highlight plain hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br></pre></td><td class="code"><pre><span class="line">[grid@node1:/u01/app/11gr2/grid/cfgtoollogs]$ olsnodes -s -t </span><br><span class="line">node1   Active  Unpinned </span><br><span class="line">node2   Active  Unpinned </span><br><span class="line">[grid@node1:/u01/app/11gr2/grid/cfgtoollogs]$ crsctl stat res -t </span><br><span class="line">-------------------------------------------------------------------------------- </span><br><span class="line">NAME           TARGET  STATE        SERVER                   STATE_DETAILS        </span><br><span class="line">-------------------------------------------------------------------------------- </span><br><span class="line">Local Resources </span><br><span class="line">-------------------------------------------------------------------------------- </span><br><span class="line">ora.CRS.dg </span><br><span class="line">               ONLINE  ONLINE       node1                                         </span><br><span class="line">               ONLINE  ONLINE       node2                                         </span><br><span class="line">ora.LISTENER.lsnr </span><br><span class="line">               ONLINE  ONLINE       node1                                         </span><br><span class="line">               ONLINE  ONLINE       node2                                         </span><br><span class="line">ora.asm </span><br><span class="line">               ONLINE  ONLINE       node1                    Started              </span><br><span class="line">               ONLINE  ONLINE       node2                    Started              </span><br><span class="line">ora.gsd </span><br><span class="line">               OFFLINE OFFLINE      node1                                         </span><br><span class="line">               OFFLINE OFFLINE      node2                                         </span><br><span class="line">ora.net1.network </span><br><span class="line">               ONLINE  ONLINE       node1                                         </span><br><span class="line">               ONLINE  ONLINE       node2                                         </span><br><span class="line">ora.ons </span><br><span class="line">               ONLINE  ONLINE       node1                                         </span><br><span class="line">               ONLINE  ONLINE       node2                                         </span><br><span class="line">ora.registry.acfs </span><br><span class="line">               ONLINE  ONLINE       node1                                         </span><br><span class="line">               ONLINE  ONLINE       node2                                         </span><br><span class="line">-------------------------------------------------------------------------------- </span><br><span class="line">Cluster Resources </span><br><span class="line">-------------------------------------------------------------------------------- </span><br><span class="line">ora.LISTENER_SCAN1.lsnr </span><br><span class="line">      1        ONLINE  ONLINE       node1                                         </span><br><span class="line">ora.cvu </span><br><span class="line">      1        ONLINE  ONLINE       node1                                         </span><br><span class="line">ora.node1.vip </span><br><span class="line">      1        ONLINE  ONLINE       node1                                         </span><br><span class="line">ora.node2.vip </span><br><span class="line">      1        ONLINE  ONLINE       node2                                         </span><br><span class="line">ora.oc4j </span><br><span class="line">      1        ONLINE  ONLINE       node1                                         </span><br><span class="line">ora.scan1.vip </span><br><span class="line">      1        ONLINE  ONLINE       node1</span><br></pre></td></tr></table></figure>
+
+<h1>3.创建ASM磁盘组</h1>
+<figure class="highlight plain hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line">#[grid@node1:/worktmp/11g/grid]$ asmca -silent -configureASM -sysAsmPassword Password123 \ </span><br><span class="line">#-asmsnmpPassword Password123 -diskString &apos;/dev/asm*&apos; -diskGroupName DATA1 \ </span><br><span class="line">#-disk &apos;/dev/asm-diske&apos; -redundancy EXTERNAL</span><br><span class="line">#Correct </span><br><span class="line">asmca -silent -createDiskGroup -diskString &apos;/dev/asm-disk*&apos; \</span><br><span class="line">-diskGroupName DATA -disk &apos;/dev/asm-diske&apos; -redundancy EXTERNAL \</span><br><span class="line">-sysAsmPassword Password123 -compatible.asm 11.2 \</span><br><span class="line">-compatible.rdbms 11.2</span><br></pre></td></tr></table></figure>
+
+检测安装结果： 
+<figure class="highlight plain hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line">SQL&gt; select name,type,state,total_mb,free_mb,COMPATIBILITY, DATABASE_COMPATIBILITY from gv$asm_diskgroup; </span><br><span class="line"></span><br><span class="line">NAME	   TYPE   STATE 	TOTAL_MB    FREE_MB COMPATIBILITY   DATABASE_COMPAT</span><br><span class="line">---------- ------ ----------- ---------- ---------- --------------- ---------------</span><br><span class="line">CRS	   NORMAL MOUNTED	   24576      23650 11.2.0.0.0	    10.1.0.0.0</span><br><span class="line">DATA	   EXTERN MOUNTED	   30720      30625 11.2.0.0.0	    10.1.0.0.0</span><br><span class="line">CRS	   NORMAL MOUNTED	   24576      23650 11.2.0.0.0	    10.1.0.0.0</span><br><span class="line">DATA	   EXTERN MOUNTED	   30720      30625 11.2.0.0.0	    10.1.0.0.0</span><br></pre></td></tr></table></figure>
+
+<h1>4.安装RDBMS软件</h1>
+安装前检测：
+<figure class="highlight plain hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">[grid@node1:/worktmp/11g/grid]$ ./runcluvfy.sh stage -pre dbinst -n node1,node2 -verbose</span><br></pre></td></tr></table></figure>
+
+只安装软件，不创建DB，修改database下默认响应文件：
+<figure class="highlight plain hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br></pre></td><td class="code"><pre><span class="line">[oracle@node1:/home/oracle]$ cd /worktmp/11g/database/response/ </span><br><span class="line">[oracle@node1:/worktmp/11g/database/response]$ cat db_install.rsp | grep -v ^# | grep -v ^$ &gt; ~/db_install.rsp </span><br><span class="line">[oracle@node1:/worktmp/11g/database/response]$ cat ~/db_install.rsp </span><br><span class="line">oracle.install.responseFileVersion=/oracle/install/rspfmt_dbinstall_response_schema_v11_2_0 </span><br><span class="line">oracle.install.option=INSTALL_DB_SWONLY </span><br><span class="line">ORACLE_HOSTNAME=node1 </span><br><span class="line">UNIX_GROUP_NAME=oinstall </span><br><span class="line">INVENTORY_LOCATION=/u01/app/oraInvertory </span><br><span class="line">SELECTED_LANGUAGES=en,zh_CN </span><br><span class="line">ORACLE_HOME=/u01/app/oracle/product/11gr2 </span><br><span class="line">ORACLE_BASE=/u01/app/oracle </span><br><span class="line">oracle.install.db.InstallEdition=EE </span><br><span class="line">oracle.install.db.EEOptionsSelection=false </span><br><span class="line">oracle.install.db.optionalComponents=oracle.rdbms.partitioning:11.2.0.4.0,oracle.oraolap:11.2.0.4.0, </span><br><span class="line">oracle.rdbms.dm:11.2.0.4.0,oracle.rdbms.dv:11.2.0.4.0, </span><br><span class="line">oracle.rdbms.lbac:11.2.0.4.0,oracle.rdbms.rat:11.2.0.4.0 </span><br><span class="line">oracle.install.db.DBA_GROUP=dba </span><br><span class="line">oracle.install.db.OPER_GROUP= </span><br><span class="line">oracle.install.db.CLUSTER_NODES=node1,node2 </span><br><span class="line">oracle.install.db.isRACOneInstall=false </span><br><span class="line">oracle.install.db.racOneServiceName= </span><br><span class="line">oracle.install.db.config.starterdb.type= </span><br><span class="line">oracle.install.db.config.starterdb.globalDBName= </span><br><span class="line">oracle.install.db.config.starterdb.SID= </span><br><span class="line">oracle.install.db.config.starterdb.characterSet=AL32UTF8 </span><br><span class="line">oracle.install.db.config.starterdb.memoryOption=false </span><br><span class="line">oracle.install.db.config.starterdb.memoryLimit= </span><br><span class="line">oracle.install.db.config.starterdb.installExampleSchemas=false </span><br><span class="line">oracle.install.db.config.starterdb.enableSecuritySettings=true </span><br><span class="line">oracle.install.db.config.starterdb.password.ALL= </span><br><span class="line">oracle.install.db.config.starterdb.password.SYS= </span><br><span class="line">oracle.install.db.config.starterdb.password.SYSTEM= </span><br><span class="line">oracle.install.db.config.starterdb.password.SYSMAN= </span><br><span class="line">oracle.install.db.config.starterdb.password.DBSNMP= </span><br><span class="line">oracle.install.db.config.starterdb.control=DB_CONTROL </span><br><span class="line">oracle.install.db.config.starterdb.gridcontrol.gridControlServiceURL= </span><br><span class="line">oracle.install.db.config.starterdb.automatedBackup.enable=false </span><br><span class="line">oracle.install.db.config.starterdb.automatedBackup.osuid= </span><br><span class="line">oracle.install.db.config.starterdb.automatedBackup.ospwd= </span><br><span class="line">oracle.install.db.config.starterdb.storageType= </span><br><span class="line">oracle.install.db.config.starterdb.fileSystemStorage.dataLocation= </span><br><span class="line">oracle.install.db.config.starterdb.fileSystemStorage.recoveryLocation= </span><br><span class="line">oracle.install.db.config.asm.diskGroup= </span><br><span class="line">oracle.install.db.config.asm.ASMSNMPPassword= </span><br><span class="line">MYORACLESUPPORT_USERNAME= </span><br><span class="line">MYORACLESUPPORT_PASSWORD= </span><br><span class="line">SECURITY_UPDATES_VIA_MYORACLESUPPORT=false </span><br><span class="line">DECLINE_SECURITY_UPDATES=true </span><br><span class="line">PROXY_HOST= </span><br><span class="line">PROXY_PORT= </span><br><span class="line">PROXY_USER= </span><br><span class="line">PROXY_PWD= </span><br><span class="line">PROXY_REALM= </span><br><span class="line">COLLECTOR_SUPPORTHUB_URL= </span><br><span class="line">oracle.installer.autoupdates.option=SKIP_UPDATES </span><br><span class="line">oracle.installer.autoupdates.downloadUpdatesLoc= </span><br><span class="line">AUTOUPDATES_MYORACLESUPPORT_USERNAME= </span><br><span class="line">AUTOUPDATES_MYORACLESUPPORT_PASSWORD=</span><br></pre></td></tr></table></figure>
+
+执行安装程序：
+<figure class="highlight plain hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">[oracle@node1:/worktmp/11g/database]$./runInstaller -silent \ </span><br><span class="line">-responseFile /home/oracle/db_install.rsp \ </span><br><span class="line">-ignorePrereq -ignoreSysPreReqs -ignoreDiskWarning</span><br></pre></td></tr></table></figure>
+
+安装完成，执行脚本：
+<figure class="highlight plain hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br></pre></td><td class="code"><pre><span class="line">[root@node1:/root]# /u01/app/oracle/product/11gr2/root.sh </span><br><span class="line">[root@node2:/root]# /u01/app/oracle/product/11gr2/root.sh </span><br><span class="line">Performing root user operation for Oracle 11g </span><br><span class="line"></span><br><span class="line"> The following environment variables are set as: </span><br><span class="line">    ORACLE_OWNER= oracle </span><br><span class="line">    ORACLE_HOME=  /u01/app/oracle/product/11gr2 </span><br><span class="line">   Copying dbhome to /usr/local/bin ... </span><br><span class="line">   Copying oraenv to /usr/local/bin ... </span><br><span class="line">   Copying coraenv to /usr/local/bin ... </span><br><span class="line"></span><br><span class="line"> Entries will be added to the /etc/oratab file as needed by </span><br><span class="line">Database Configuration Assistant when a database is created </span><br><span class="line">Finished running generic part of root script. </span><br><span class="line">Now product-specific root actions will be performed. </span><br><span class="line">Finished product-specific root actions. </span><br><span class="line">Finished product-specific root actions.</span><br></pre></td></tr></table></figure>
+
+<h1>5.DBCA建库</h1>
+<figure class="highlight plain hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br></pre></td><td class="code"><pre><span class="line">[oracle@node1:/home/oracle]$ $ORACLE_HOME/bin/dbca -silent -createDatabase \ </span><br><span class="line">-templateName General_Purpose.dbc -gdbName racdb -sid racdb \ </span><br><span class="line">-sysPassword Password123 -systemPassword Password123 -recoveryAreaDestination FRA -storageType ASM \ </span><br><span class="line">-diskGroupName DATA1 -datafileJarLocation $ORACLE_HOME/assistants/dbca/templates \ </span><br><span class="line">-nodeinfo node1,node2 -characterset AL32UTF8 -obfuscatedPasswords false \ </span><br><span class="line">-sampleSchema false -asmSysPassword Password123 </span><br><span class="line">Copying database files </span><br><span class="line">1% complete </span><br><span class="line">3% complete </span><br><span class="line">9% complete </span><br><span class="line">15% complete </span><br><span class="line">21% complete </span><br><span class="line">27% complete </span><br><span class="line">30% complete </span><br><span class="line">Creating and starting Oracle instance </span><br><span class="line">32% complete </span><br><span class="line">36% complete </span><br><span class="line">40% complete </span><br><span class="line">44% complete </span><br><span class="line">45% complete </span><br><span class="line">48% complete </span><br><span class="line">50% complete </span><br><span class="line">Creating cluster database views </span><br><span class="line">52% complete </span><br><span class="line">70% complete </span><br><span class="line">Completing Database Creation </span><br><span class="line">73% complete </span><br><span class="line">76% complete </span><br><span class="line">85% complete </span><br><span class="line">94% complete </span><br><span class="line">100% complete </span><br><span class="line">Look at the log file &quot;/u01/app/oracle/cfgtoollogs/dbca/racdb/racdb.log&quot; for further details.</span><br></pre></td></tr></table></figure>
+
+<p>利用Oracle提供的General_Purpose模版创建，也可以自己录制数据库模版，在dbca.rsp中添加自己的模版创建数据库，本文采用的是第一种方式。 
+利用自己的模版创建：</p><p>
+</p><p>a) 利用OUI图形界面创建create database的template。</p><p>
+</p><p>b) 选择custom database</p><p>
+</p><p>c) 其他按照需求自定义</p><p>
+</p><p>d) 最后一步取消create database选项，改为选择create template</p><p>
+</p><p>e) 创建后模版文件位置：$ORACLE_HOME/assistants/dbca/templates</p><p>
+</p><p>修改安装文件内response文件dbca.rsp，主要修改GDBNAME、SID及TEMPLATENAME三个选项。再使用以下命令安装：</p><p>
+<code>dbca -silent -createdatabase -responseFile ./dbca.rsp</code>
+</p><h1>6.完善安装</h1>
+修改归档模式： 
+<figure class="highlight plain hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br></pre></td><td class="code"><pre><span class="line">SQL&gt; select inst_id,instance_name,version,archiver,status from gv$instance; </span><br><span class="line"></span><br><span class="line">    INST_ID INSTANCE_NAME                    VERSION                            ARCHIVER       STATUS </span><br><span class="line">---------- -------------------------------- ---------------------------------- -------------- ------------------------ </span><br><span class="line">         1 racdb1                           11.2.0.4.0                         STOPPED        OPEN </span><br><span class="line">         2 racdb2                           11.2.0.4.0                         STOPPED        OPEN </span><br><span class="line"></span><br><span class="line"> SQL&gt; alter system set log_archive_dest_1=&apos;location=+DATA1/arch/racdb1&apos; sid=&apos;racdb1&apos; scope=spfile; </span><br><span class="line"></span><br><span class="line"> System altered. </span><br><span class="line"></span><br><span class="line"> SQL&gt; alter system set log_archive_dest_1=&apos;location=+DATA1/arch/racdb2&apos; sid=&apos;racdb2&apos; scope=spfile; </span><br><span class="line"></span><br><span class="line"> System altered.</span><br></pre></td></tr></table></figure>
+
+<figure class="highlight plain hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">[grid@node2:/home/grid]$ srvctl stop database -d racdb -o immediate </span><br><span class="line">[grid@node2:/home/grid]$ srvctl start database -d racdb -o mount</span><br></pre></td></tr></table></figure>
+
+<figure class="highlight plain hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line">SQL&gt; alter database archivelog; </span><br><span class="line"></span><br><span class="line"> Database altered. </span><br><span class="line"></span><br><span class="line"> SQL&gt; archive log list; </span><br><span class="line">Database log mode              Archive Mode </span><br><span class="line">Automatic archival             Enabled </span><br><span class="line">Archive destination            +DATA1/arch/racdb1 </span><br><span class="line">Oldest online log sequence     4 </span><br><span class="line">Next log sequence to archive   5 </span><br><span class="line">Current log sequence           5</span><br></pre></td></tr></table></figure>
+
+<figure class="highlight plain hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">[grid@node2:/home/grid]$ srvctl stop database -d racdb -o immediate </span><br><span class="line">[grid@node2:/home/grid]$ srvctl start database -d racdb -o open</span><br></pre></td></tr></table></figure>
+
+<figure class="highlight plain hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line">SQL&gt; set linesize 200 </span><br><span class="line">SQL&gt; select inst_id,instance_name,version,archiver,status from gv$instance; </span><br><span class="line"></span><br><span class="line">    INST_ID INSTANCE_NAME                    VERSION                            ARCHIVER       STATUS </span><br><span class="line">---------- -------------------------------- ---------------------------------- -------------- ------------------------ </span><br><span class="line">         1 racdb1                           11.2.0.4.0                         STARTED        OPEN </span><br><span class="line">         2 racdb2                           11.2.0.4.0                         STARTED        OPEN</span><br></pre></td></tr></table></figure>
+
+检查资源状况：
+<figure class="highlight plain hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br></pre></td><td class="code"><pre><span class="line">[root@node1:/root]# /u01/app/11gr2/grid/bin/crsctl stat res -t </span><br><span class="line">-------------------------------------------------------------------------------- </span><br><span class="line">NAME           TARGET  STATE        SERVER                   STATE_DETAILS        </span><br><span class="line">-------------------------------------------------------------------------------- </span><br><span class="line">Local Resources </span><br><span class="line">-------------------------------------------------------------------------------- </span><br><span class="line">ora.CRS.dg </span><br><span class="line">               ONLINE  ONLINE       node1                                         </span><br><span class="line">               ONLINE  ONLINE       node2                                         </span><br><span class="line">ora.DATA1.dg </span><br><span class="line">               ONLINE  ONLINE       node1                                         </span><br><span class="line">               ONLINE  ONLINE       node2                                         </span><br><span class="line">ora.LISTENER.lsnr </span><br><span class="line">               ONLINE  ONLINE       node1                                         </span><br><span class="line">               ONLINE  ONLINE       node2                                         </span><br><span class="line">ora.asm </span><br><span class="line">               ONLINE  ONLINE       node1                    Started              </span><br><span class="line">               ONLINE  ONLINE       node2                    Started              </span><br><span class="line">ora.gsd </span><br><span class="line">               OFFLINE OFFLINE      node1                                         </span><br><span class="line">               OFFLINE OFFLINE      node2                                         </span><br><span class="line">ora.net1.network </span><br><span class="line">               ONLINE  ONLINE       node1                                         </span><br><span class="line">               ONLINE  ONLINE       node2                                         </span><br><span class="line">ora.ons </span><br><span class="line">               ONLINE  ONLINE       node1                                         </span><br><span class="line">               ONLINE  ONLINE       node2                                         </span><br><span class="line">ora.registry.acfs </span><br><span class="line">               ONLINE  ONLINE       node1                                         </span><br><span class="line">               ONLINE  ONLINE       node2                                         </span><br><span class="line">-------------------------------------------------------------------------------- </span><br><span class="line">Cluster Resources </span><br><span class="line">-------------------------------------------------------------------------------- </span><br><span class="line">ora.LISTENER_SCAN1.lsnr </span><br><span class="line">      1        ONLINE  ONLINE       node2                                         </span><br><span class="line">ora.cvu </span><br><span class="line">      1        ONLINE  ONLINE       node2                                         </span><br><span class="line">ora.node1.vip </span><br><span class="line">      1        ONLINE  ONLINE       node1                                         </span><br><span class="line">ora.node2.vip </span><br><span class="line">      1        ONLINE  ONLINE       node2                                         </span><br><span class="line">ora.oc4j </span><br><span class="line">      1        ONLINE  ONLINE       node2                                         </span><br><span class="line">ora.racdb.db </span><br><span class="line">      1        ONLINE  ONLINE       node1                    Open                 </span><br><span class="line">      2        ONLINE  ONLINE       node2                    Open                 </span><br><span class="line">ora.scan1.vip </span><br><span class="line">      1        ONLINE  ONLINE       node2</span><br></pre></td></tr></table></figure>
+
+Reference：<br>
+<b>Oracle® Real Application Clusters Installation Guide 11<i>g</i> Release 2 (11.2) for Linux and UNIX</b><br>
+<b>Oracle® Grid Infrastructure Installation Guide 11<i>g</i> Release 2 (11.2) for Linux</b> 
+<br>
+ <b>EOF</b> 
+
+    
+    </div>
+    
+    <div class="columns is-variable is-1 is-multiline is-mobile">
+    
+        <span class="column is-narrow"><a class="tag is-light article-tag" href="/tags/installation/">#installation</a></span>
+    
+    </div>
+    
+    
+    <div class="columns is-mobile is-multiline article-nav">
+        <span class="column is-12-mobile is-half-desktop  article-nav-prev">
+            
+            <a href="/grep-and-regular-expression.html">[shell学习笔记]正则表达式与grep</a>
+            
+        </span>
+        <span class="column is-12-mobile is-half-desktop  article-nav-next">
+            
+            <a href="/11g-fault-diagnosability-infrastructure.html">11g新特性—FDI简介</a>
+            
+        </span>
+    </div>
+    
+</article>
+
+
+
+
+    </div>
+</section>
+    <footer class="footer">
+    <div class="container">
+        <div class="columns content">
+            <div class="column is-narrow has-text-centered">
+                &copy; 2018 Kong&nbsp;
+                Powered by <a href="http://hexo.io/" target="_blank">Hexo</a> & <a
+                        href="http://github.com/ppoffice/hexo-theme-minos">Minos</a>
+            </div>
+            <div class="column is-hidden-mobile"></div>
+
+            
+            
+        </div>
+    </div>
+</footer>
+    <script src="//cdnjs.cloudflare.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
+<script src="//cdnjs.cloudflare.com/ajax/libs/moment.js/2.22.2/moment-with-locales.min.js"></script>
+
+<!-- test if the browser is outdated -->
+<div id="outdated">
+    <h6>Your browser is out-of-date!</h6>
+    <p>Update your browser to view this website correctly. <a id="btnUpdateBrowser" href="http://outdatedbrowser.com/">Update my browser now </a></p>
+    <p class="last"><a href="#" id="btnCloseUpdateBrowser" title="Close">&times;</a></p>
+</div>
+<script src="//cdnjs.cloudflare.com/ajax/libs/outdated-browser/1.1.5/outdatedbrowser.min.js"></script>
+<script>
+    $(document).ready(function () {
+        // plugin function, place inside DOM ready function
+        outdatedBrowser({
+            bgColor: '#f25648',
+            color: '#ffffff',
+            lowerThan: 'flex'
+        })
+    });
+</script>
+
+<script>
+    window.FontAwesomeConfig = {
+        searchPseudoElements: true
+    }
+    moment.locale("en-AU");
+</script>
+
+
+    
+    
+    
+    
+    
+    
+
+    
+
+
+<script src="/js/script.js"></script>
+
+    
+    <div class="searchbox ins-search">
+    <div class="searchbox-mask"></div>
+    <div class="searchbox-container ins-search-container">
+        <div class="searchbox-input-wrapper">
+            <input type="text" class="searchbox-input ins-search-input" placeholder="Type something..." />
+            <span class="searchbox-close ins-close ins-selectable"><i class="fa fa-times-circle"></i></span>
+        </div>
+        <div class="searchbox-result-wrapper ins-section-wrapper">
+            <div class="ins-section-container"></div>
+        </div>
+    </div>
+</div>
+<script>
+    (function (window) {
+        var INSIGHT_CONFIG = {
+            TRANSLATION: {
+                POSTS: 'Posts',
+                PAGES: 'Pages',
+                CATEGORIES: 'Categories',
+                TAGS: 'Tags',
+                UNTITLED: '(Untitled)',
+            },
+            CONTENT_URL: '/content.json',
+        };
+        window.INSIGHT_CONFIG = INSIGHT_CONFIG;
+    })(window);
+</script>
+<script src="/js/insight.js"></script>
+    
+</body>
+</html>
