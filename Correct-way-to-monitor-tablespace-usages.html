@@ -1,0 +1,254 @@
+<!DOCTYPE html>
+<html class="has-navbar-fixed-top">
+<head>
+    <meta charset="utf-8">
+<title>Correct way to monitor tablespace usages via SQLs - My Notebook</title>
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+
+<link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/outdated-browser/1.1.5/outdatedbrowser.min.css">
+
+
+
+
+
+
+
+
+
+
+<link rel="icon" href="/images/favicon.ico">
+
+
+<link rel="stylesheet" href="//fonts.googleapis.com/css?family=Ovo|Source+Code+Pro">
+<link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/bulma/0.6.2/css/bulma.min.css">
+
+
+
+<link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/highlight.js/9.12.0/styles/github.min.css">
+
+<link rel="stylesheet" href="/css/style.css">
+
+<script defer src="//use.fontawesome.com/releases/v5.0.8/js/all.js"></script>
+
+
+    
+    
+    
+    
+    
+    
+
+    
+
+
+</head>
+<body>
+    
+<nav class="navbar is-transparent is-fixed-top navbar-main" role="navigation" aria-label="main navigation">
+    <div class="container">
+        <div class="navbar-brand">
+            <a class="navbar-item navbar-logo" href="/">
+                
+                    
+                    My Notebook
+                    
+                
+            </a>
+            <div class="navbar-burger">
+                <span></span>
+                <span></span>
+                <span></span>
+            </div>
+        </div>
+        
+        <div class="navbar-menu navbar-start">
+            
+            <a class="navbar-item "
+               href="/">Home</a>
+            
+            <a class="navbar-item "
+               href="/archives">Archives</a>
+            
+            <a class="navbar-item "
+               href="/about">About</a>
+            
+        </div>
+        
+        <div class="navbar-menu navbar-end">
+            
+            <a class="navbar-item search" title="Search" href="javascript:;">
+                <i class="fas fa-search"></i>
+            </a>
+            
+            
+            
+        </div>
+    </div>
+</nav>
+
+    <section class="section">
+    <div class="container">
+    <article class="article content gallery" itemscope itemprop="blogPost">
+    <h1 class="article-title is-size-3 is-size-4-mobile" itemprop="name">
+        
+            Correct way to monitor tablespace usages via SQLs
+        
+    </h1>
+    <div class="article-meta columns is-variable is-1 is-multiline is-mobile is-size-7-mobile">
+        <span class="column is-narrow">
+            <time datetime="2018-10-08T23:26:05.000Z" itemprop="datePublished">Oct 8 2018</time>
+        </span>
+        
+        <span class="column is-narrow article-category">
+            <i class="far fa-folder"></i>
+            <a class="article-category-link" href="/categories/oracle/">oracle</a>
+        </span>
+        
+        
+    </div>
+    <div class="article-entry is-size-6-mobile" itemprop="articleBody">
+    
+        <p>There are many ways to monitor Oracle tablespace usages. OEM, SQL Developer, ect,. But in some cases, we have no handy GUI tools, which require us to use SQLs for monitoring tablespace usages.<br>Some v$ views and dictionaries are useful while monitoring tablespace.<br><a id="more"></a></p>
+<h1 id="1-Permanent-tablespace"><a href="#1-Permanent-tablespace" class="headerlink" title="1. Permanent tablespace"></a>1. Permanent tablespace</h1><ul>
+<li><code>DBA_TABLESPACE_USAGE_METRICS</code><br> Describes tablespace usage metrics for all types of tablespaces, including permanent, temporary, and undo tablespaces. Not suitable for autoextend data files.<blockquote>
+<p>TABLESPACE_SIZE is the maximum possible size if AUTO extended on, not the current size. The same applies to USED_PERCENT.<br>USED_SPACE and TABLESPACE_SIZE are in blocks.<br>see mos: <a href="https://support.oracle.com/epmos/faces/DocumentDisplay?_afrLoop=239212711068322&amp;id=455715.1&amp;_adf.ctrl-state=uz8pga6j_119" target="_blank" rel="noopener">Difference in Tablespace Size Values From dba_data_files and dba_tablespace_usage_metrics/V$filespace_usage (Doc ID 455715.1)</a></p>
+</blockquote>
+</li>
+</ul>
+<p>For the usage of tablespace(must exclude autoextensible data files):<br><figure class="highlight sql hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br></pre></td><td class="code"><pre><span class="line"><span class="hljs-keyword">set</span> line <span class="hljs-number">200</span></span><br><span class="line"><span class="hljs-keyword">col</span> tablespace_name <span class="hljs-keyword">for</span> a30</span><br><span class="line"><span class="hljs-keyword">SELECT</span> a.tablespace_name,</span><br><span class="line">  <span class="hljs-keyword">ROUND</span>((a.used_space * b.block_size)/<span class="hljs-number">1024</span>/<span class="hljs-number">1024</span>, <span class="hljs-number">2</span>) <span class="hljs-keyword">AS</span> <span class="hljs-string">"USED_SPACE(MB)"</span>,</span><br><span class="line">  <span class="hljs-keyword">ROUND</span>((a.tablespace_size * b.block_size)/<span class="hljs-number">1024</span>/<span class="hljs-number">1024</span>, <span class="hljs-number">2</span>) <span class="hljs-keyword">AS</span> <span class="hljs-string">"TABLESPACE_SIZE(MB)"</span>,</span><br><span class="line">  <span class="hljs-keyword">ROUND</span>(a.used_percent, <span class="hljs-number">2</span>) <span class="hljs-keyword">AS</span> <span class="hljs-string">"USED_PERCENT"</span></span><br><span class="line">  <span class="hljs-keyword">FROM</span> DBA_TABLESPACE_USAGE_METRICS a <span class="hljs-keyword">JOIN</span></span><br><span class="line">  DBA_TABLESPACES b</span><br><span class="line">  <span class="hljs-keyword">ON</span> a.tablespace_name = b.tablespace_name;</span><br><span class="line">ABLESPACE_NAME            USED_SPACE(MB) TABLESPACE_SIZE(MB) USED_PERCENT</span><br><span class="line"><span class="hljs-comment">------------------------------ -------------- ------------------- ------------</span></span><br><span class="line">SYSTEM                       828.13          4741.98     17.46    <span class="hljs-comment">--autoextend on, not real</span></span><br><span class="line">SYSAUX                       645.94          4741.98     13.62    <span class="hljs-comment">--autoextend on, not real</span></span><br><span class="line">TEMP                              3          4741.98       .06</span><br><span class="line">USERS                        7920.25         8322.5      95.17    <span class="hljs-comment">--auto extend off, real usages</span></span><br></pre></td></tr></table></figure></p>
+<ul>
+<li><code>v$filespace_usage</code><br> Summarizes space allocation information of each datafile and tempfile. This view is the basic view of <code>DBA_TABLESPACE_USAGE_METRICS</code>.</li>
+<li><code>DBA_HIST_TBSPC_SPACE_USAGE</code><br> Displays historical tablespace usage statistics, deponds on AWR retention</li>
+</ul>
+<p>Below shows the examples:</p>
+<h2 id="1-1-Monitoring-real-tablespace-usage"><a href="#1-1-Monitoring-real-tablespace-usage" class="headerlink" title="1.1 Monitoring real tablespace usage"></a>1.1 Monitoring real tablespace usage</h2><figure class="highlight sql hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br></pre></td><td class="code"><pre><span class="line">col dbname for a10</span><br><span class="line">col tbs_name for a30</span><br><span class="line">col sum_size for a30</span><br><span class="line">col free_size for a30</span><br><span class="line">col usage_pct for a30</span><br><span class="line"><span class="hljs-keyword">SELECT</span> * <span class="hljs-keyword">FROM</span> (</span><br><span class="line">    <span class="hljs-keyword">SELECT</span>  <span class="hljs-keyword">substr</span> (d.NAME || <span class="hljs-string">'                                                '</span>, <span class="hljs-number">1</span>, <span class="hljs-number">15</span>) <span class="hljs-keyword">AS</span> DBNAME,</span><br><span class="line">    <span class="hljs-keyword">SUBSTR</span> (a.tablespace_name || <span class="hljs-string">'                                     '</span>, <span class="hljs-number">1</span>, <span class="hljs-number">30</span>) <span class="hljs-keyword">AS</span> TBS_NAME,</span><br><span class="line">    <span class="hljs-keyword">SUBSTR</span> (a.BYTES ||<span class="hljs-string">'                                                '</span>, <span class="hljs-number">1</span>, <span class="hljs-number">8</span>) <span class="hljs-keyword">AS</span> SUM_SIZE,</span><br><span class="line">    <span class="hljs-keyword">SUBSTR</span> (TO_CHAR(<span class="hljs-keyword">decode</span>(<span class="hljs-keyword">ROUND</span>(c.BYTES,<span class="hljs-number">1</span>),<span class="hljs-literal">null</span>,<span class="hljs-number">0</span>,<span class="hljs-keyword">ROUND</span>(c.bytes,<span class="hljs-number">1</span>)))||<span class="hljs-string">'              '</span>, <span class="hljs-number">1</span>, <span class="hljs-number">8</span>) <span class="hljs-keyword">AS</span> FREE_SIZE,</span><br><span class="line">    <span class="hljs-keyword">substr</span> (<span class="hljs-keyword">ROUND</span> (<span class="hljs-number">100</span> * (<span class="hljs-number">1</span> - (NVL (c.BYTES, <span class="hljs-number">0</span>)</span><br><span class="line">                    / NVL (a.BYTES, <span class="hljs-number">0</span>))), <span class="hljs-number">2</span>)||<span class="hljs-string">'   '</span>,<span class="hljs-number">1</span>,<span class="hljs-number">5</span>) <span class="hljs-keyword">AS</span> USAGE_PCT</span><br><span class="line">    <span class="hljs-keyword">FROM</span> (<span class="hljs-keyword">SELECT</span> tablespace_name,<span class="hljs-keyword">SUM</span> (<span class="hljs-keyword">BYTES</span>) / <span class="hljs-number">1024</span> / <span class="hljs-number">1024</span> <span class="hljs-keyword">AS</span> <span class="hljs-keyword">BYTES</span></span><br><span class="line">        <span class="hljs-keyword">FROM</span> dba_data_files</span><br><span class="line">        <span class="hljs-keyword">GROUP</span> <span class="hljs-keyword">BY</span> tablespace_name) a,</span><br><span class="line">    (<span class="hljs-keyword">SELECT</span> f.tablespace_name,<span class="hljs-keyword">SUM</span> (f.BYTES) / <span class="hljs-number">1024</span> / <span class="hljs-number">1024</span> <span class="hljs-keyword">AS</span> <span class="hljs-keyword">BYTES</span></span><br><span class="line">        <span class="hljs-keyword">FROM</span> dba_free_space f</span><br><span class="line">        <span class="hljs-keyword">GROUP</span> <span class="hljs-keyword">BY</span> f.tablespace_name) c,</span><br><span class="line">    v$<span class="hljs-keyword">database</span> d</span><br><span class="line">    <span class="hljs-keyword">WHERE</span> a.tablespace_name = c.tablespace_name(+)</span><br><span class="line">);</span><br></pre></td></tr></table></figure>
+<h2 id="1-2-Monitoring-tablespace-growth-rate"><a href="#1-2-Monitoring-tablespace-growth-rate" class="headerlink" title="1.2 Monitoring tablespace growth rate"></a>1.2 Monitoring tablespace growth rate</h2><figure class="highlight sql hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br></pre></td><td class="code"><pre><span class="line"><span class="hljs-keyword">SELECT</span> A.NAME, B.TABLESPACE_ID,B.DATETIME,B.USED_SIZE_MB,B.INC_MB,</span><br><span class="line">       <span class="hljs-keyword">CASE</span> <span class="hljs-keyword">WHEN</span> <span class="hljs-keyword">SUBSTR</span>(INC_RATE,<span class="hljs-number">1</span>,<span class="hljs-number">1</span>)=<span class="hljs-string">'.'</span> <span class="hljs-keyword">THEN</span> <span class="hljs-string">'0'</span>||INC_RATE</span><br><span class="line">            <span class="hljs-keyword">WHEN</span> <span class="hljs-keyword">SUBSTR</span>(INC_RATE,<span class="hljs-number">1</span>,<span class="hljs-number">2</span>)=<span class="hljs-string">'-.'</span> <span class="hljs-keyword">THEN</span> <span class="hljs-string">'-0'</span>||<span class="hljs-keyword">SUBSTR</span>(INC_RATE,<span class="hljs-number">2</span>,<span class="hljs-keyword">LENGTH</span>(INC_RATE))</span><br><span class="line">            <span class="hljs-keyword">ELSE</span> INC_RATE</span><br><span class="line">       <span class="hljs-keyword">END</span> <span class="hljs-keyword">AS</span> INC_RATEX</span><br><span class="line">  <span class="hljs-keyword">FROM</span> V$<span class="hljs-keyword">TABLESPACE</span> A,</span><br><span class="line">       (</span><br><span class="line">           <span class="hljs-keyword">SELECT</span> TABLESPACE_ID,DATETIME,</span><br><span class="line">                  USED_SIZE_MB,</span><br><span class="line">                  (<span class="hljs-keyword">DECODE</span>(PREV_USE_MB,<span class="hljs-number">0</span>,<span class="hljs-number">0</span>,USED_SIZE_MB)-PREV_USE_MB) <span class="hljs-keyword">AS</span>  INC_MB,</span><br><span class="line">                  TO_CHAR(<span class="hljs-keyword">ROUND</span>((<span class="hljs-keyword">DECODE</span>(PREV_USE_MB,<span class="hljs-number">0</span>,<span class="hljs-number">0</span>,USED_SIZE_MB)-PREV_USE_MB)/<span class="hljs-keyword">DECODE</span>(PREV_USE_MB,<span class="hljs-number">0</span>,<span class="hljs-number">1</span>,PREV_USE_MB)*<span class="hljs-number">100</span>,<span class="hljs-number">2</span>))||<span class="hljs-string">'%'</span> <span class="hljs-keyword">AS</span> INC_RATE</span><br><span class="line">         <span class="hljs-keyword">FROM</span></span><br><span class="line">         (</span><br><span class="line">           <span class="hljs-keyword">SELECT</span> TABLESPACE_ID,</span><br><span class="line">                  TRUNC(<span class="hljs-keyword">TO_DATE</span>(RTIME, <span class="hljs-string">'mm/dd/yyyy hh24:mi:ss'</span>)) DATETIME,</span><br><span class="line">                  <span class="hljs-keyword">MAX</span>(TABLESPACE_USEDSIZE * <span class="hljs-number">8</span> / <span class="hljs-number">1024</span>) USED_SIZE_MB,</span><br><span class="line">                  LAG(<span class="hljs-keyword">MAX</span>(TABLESPACE_USEDSIZE * <span class="hljs-number">8</span> / <span class="hljs-number">1024</span>),<span class="hljs-number">1</span>,<span class="hljs-number">0</span>) <span class="hljs-keyword">OVER</span>(<span class="hljs-keyword">PARTITION</span> <span class="hljs-keyword">BY</span> TABLESPACE_ID <span class="hljs-keyword">ORDER</span> <span class="hljs-keyword">BY</span> TRUNC(<span class="hljs-keyword">TO_DATE</span>(RTIME, <span class="hljs-string">'mm/dd/yyyy hh24:mi:ss'</span>)) ) <span class="hljs-keyword">AS</span> PREV_USE_MB</span><br><span class="line">             <span class="hljs-keyword">FROM</span> DBA_HIST_TBSPC_SPACE_USAGE</span><br><span class="line">            <span class="hljs-keyword">WHERE</span> TRUNC(<span class="hljs-keyword">TO_DATE</span>(RTIME, <span class="hljs-string">'mm/dd/yyyy hh24:mi:ss'</span>)) &gt; TRUNC(<span class="hljs-keyword">SYSDATE</span> - <span class="hljs-number">30</span>)</span><br><span class="line">            <span class="hljs-keyword">GROUP</span> <span class="hljs-keyword">BY</span> TABLESPACE_ID, TRUNC(<span class="hljs-keyword">TO_DATE</span>(RTIME, <span class="hljs-string">'mm/dd/yyyy hh24:mi:ss'</span>))</span><br><span class="line">         )</span><br><span class="line">       ) B</span><br><span class="line"> <span class="hljs-keyword">WHERE</span> A.TS# = B.TABLESPACE_ID</span><br><span class="line"> <span class="hljs-keyword">ORDER</span> <span class="hljs-keyword">BY</span> B.TABLESPACE_ID,DATETIME;</span><br></pre></td></tr></table></figure>
+<h1 id="2-Temporary-tablespace"><a href="#2-Temporary-tablespace" class="headerlink" title="2. Temporary tablespace"></a>2. Temporary tablespace</h1><ul>
+<li><p><code>GV_$TEMP_SPACE_HEADER</code><br> The views <code>v$sort_usage</code> or <code>v$tempseg_usage</code> ( and <code>v$sort_segment</code>) give the correct information regarding the allocation of sort segments. The view <code>v$temp_space_header</code> shows that these many blocks were touched in each temp file at some point when temp usage was at its highest,in essence, it shows the number of initialized blocks for each tempfile, not the actual allocated blocks.</p>
+<blockquote>
+<p>see mos: <a href="https://support.oracle.com/epmos/faces/DocumentDisplay?_afrLoop=240558702386283&amp;id=2095211.1&amp;_adf.ctrl-state=uz8pga6j_527" target="_blank" rel="noopener">Mismatch Between V$TEMP_SPACE_HEADER and V$TEMPSEG_USAGE/V$SORT_USAGE (Doc ID 2095211.1)</a>.</p>
+</blockquote>
+</li>
+<li><p>Correct way to show TEMP tablespace usage</p>
+<figure class="highlight sql hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br></pre></td><td class="code"><pre><span class="line"><span class="hljs-keyword">select</span> tablespace_name,</span><br><span class="line">tablespace_size/<span class="hljs-number">1024</span>/<span class="hljs-number">1024</span> <span class="hljs-string">"Total Space"</span>,</span><br><span class="line">allocated_space/<span class="hljs-number">1024</span>/<span class="hljs-number">1024</span> <span class="hljs-string">"Alloc Space"</span>,</span><br><span class="line">free_space/<span class="hljs-number">1024</span>/<span class="hljs-number">1024</span> <span class="hljs-string">"Free Space"</span></span><br><span class="line"><span class="hljs-keyword">from</span> dba_temp_free_space;</span><br><span class="line"></span><br><span class="line"><span class="hljs-keyword">select</span> tablespace_name, total_blocks*<span class="hljs-number">8</span>/<span class="hljs-number">1024</span> total_mb, used_blocks*<span class="hljs-number">8</span>/<span class="hljs-number">1024</span> used_mb, free_blocks*<span class="hljs-number">8</span>/<span class="hljs-number">1024</span> free_mb</span><br><span class="line"><span class="hljs-keyword">from</span> v$sort_segment;</span><br><span class="line"></span><br><span class="line"><span class="hljs-keyword">SELECT</span> D.tablespace_name,</span><br><span class="line">       <span class="hljs-keyword">SPACE</span> <span class="hljs-string">"SUM_SPACE(M)"</span>,</span><br><span class="line">       blocks <span class="hljs-string">"SUM_BLOCKS"</span>,</span><br><span class="line">       used_space <span class="hljs-string">"USED_SPACE(M)"</span>,</span><br><span class="line">       <span class="hljs-keyword">Round</span>(Nvl(used_space, <span class="hljs-number">0</span>) / <span class="hljs-keyword">SPACE</span> * <span class="hljs-number">100</span>, <span class="hljs-number">2</span>) <span class="hljs-string">"USED_RATE(%)"</span>,</span><br><span class="line">       <span class="hljs-keyword">SPACE</span> - used_space <span class="hljs-string">"FREE_SPACE(M)"</span></span><br><span class="line">  <span class="hljs-keyword">FROM</span> (<span class="hljs-keyword">SELECT</span> tablespace_name,</span><br><span class="line">               <span class="hljs-keyword">Round</span>(<span class="hljs-keyword">SUM</span>(<span class="hljs-keyword">bytes</span>) / (<span class="hljs-number">1024</span> * <span class="hljs-number">1024</span>), <span class="hljs-number">2</span>) <span class="hljs-keyword">SPACE</span>,</span><br><span class="line">               <span class="hljs-keyword">SUM</span>(blocks) BLOCKS</span><br><span class="line">          <span class="hljs-keyword">FROM</span> dba_temp_files</span><br><span class="line">         <span class="hljs-keyword">GROUP</span> <span class="hljs-keyword">BY</span> tablespace_name) D,</span><br><span class="line">       (<span class="hljs-keyword">SELECT</span> <span class="hljs-keyword">tablespace</span>,</span><br><span class="line">               <span class="hljs-keyword">Round</span>(<span class="hljs-keyword">SUM</span>(blocks * <span class="hljs-number">8192</span>) / (<span class="hljs-number">1024</span> * <span class="hljs-number">1024</span>), <span class="hljs-number">2</span>) USED_SPACE</span><br><span class="line">          <span class="hljs-keyword">FROM</span> v$sort_usage</span><br><span class="line">         <span class="hljs-keyword">GROUP</span> <span class="hljs-keyword">BY</span> <span class="hljs-keyword">tablespace</span>) F</span><br><span class="line"> <span class="hljs-keyword">WHERE</span> D.tablespace_name = F.tablespace(+)</span><br></pre></td></tr></table></figure>
+</li>
+</ul>
+<p><strong>EOF</strong></p>
+
+    
+    </div>
+    
+    <div class="columns is-variable is-1 is-multiline is-mobile">
+    
+        <span class="column is-narrow"><a class="tag is-light article-tag" href="/tags/scripts/">#scripts</a></span>
+    
+    </div>
+    
+    
+    <div class="columns is-mobile is-multiline article-nav">
+        <span class="column is-12-mobile is-half-desktop is-hidden-mobile article-nav-prev">
+            
+        </span>
+        <span class="column is-12-mobile is-half-desktop  article-nav-next">
+            
+            <a href="/db2-runstats-and-reorgs.html">DB2 Runstats and Reorgs</a>
+            
+        </span>
+    </div>
+    
+</article>
+
+
+
+
+    </div>
+</section>
+    <footer class="footer">
+    <div class="container">
+        <div class="columns content">
+            <div class="column is-narrow has-text-centered">
+                &copy; 2013 - 2018 Fung Kong&nbsp;
+                Powered by <a href="http://hexo.io/" target="_blank">Hexo</a> & <a
+                        href="http://github.com/ppoffice/hexo-theme-minos">Minos</a>
+            </div>
+            <div class="column is-hidden-mobile"></div>
+
+            
+            
+        </div>
+    </div>
+</footer>
+
+    <script src="//cdnjs.cloudflare.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
+<script src="//cdnjs.cloudflare.com/ajax/libs/moment.js/2.22.2/moment-with-locales.min.js"></script>
+
+<!-- test if the browser is outdated -->
+<div id="outdated">
+    <h6>Your browser is out-of-date!</h6>
+    <p>Update your browser to view this website correctly. <a id="btnUpdateBrowser" href="http://outdatedbrowser.com/">Update my browser now </a></p>
+    <p class="last"><a href="#" id="btnCloseUpdateBrowser" title="Close">&times;</a></p>
+</div>
+<script src="//cdnjs.cloudflare.com/ajax/libs/outdated-browser/1.1.5/outdatedbrowser.min.js"></script>
+<script>
+    $(document).ready(function () {
+        // plugin function, place inside DOM ready function
+        outdatedBrowser({
+            bgColor: '#f25648',
+            color: '#ffffff',
+            lowerThan: 'flex'
+        })
+    });
+</script>
+
+<script>
+    window.FontAwesomeConfig = {
+        searchPseudoElements: true
+    }
+    moment.locale("en-AU");
+</script>
+
+
+    
+    
+    
+    
+    
+    
+
+    
+
+
+<script src="/js/script.js"></script>
+
+    
+    <div class="searchbox ins-search">
+    <div class="searchbox-mask"></div>
+    <div class="searchbox-container ins-search-container">
+        <div class="searchbox-input-wrapper">
+            <input type="text" class="searchbox-input ins-search-input" placeholder="Type something..." />
+            <span class="searchbox-close ins-close ins-selectable"><i class="fa fa-times-circle"></i></span>
+        </div>
+        <div class="searchbox-result-wrapper ins-section-wrapper">
+            <div class="ins-section-container"></div>
+        </div>
+    </div>
+</div>
+<script>
+    (function (window) {
+        var INSIGHT_CONFIG = {
+            TRANSLATION: {
+                POSTS: 'Posts',
+                PAGES: 'Pages',
+                CATEGORIES: 'Categories',
+                TAGS: 'Tags',
+                UNTITLED: '(Untitled)',
+            },
+            CONTENT_URL: '/content.json',
+        };
+        window.INSIGHT_CONFIG = INSIGHT_CONFIG;
+    })(window);
+</script>
+<script src="/js/insight.js"></script>
+    
+</body>
+</html>
