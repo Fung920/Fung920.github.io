@@ -92,6 +92,74 @@
         <article class="article content gallery" itemscope itemprop="blogPost">
     <h1 class="article-title is-size-3 is-size-4-mobile" itemprop="name">
         
+            <a href="/ora-19511.html" itemprop="url">ORA-19511</a>
+        
+    </h1>
+    <div class="article-meta columns is-variable is-1 is-multiline is-mobile is-size-7-mobile">
+        <span class="column is-narrow">
+            <time datetime="2014-12-16T02:37:15.000Z" itemprop="datePublished">Dec 15 2014</time>
+        </span>
+        
+        <span class="column is-narrow article-category">
+            <i class="far fa-folder"></i>
+            <a class="article-category-link" href="/categories/oracle/">oracle</a>
+        </span>
+        
+        
+    </div>
+    <div class="article-entry is-size-6-mobile" itemprop="articleBody">
+    
+        <p>客户最近因升级主机，NBU客户端重新安装，最近说NBU备份Oracle老是报错。我过去现场一看，最早记录10月份，从那时开始一直在报错，这一个多月就从没备份成功过。很有可能NBU客户端安装后就一直备份不成功，但是客户一直没发现。<br></p>
+        <p class="article-more-link">
+            <a href="/ora-19511.html#more">Read More</a>
+        </p>
+    
+    </div>
+    
+    
+</article>
+
+
+
+
+    
+        <article class="article content gallery" itemscope itemprop="blogPost">
+    <h1 class="article-title is-size-3 is-size-4-mobile" itemprop="name">
+        
+            <a href="/bbed-demo.html" itemprop="url">BBED Demo</a>
+        
+    </h1>
+    <div class="article-meta columns is-variable is-1 is-multiline is-mobile is-size-7-mobile">
+        <span class="column is-narrow">
+            <time datetime="2014-09-05T02:46:13.000Z" itemprop="datePublished">Sep 4 2014</time>
+        </span>
+        
+        <span class="column is-narrow article-category">
+            <i class="far fa-folder"></i>
+            <a class="article-category-link" href="/categories/oracle/">oracle</a>
+        </span>
+        
+        
+    </div>
+    <div class="article-entry is-size-6-mobile" itemprop="articleBody">
+    
+        <p>BBED功能有限，对很多类型的数据块都不支持。BBED虽然支持在open状态下修改数据块，但建议先干净的关闭数据库在进行BBED修改。正常关闭数据库能避开检查点进程覆盖掉bbed修改的块缓存。<br></p>
+        <p class="article-more-link">
+            <a href="/bbed-demo.html#more">Read More</a>
+        </p>
+    
+    </div>
+    
+    
+</article>
+
+
+
+
+    
+        <article class="article content gallery" itemscope itemprop="blogPost">
+    <h1 class="article-title is-size-3 is-size-4-mobile" itemprop="name">
+        
             <a href="/bbed-structure.html" itemprop="url">BBED Structure</a>
         
     </h1>
@@ -350,74 +418,6 @@
         <p>Oracle中的执行计划显示在执行一条SQL语句时必须执行的详细步骤，通常以表格形式呈现，但其实是树形结构。查看Oracle中的执行计划一般有以下几种方法(包括但不限于)。<br></p>
         <p class="article-more-link">
             <a href="/execution-plan.html#more">Read More</a>
-        </p>
-    
-    </div>
-    
-    
-</article>
-
-
-
-
-    
-        <article class="article content gallery" itemscope itemprop="blogPost">
-    <h1 class="article-title is-size-3 is-size-4-mobile" itemprop="name">
-        
-            <a href="/table-join-type.html" itemprop="url">Oracle表连接类型</a>
-        
-    </h1>
-    <div class="article-meta columns is-variable is-1 is-multiline is-mobile is-size-7-mobile">
-        <span class="column is-narrow">
-            <time datetime="2014-08-17T13:12:10.000Z" itemprop="datePublished">Aug 17 2014</time>
-        </span>
-        
-        <span class="column is-narrow article-category">
-            <i class="far fa-folder"></i>
-            <a class="article-category-link" href="/categories/oracle/">oracle</a>
-        </span>
-        
-        
-    </div>
-    <div class="article-entry is-size-6-mobile" itemprop="articleBody">
-    
-        <p>在Oracle优化器中，多表的连接顺序，连接方法的不同，对CBO产生的COST有很大的差异。在优化器解析含表连接的SQL时，它会根据目标SQL的写法来决定表连接的顺序、表连接的方法和单表访问路径来决定此SQL的最终执行计划。<br></p>
-        <p class="article-more-link">
-            <a href="/table-join-type.html#more">Read More</a>
-        </p>
-    
-    </div>
-    
-    
-</article>
-
-
-
-
-    
-        <article class="article content gallery" itemscope itemprop="blogPost">
-    <h1 class="article-title is-size-3 is-size-4-mobile" itemprop="name">
-        
-            <a href="/manage-pdbs.html" itemprop="url">12C之PDB管理</a>
-        
-    </h1>
-    <div class="article-meta columns is-variable is-1 is-multiline is-mobile is-size-7-mobile">
-        <span class="column is-narrow">
-            <time datetime="2014-08-13T02:00:41.000Z" itemprop="datePublished">Aug 12 2014</time>
-        </span>
-        
-        <span class="column is-narrow article-category">
-            <i class="far fa-folder"></i>
-            <a class="article-category-link" href="/categories/oracle/">oracle</a>
-        </span>
-        
-        
-    </div>
-    <div class="article-entry is-size-6-mobile" itemprop="articleBody">
-    
-        <p>在上一篇文章<a href="/12c-silent-installation.html">12c Silent Installation</a>创建的一个空的CDB，本文介绍如何使用sqlplus工具对PDB进行维护(EM Express更简单，以下所有操作均可从EM生成对应的SQL)。<br></p>
-        <p class="article-more-link">
-            <a href="/manage-pdbs.html#more">Read More</a>
         </p>
     
     </div>

@@ -92,6 +92,74 @@
         <article class="article content gallery" itemscope itemprop="blogPost">
     <h1 class="article-title is-size-3 is-size-4-mobile" itemprop="name">
         
+            <a href="/table-join-type.html" itemprop="url">Oracle表连接类型</a>
+        
+    </h1>
+    <div class="article-meta columns is-variable is-1 is-multiline is-mobile is-size-7-mobile">
+        <span class="column is-narrow">
+            <time datetime="2014-08-17T13:12:10.000Z" itemprop="datePublished">Aug 17 2014</time>
+        </span>
+        
+        <span class="column is-narrow article-category">
+            <i class="far fa-folder"></i>
+            <a class="article-category-link" href="/categories/oracle/">oracle</a>
+        </span>
+        
+        
+    </div>
+    <div class="article-entry is-size-6-mobile" itemprop="articleBody">
+    
+        <p>在Oracle优化器中，多表的连接顺序，连接方法的不同，对CBO产生的COST有很大的差异。在优化器解析含表连接的SQL时，它会根据目标SQL的写法来决定表连接的顺序、表连接的方法和单表访问路径来决定此SQL的最终执行计划。<br></p>
+        <p class="article-more-link">
+            <a href="/table-join-type.html#more">Read More</a>
+        </p>
+    
+    </div>
+    
+    
+</article>
+
+
+
+
+    
+        <article class="article content gallery" itemscope itemprop="blogPost">
+    <h1 class="article-title is-size-3 is-size-4-mobile" itemprop="name">
+        
+            <a href="/manage-pdbs.html" itemprop="url">12C之PDB管理</a>
+        
+    </h1>
+    <div class="article-meta columns is-variable is-1 is-multiline is-mobile is-size-7-mobile">
+        <span class="column is-narrow">
+            <time datetime="2014-08-13T02:00:41.000Z" itemprop="datePublished">Aug 12 2014</time>
+        </span>
+        
+        <span class="column is-narrow article-category">
+            <i class="far fa-folder"></i>
+            <a class="article-category-link" href="/categories/oracle/">oracle</a>
+        </span>
+        
+        
+    </div>
+    <div class="article-entry is-size-6-mobile" itemprop="articleBody">
+    
+        <p>在上一篇文章<a href="/12c-silent-installation.html">12c Silent Installation</a>创建的一个空的CDB，本文介绍如何使用sqlplus工具对PDB进行维护(EM Express更简单，以下所有操作均可从EM生成对应的SQL)。<br></p>
+        <p class="article-more-link">
+            <a href="/manage-pdbs.html#more">Read More</a>
+        </p>
+    
+    </div>
+    
+    
+</article>
+
+
+
+
+    
+        <article class="article content gallery" itemscope itemprop="blogPost">
+    <h1 class="article-title is-size-3 is-size-4-mobile" itemprop="name">
+        
             <a href="/12c-silent-installation.html" itemprop="url">12C静默安装CDB</a>
         
     </h1>
@@ -350,74 +418,6 @@
         <p>完全恢复和不完全恢复在前文<a href="/rman-recovery-concepts.html">RMAN Recovery Concepts</a>已经简单描述过。本文简单描述下基于RMAN的完全恢复和不完全恢复。<br></p>
         <p class="article-more-link">
             <a href="/rman-complete-and-incomplete-recovery.html#more">Read More</a>
-        </p>
-    
-    </div>
-    
-    
-</article>
-
-
-
-
-    
-        <article class="article content gallery" itemscope itemprop="blogPost">
-    <h1 class="article-title is-size-3 is-size-4-mobile" itemprop="name">
-        
-            <a href="/handling-online-redo-log-failures.html" itemprop="url">Oracle日志文件损坏的恢复</a>
-        
-    </h1>
-    <div class="article-meta columns is-variable is-1 is-multiline is-mobile is-size-7-mobile">
-        <span class="column is-narrow">
-            <time datetime="2014-06-05T02:06:11.000Z" itemprop="datePublished">Jun 4 2014</time>
-        </span>
-        
-        <span class="column is-narrow article-category">
-            <i class="far fa-folder"></i>
-            <a class="article-category-link" href="/categories/oracle/">oracle</a>
-        </span>
-        
-        
-    </div>
-    <div class="article-entry is-size-6-mobile" itemprop="articleBody">
-    
-        <p>如前文<a href="/redo-manage.html">管理redo文件</a>所述，Online redo log是记录数据所有操作的地方，它最大的目的就是在数据库需要恢复的时候提供恢复的依据。<br></p>
-        <p class="article-more-link">
-            <a href="/handling-online-redo-log-failures.html#more">Read More</a>
-        </p>
-    
-    </div>
-    
-    
-</article>
-
-
-
-
-    
-        <article class="article content gallery" itemscope itemprop="blogPost">
-    <h1 class="article-title is-size-3 is-size-4-mobile" itemprop="name">
-        
-            <a href="/rman-recovery-concepts.html" itemprop="url">RMAN恢复基本概念</a>
-        
-    </h1>
-    <div class="article-meta columns is-variable is-1 is-multiline is-mobile is-size-7-mobile">
-        <span class="column is-narrow">
-            <time datetime="2014-06-01T04:34:25.000Z" itemprop="datePublished">Jun 1 2014</time>
-        </span>
-        
-        <span class="column is-narrow article-category">
-            <i class="far fa-folder"></i>
-            <a class="article-category-link" href="/categories/oracle/">oracle</a>
-        </span>
-        
-        
-    </div>
-    <div class="article-entry is-size-6-mobile" itemprop="articleBody">
-    
-        <p>大部分recovery场景都需要经过两个阶段：restore(还原)和recover(恢复)。<br></p>
-        <p class="article-more-link">
-            <a href="/rman-recovery-concepts.html#more">Read More</a>
         </p>
     
     </div>

@@ -1,0 +1,271 @@
+<!DOCTYPE html>
+<html class="has-navbar-fixed-top">
+<head>
+    <meta charset="utf-8">
+<title>Oracle 12c Proactive Bundle Patch - My Notebook</title>
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+
+<link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/outdated-browser/1.1.5/outdatedbrowser.min.css">
+
+
+
+
+
+
+
+
+
+
+<link rel="icon" href="/images/favicon.ico">
+
+
+<link rel="stylesheet" href="//fonts.googleapis.com/css?family=Ovo|Source+Code+Pro">
+<link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/bulma/0.6.2/css/bulma.min.css">
+
+
+
+<link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/highlight.js/9.12.0/styles/github.min.css">
+
+<link rel="stylesheet" href="/css/style.css">
+
+<script defer src="//use.fontawesome.com/releases/v5.0.8/js/all.js"></script>
+
+
+    
+    
+    
+    
+    
+    
+
+    
+
+
+</head>
+<body>
+    
+<nav class="navbar is-transparent is-fixed-top navbar-main" role="navigation" aria-label="main navigation">
+    <div class="container">
+        <div class="navbar-brand">
+            <a class="navbar-item navbar-logo" href="/">
+                
+                    
+                    My Notebook
+                    
+                
+            </a>
+            <div class="navbar-burger">
+                <span></span>
+                <span></span>
+                <span></span>
+            </div>
+        </div>
+        
+        <div class="navbar-menu navbar-start">
+            
+            <a class="navbar-item "
+               href="/">Home</a>
+            
+            <a class="navbar-item "
+               href="/archives">Archives</a>
+            
+            <a class="navbar-item "
+               href="/about">About</a>
+            
+        </div>
+        
+        <div class="navbar-menu navbar-end">
+            
+            <a class="navbar-item search" title="Search" href="javascript:;">
+                <i class="fas fa-search"></i>
+            </a>
+            
+            
+            
+        </div>
+    </div>
+</nav>
+
+    <section class="section">
+    <div class="container">
+    <article class="article content gallery" itemscope itemprop="blogPost">
+    <h1 class="article-title is-size-3 is-size-4-mobile" itemprop="name">
+        
+            Oracle 12c Proactive Bundle Patch
+        
+    </h1>
+    <div class="article-meta columns is-variable is-1 is-multiline is-mobile is-size-7-mobile">
+        <span class="column is-narrow">
+            <time datetime="2018-10-09T23:20:39.000Z" itemprop="datePublished">Oct 9 2018</time>
+        </span>
+        
+        <span class="column is-narrow article-category">
+            <i class="far fa-folder"></i>
+            <a class="article-category-link" href="/categories/oracle/">oracle</a>
+        </span>
+        
+        
+    </div>
+    <div class="article-entry is-size-6-mobile" itemprop="articleBody">
+    
+        <p>As of Oracle 12.1.0.2, ORACLE provide a new approach to patch PSU which called Proactive Bundle Patch(DBBP) and replace the previous PSU.<br>With DBBP, applying patch is more easier. PSU is conflict with DBBP, if you want to apply DBBP in your database which PSUs are installed, you have to rollback all PSUs to make sure applying DBBP successfully.<br>Because DBBP covers more bug fixes than PSU, it’s recommended to use DBBP to apply latest patches.<br><a id="more"></a></p>
+<h1 id="1-Pre-installation-task"><a href="#1-Pre-installation-task" class="headerlink" title="1. Pre-installation task"></a>1. Pre-installation task</h1><p>First, it’s always essential to check the <code>opatch</code> version, find the readme file in the patchset to meet the minimum version. In RAC environment, both <code>GRID_HOME</code> and <code>ORACLE_HOME</code> Opatch should be replaced with target version.</p>
+<ul>
+<li><p>Reserve historical information</p>
+<figure class="highlight sql hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br></pre></td><td class="code"><pre><span class="line">&lt;ORACLE_HOME&gt;/OPatch/opatch lsinventory -detail -oh &lt;ORACLE_HOME&gt; &gt;/tmp/lsinv.info</span><br><span class="line">&lt;ORACLE_HOME&gt;/OPatch/opatch lspatches &gt;&gt; /tmp/lsinv.info</span><br><span class="line">SQL&gt; SET LINESIZE 200</span><br><span class="line">COLUMN action_time FORMAT A20</span><br><span class="line">COLUMN action FORMAT A10</span><br><span class="line">COLUMN status FORMAT A10</span><br><span class="line">COLUMN description FORMAT A40</span><br><span class="line">COLUMN version FORMAT A10</span><br><span class="line">COLUMN bundle_series FORMAT A10</span><br><span class="line"></span><br><span class="line">spool /tmp/datapatch.info</span><br><span class="line"><span class="hljs-keyword">SELECT</span> TO_CHAR(action_time, <span class="hljs-string">'DD-MON-YYYY HH24:MI:SS'</span>) <span class="hljs-keyword">AS</span> action_time,</span><br><span class="line"><span class="hljs-keyword">action</span>, <span class="hljs-keyword">status</span>, description, <span class="hljs-keyword">version</span>, patch_id, bundle_series</span><br><span class="line"><span class="hljs-keyword">FROM</span>   sys.dba_registry_sqlpatch</span><br><span class="line"><span class="hljs-keyword">ORDER</span> <span class="hljs-keyword">by</span> action_time;</span><br><span class="line">spool off</span><br></pre></td></tr></table></figure>
+</li>
+<li><p>Run OPatch Conflict check</p>
+<figure class="highlight sh hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="hljs-variable">$ORACLE_HOME</span>/OPatch/opatch prereq CheckConflictAgainstOHWithDetail -phBaseDir &lt;UNZIPPED_PATCH_LOCATION&gt;/27968010/27547374</span><br></pre></td></tr></table></figure>
+</li>
+<li><p>One-off patch conflict detection and resolution</p>
+<figure class="highlight sh hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">GRID_HOME/OPatch/opatchauto apply &lt;UNZIPPED_PATCH_LOCATION&gt;/27968010 -analyze</span><br></pre></td></tr></table></figure>
+</li>
+</ul>
+<h1 id="2-Installation"><a href="#2-Installation" class="headerlink" title="2. Installation"></a>2. Installation</h1><h2 id="2-1-Applying-DBBP"><a href="#2-1-Applying-DBBP" class="headerlink" title="2.1 Applying DBBP"></a>2.1 Applying DBBP</h2><ul>
+<li>opatchauto<br>Running below commands on all nodes, this command require sequential execution, <strong>DO NOT run in both nodes parallel in RAC</strong>.<figure class="highlight sh hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">--with root user</span><br><span class="line"><span class="hljs-built_in">export</span> PATH=<span class="hljs-variable">$PATH</span>:&lt;GI_HOME&gt;/OPatch</span><br><span class="line">opatchauto apply &lt;UNZIPPED_PATCH_LOCATION&gt;/27968010</span><br></pre></td></tr></table></figure>
+</li>
+</ul>
+<p>After <code>opatchauto</code> installed, <code>lspatches</code> will show latest patch numbers, but they’re not yet applied to database.</p>
+<h2 id="2-2-Datapatch"><a href="#2-2-Datapatch" class="headerlink" title="2.2 Datapatch"></a>2.2 Datapatch</h2><p>Execute below commands in one of instance(RAC) with Oracle user id:<br><figure class="highlight hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line"><span class="hljs-comment">--for CDB</span></span><br><span class="line"><span class="hljs-keyword">alter</span> <span class="hljs-keyword">pluggable</span> <span class="hljs-keyword">database</span> all <span class="hljs-keyword">open</span>;</span><br><span class="line">$ORACLE_HOME/datapatch -verbose</span><br><span class="line">SQL&gt; @?/rdbms/admin/utlrp.sql</span><br><span class="line"><span class="hljs-comment">--If an OJVM PSU is installed or planned to be installed, no further actions are necessary. Otherwise, the workaround of using the OJVM Mitigation patch can be activated. As SYSDBA do the following from the admin directory</span></span><br><span class="line">SQL&gt; @?/rdbms/admin/dbmsjdev.sql</span><br><span class="line">SQL&gt; exec dbms_java_dev.disable</span><br></pre></td></tr></table></figure></p>
+<ul>
+<li>Upgrade rman catalog if any<figure class="highlight hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">rman catalog username/password@alias</span><br><span class="line">RMAN&gt; UPGRADE CATALOG;</span><br></pre></td></tr></table></figure>
+</li>
+</ul>
+<h2 id="2-3-Verifying-patching-result"><a href="#2-3-Verifying-patching-result" class="headerlink" title="2.3 Verifying patching result"></a>2.3 Verifying patching result</h2><figure class="highlight sql hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br></pre></td><td class="code"><pre><span class="line">ET LINESIZE 400</span><br><span class="line"></span><br><span class="line">COLUMN action_time FORMAT A20</span><br><span class="line">COLUMN action FORMAT A10</span><br><span class="line">COLUMN status FORMAT A10</span><br><span class="line">COLUMN description FORMAT A40</span><br><span class="line">COLUMN version FORMAT A10</span><br><span class="line">COLUMN bundle_series FORMAT A10</span><br><span class="line"></span><br><span class="line"><span class="hljs-keyword">SELECT</span> TO_CHAR(action_time, <span class="hljs-string">'DD-MON-YYYY HH24:MI:SS'</span>) <span class="hljs-keyword">AS</span> action_time,</span><br><span class="line">       <span class="hljs-keyword">action</span>,</span><br><span class="line">       <span class="hljs-keyword">status</span>,</span><br><span class="line">       description,</span><br><span class="line">       <span class="hljs-keyword">version</span>,</span><br><span class="line">       patch_id,</span><br><span class="line">       bundle_series</span><br><span class="line"><span class="hljs-keyword">FROM</span>   sys.dba_registry_sqlpatch</span><br><span class="line"><span class="hljs-keyword">ORDER</span> <span class="hljs-keyword">by</span> action_time;</span><br></pre></td></tr></table></figure>
+<h1 id="3-Backout"><a href="#3-Backout" class="headerlink" title="3. Backout"></a>3. Backout</h1><ul>
+<li><p>Execute as root to uninstall patches</p>
+<figure class="highlight sh hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">--RAC</span><br><span class="line">&lt;GI_HOME&gt;/OPatch/opatchauto rollback &lt;UNZIPPED_PATCH_LOCATION&gt;/27968010</span><br><span class="line">--Non RAC</span><br><span class="line">opatch rollback -id 27547374</span><br></pre></td></tr></table></figure>
+</li>
+<li><p>Update data dictionary with datapatch</p>
+<figure class="highlight sql hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">SQL&gt; startup</span><br><span class="line"><span class="hljs-comment">--CDB, not necessary if non-CDB</span></span><br><span class="line">SQL&gt; alter pluggable database all open;</span><br><span class="line">$ORACLE_HOME/OPatch/datapatch -verbose</span><br></pre></td></tr></table></figure>
+</li>
+</ul>
+<h1 id="4-Trouble-shooting"><a href="#4-Trouble-shooting" class="headerlink" title="4. Trouble shooting"></a>4. Trouble shooting</h1><p>In Linux platform, with error:<br><figure class="highlight plain hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">opatchauto/opatch apply failing with CLSRSC-46: Error: &apos;&lt;GRID_HOME&gt;/suptools/tfa/release/tfa_home/jlib/jewt4.jar&apos; does not exist</span><br></pre></td></tr></table></figure></p>
+<p>According to MOS: <a href="https://support.oracle.com/epmos/faces/DocumentDisplay?_afrLoop=331630215485049&amp;id=2409411.1&amp;_adf.ctrl-state=v1xoqgu3h_810" target="_blank" rel="noopener">opatchauto/opatch apply failing with CLSRSC-46: Error: ‘&lt;GRID_HOME&gt;/suptools/tfa/release/tfa_home/jlib/jewt4.jar’ does not exist (Doc ID 2409411.1)</a>, following the instructions:<br><figure class="highlight sh hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">cp -p <span class="hljs-variable">$GRID_HOME</span>/crs/sbs/crsconfig_fileperms.sbs <span class="hljs-variable">$GRID_HOME</span>/crs/sbs/crsconfig_fileperms.sbs.bak</span><br><span class="line">cp -p <span class="hljs-variable">$GRID_HOME</span>/crs/utl/&lt;node&gt;/crsconfig_fileperms <span class="hljs-variable">$GRID_HOME</span>/crs/utl/&lt;node&gt;/crsconfig_fileperms.bak</span><br></pre></td></tr></table></figure></p>
+<p>Remove below lines in above files:<br><figure class="highlight plain hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">unix %ORA_CRS_HOME%/suptools/tfa/release/tfa_home/jlib/jdev-rt.jar %HAS_USER% %ORA_DBA_GROUP% 0644</span><br><span class="line">unix %ORA_CRS_HOME%/suptools/tfa/release/tfa_home/jlib/jewt4.jar %HAS_USER% %ORA_DBA_GROUP% 0644</span><br></pre></td></tr></table></figure></p>
+<p>Run <code>opatchauto resume</code> again will proceed to apply patches.</p>
+<ul>
+<li>AIX <code>dba_registry_sqlpatch</code> shows nothing</li>
+</ul>
+<p>This is related with [BUG 20244108 - QOPIPREP.BAT MODIFIES XML INVENTORY WHILE READING], after applying one-off patch <a href="https://support.oracle.com/epmos/faces/PatchDetail?requestId=18676540&amp;_afrLoop=335757918424614&amp;patchId=20244108&amp;_afrWindowMode=0&amp;_adf.ctrl-state=tcbuacddo_72" target="_blank" rel="noopener">Patch 20244108</a> everything works fine.</p>
+<p><strong>EOF</strong></p>
+
+    
+    </div>
+    
+    <div class="columns is-variable is-1 is-multiline is-mobile">
+    
+        <span class="column is-narrow"><a class="tag is-light article-tag" href="/tags/patch/">#patch</a></span>
+    
+        <span class="column is-narrow"><a class="tag is-light article-tag" href="/tags/12c/">#12c</a></span>
+    
+    </div>
+    
+    
+    <div class="columns is-mobile is-multiline article-nav">
+        <span class="column is-12-mobile is-half-desktop is-hidden-mobile article-nav-prev">
+            
+        </span>
+        <span class="column is-12-mobile is-half-desktop  article-nav-next">
+            
+            <a href="/Hugepage-setting-on-Linux-AIX.html">Hugepage setting on Linux/AIX</a>
+            
+        </span>
+    </div>
+    
+</article>
+
+
+
+
+    </div>
+</section>
+    <footer class="footer">
+    <div class="container">
+        <div class="columns content">
+            <div class="column is-narrow has-text-centered">
+                &copy; 2013 - 2018 Fung Kong&nbsp;
+                Powered by <a href="http://hexo.io/" target="_blank">Hexo</a> & <a
+                        href="http://github.com/ppoffice/hexo-theme-minos">Minos</a>
+            </div>
+            <div class="column is-hidden-mobile"></div>
+
+            
+            
+        </div>
+    </div>
+</footer>
+
+    <script src="//cdnjs.cloudflare.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
+<script src="//cdnjs.cloudflare.com/ajax/libs/moment.js/2.22.2/moment-with-locales.min.js"></script>
+
+<!-- test if the browser is outdated -->
+<div id="outdated">
+    <h6>Your browser is out-of-date!</h6>
+    <p>Update your browser to view this website correctly. <a id="btnUpdateBrowser" href="http://outdatedbrowser.com/">Update my browser now </a></p>
+    <p class="last"><a href="#" id="btnCloseUpdateBrowser" title="Close">&times;</a></p>
+</div>
+<script src="//cdnjs.cloudflare.com/ajax/libs/outdated-browser/1.1.5/outdatedbrowser.min.js"></script>
+<script>
+    $(document).ready(function () {
+        // plugin function, place inside DOM ready function
+        outdatedBrowser({
+            bgColor: '#f25648',
+            color: '#ffffff',
+            lowerThan: 'flex'
+        })
+    });
+</script>
+
+<script>
+    window.FontAwesomeConfig = {
+        searchPseudoElements: true
+    }
+    moment.locale("en-AU");
+</script>
+
+
+    
+    
+    
+    
+    
+    
+
+    
+
+
+<script src="/js/script.js"></script>
+
+    
+    <div class="searchbox ins-search">
+    <div class="searchbox-mask"></div>
+    <div class="searchbox-container ins-search-container">
+        <div class="searchbox-input-wrapper">
+            <input type="text" class="searchbox-input ins-search-input" placeholder="Type something..." />
+            <span class="searchbox-close ins-close ins-selectable"><i class="fa fa-times-circle"></i></span>
+        </div>
+        <div class="searchbox-result-wrapper ins-section-wrapper">
+            <div class="ins-section-container"></div>
+        </div>
+    </div>
+</div>
+<script>
+    (function (window) {
+        var INSIGHT_CONFIG = {
+            TRANSLATION: {
+                POSTS: 'Posts',
+                PAGES: 'Pages',
+                CATEGORIES: 'Categories',
+                TAGS: 'Tags',
+                UNTITLED: '(Untitled)',
+            },
+            CONTENT_URL: '/content.json',
+        };
+        window.INSIGHT_CONFIG = INSIGHT_CONFIG;
+    })(window);
+</script>
+<script src="/js/insight.js"></script>
+    
+</body>
+</html>

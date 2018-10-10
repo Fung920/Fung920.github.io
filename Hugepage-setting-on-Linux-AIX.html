@@ -1,0 +1,308 @@
+<!DOCTYPE html>
+<html class="has-navbar-fixed-top">
+<head>
+    <meta charset="utf-8">
+<title>Hugepage setting on Linux/AIX - My Notebook</title>
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+
+<link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/outdated-browser/1.1.5/outdatedbrowser.min.css">
+
+
+
+
+
+
+
+
+
+
+<link rel="icon" href="/images/favicon.ico">
+
+
+<link rel="stylesheet" href="//fonts.googleapis.com/css?family=Ovo|Source+Code+Pro">
+<link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/bulma/0.6.2/css/bulma.min.css">
+
+
+
+<link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/highlight.js/9.12.0/styles/github.min.css">
+
+<link rel="stylesheet" href="/css/style.css">
+
+<script defer src="//use.fontawesome.com/releases/v5.0.8/js/all.js"></script>
+
+
+    
+    
+    
+    
+    
+    
+
+    
+
+
+</head>
+<body>
+    
+<nav class="navbar is-transparent is-fixed-top navbar-main" role="navigation" aria-label="main navigation">
+    <div class="container">
+        <div class="navbar-brand">
+            <a class="navbar-item navbar-logo" href="/">
+                
+                    
+                    My Notebook
+                    
+                
+            </a>
+            <div class="navbar-burger">
+                <span></span>
+                <span></span>
+                <span></span>
+            </div>
+        </div>
+        
+        <div class="navbar-menu navbar-start">
+            
+            <a class="navbar-item "
+               href="/">Home</a>
+            
+            <a class="navbar-item "
+               href="/archives">Archives</a>
+            
+            <a class="navbar-item "
+               href="/about">About</a>
+            
+        </div>
+        
+        <div class="navbar-menu navbar-end">
+            
+            <a class="navbar-item search" title="Search" href="javascript:;">
+                <i class="fas fa-search"></i>
+            </a>
+            
+            
+            
+        </div>
+    </div>
+</nav>
+
+    <section class="section">
+    <div class="container">
+    <article class="article content gallery" itemscope itemprop="blogPost">
+    <h1 class="article-title is-size-3 is-size-4-mobile" itemprop="name">
+        
+            Hugepage setting on Linux/AIX
+        
+    </h1>
+    <div class="article-meta columns is-variable is-1 is-multiline is-mobile is-size-7-mobile">
+        <span class="column is-narrow">
+            <time datetime="2018-10-09T07:34:16.000Z" itemprop="datePublished">Oct 9 2018</time>
+        </span>
+        
+        <span class="column is-narrow article-category">
+            <i class="far fa-folder"></i>
+            <a class="article-category-link" href="/categories/oracle/">oracle</a>
+        </span>
+        
+        
+    </div>
+    <div class="article-entry is-size-6-mobile" itemprop="articleBody">
+    
+        <p>Nowadays, with inexpensive hardware cost, large memory is more and more popular then before. In best practice, for the large memory, there are some recommendations.</p>
+<a id="more"></a>
+<h1 id="1-What-is-Hugepage"><a href="#1-What-is-Hugepage" class="headerlink" title="1. What is Hugepage"></a>1. What is Hugepage</h1><p>HugePages is a method to have larger pages where it is useful for working with very large memory. It is both useful in 32- and 64-bit configurations. By default, Linux kernel manage memory by dividing 4K pages, with Hugepage, the pagesize is increased to 2MB, therefore, reduce total number of pages by Linux kernel, meanwhile, it reduce the amount of memory for managing the page table. Hugepages are not swappable, which avoiding performance issue by swapping.</p>
+<blockquote>
+<p>From the Oracle Database perspective, with HugePages, the Linux kernel will use less memory to create pagetables to maintain virtual to physical mappings for SGA address range, in comparison to regular size pages. This makes more memory to be available for process-private computations or PGA usage.</p>
+</blockquote>
+<p>The Hugapage concept is introduced in 2.6.23 kernel.</p>
+<h1 id="2-How-to-set"><a href="#2-How-to-set" class="headerlink" title="2. How to set"></a>2. How to set</h1><p>Be notice, Hugepage is conflict with AMM, <strong>DO NOT use AMM while Hugepage is enabled</strong>.</p>
+<h2 id="2-1-Linux-platform"><a href="#2-1-Linux-platform" class="headerlink" title="2.1 Linux platform"></a>2.1 Linux platform</h2><p>There’s a script to calculate the Hugepage size in MOS: <a href="https://support.oracle.com/epmos/faces/DocumentDisplay?_afrLoop=324400953808653&amp;parent=DOCUMENT&amp;sourceId=361468.1&amp;id=401749.1&amp;_afrWindowMode=0&amp;_adf.ctrl-state=v1xoqgu3h_150" target="_blank" rel="noopener">Oracle Linux: Shell Script to Calculate Values Recommended Linux HugePages / HugeTLB Configuration (Doc ID 401749.1)</a></p>
+<p>The output should be like this:<br><figure class="highlight sh hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">...</span><br><span class="line">Recommended setting: vm.nr_hugepages = 67</span><br></pre></td></tr></table></figure></p>
+<p>Add above values to <code>/etc/sysctl.con</code>, and execute <code>sysctl -p</code> to enable the configuration.</p>
+<p>MOS: <a href="https://support.oracle.com/epmos/faces/SearchDocDisplay?_adf.ctrl-state=v1xoqgu3h_209&amp;_afrLoop=325228706963147" target="_blank" rel="noopener">HugePages on Oracle Linux 64-bit (Doc ID 361468.1)</a></p>
+<ul>
+<li><p>Setting memlock in <code>/etc/security/limits.conf</code><br>Set the value (in KB) slightly smaller than installed RAM, example for 64G RAM:</p>
+<figure class="highlight sh hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">oracle   soft   memlock    60397977</span><br><span class="line">oracle   hard   memlock    60397977</span><br></pre></td></tr></table></figure>
+</li>
+<li><p>Verify Hugepage is set</p>
+<figure class="highlight sh hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line">grep -i huge /proc/meminfo</span><br><span class="line">HugePages_Total:       133300      --total huge pages</span><br><span class="line">HugePages_Free:        28031       --free huge pages</span><br><span class="line">HugePages_Rsvd:        0</span><br><span class="line">HugePages_Surp:        0</span><br><span class="line">Hugepagesize:       2048 kB</span><br></pre></td></tr></table></figure>
+</li>
+</ul>
+<p><strong>DO NOT forget to disable AMM if enabled</strong>. Remove <code>memory_target</code> and <code>memory_max_size</code> from spfile is recommended.</p>
+<h2 id="2-2-AIX-platform"><a href="#2-2-AIX-platform" class="headerlink" title="2.2 AIX platform"></a>2.2 AIX platform</h2><p>Huge page on AIX is called largepages.<br>MOS: <a href="https://support.oracle.com/epmos/faces/DocumentDisplay?_afrLoop=327897114456641&amp;id=372157.1&amp;_adf.ctrl-state=v1xoqgu3h_666" target="_blank" rel="noopener">How to enable Large Page Feature on AIX-Based Systems (Doc ID 372157.1)</a></p>
+<ul>
+<li><p>Verify current large pages setting</p>
+<figure class="highlight sh hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br></pre></td><td class="code"><pre><span class="line">root@db01:/<span class="hljs-comment"># vmo -L lgpg_size</span></span><br><span class="line">NAME                      CUR    DEF    BOOT   MIN    MAX    UNIT           TYPE</span><br><span class="line">     DEPENDENCIES</span><br><span class="line">--------------------------------------------------------------------------------</span><br><span class="line">lgpg_size                 0      0      0      0      16M    bytes             D</span><br><span class="line">     lgpg_regions</span><br><span class="line">--------------------------------------------------------------------------------</span><br><span class="line">root@db01:/<span class="hljs-comment"># vmo -L lgpg_regions</span></span><br><span class="line">NAME                      CUR    DEF    BOOT   MIN    MAX    UNIT           TYPE</span><br><span class="line">     DEPENDENCIES</span><br><span class="line">--------------------------------------------------------------------------------</span><br><span class="line">lgpg_regions              0      0      0      0      8E-1                     D</span><br><span class="line">     lgpg_size</span><br><span class="line">--------------------------------------------------------------------------------</span><br></pre></td></tr></table></figure>
+</li>
+<li><p>Setting large pages<br>Give the Oracle user ID the CAP_BYPASS_RAC_VMM and CAP_PROPAGATE capabilities by following these steps:</p>
+<figure class="highlight sh hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line">--First check the current capabilities:</span><br><span class="line">lsuser -a capabilities root</span><br><span class="line">lsuser -a capabilities grid</span><br><span class="line">lsuser -a capabilities oracle</span><br><span class="line">--dd the CAP_BYPASS_RAC_VMM and CAP_PROPAGATE capabilities to the list of capabilities already assigned to this user ID:</span><br><span class="line">chuser capabilities=CAP_NUMA_ATTACH,CAP_BYPASS_RAC_VMM,CAP_PROPAGATE oracle</span><br><span class="line">chuser capabilities=CAP_NUMA_ATTACH,CAP_BYPASS_RAC_VMM,CAP_PROPAGATE root</span><br></pre></td></tr></table></figure>
+</li>
+</ul>
+<p>Configure the number and size of large pages:<br><figure class="highlight sh hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">vmo -p -o lgpg_regions=3800 -o lgpg_size=16777216</span><br></pre></td></tr></table></figure></p>
+<blockquote>
+<p>num_of_large_pages = INT((total_SGA_size-1)/16MB)+1<br>Allocate 16777216 bytes to provide large pages, with 3800 actual large pages.</p>
+</blockquote>
+<p>Change lru_file_repage, the default is 1:<br><figure class="highlight sh hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">vmo -o lru_file_repage=0</span><br></pre></td></tr></table></figure></p>
+<p>Load the configuration into the kernel and reboot the server<br><figure class="highlight sh hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">bosboot -a</span><br><span class="line">reboot</span><br></pre></td></tr></table></figure></p>
+<p>After starting up instance, verify large pages is using:<br><figure class="highlight sh hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">svmon -P SMON_PID</span><br><span class="line">vmstat -P all</span><br></pre></td></tr></table></figure></p>
+<h1 id="3-Disable-transparent-Hugepages-in-Linux"><a href="#3-Disable-transparent-Hugepages-in-Linux" class="headerlink" title="3. Disable transparent Hugepages in Linux"></a>3. Disable transparent Hugepages in Linux</h1><p>MOS: <a href="https://support.oracle.com/epmos/faces/DocumentDisplay?_afrLoop=325509027121186&amp;parent=DOCUMENT&amp;sourceId=361468.1&amp;id=1557478.1&amp;_afrWindowMode=0&amp;_adf.ctrl-state=v1xoqgu3h_433" target="_blank" rel="noopener">ALERT: Disable Transparent HugePages on SLES11, RHEL6, RHEL7, OL6, OL7, and UEK2 and above (Doc ID 1557478.1)</a></p>
+<p>For Linux, Oracle strongly recommend to disable transparent Hugepages, especially in RAC, transparent Hugepages will occur node reboot.</p>
+<ul>
+<li>Verify current setting<figure class="highlight plain hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">cat /sys/kernel/mm/transparent_hugepage/enabled #OEL</span><br><span class="line">cat //sys/kernel/mm/redhat_transparent_hugepage/enabled #RHEL</span><br><span class="line">       [always] madvise never</span><br></pre></td></tr></table></figure>
+</li>
+</ul>
+<p>If “enabled” is NOT set to “[never]”, the Transparent HugePages are being used.</p>
+<p>Or<br><figure class="highlight sh hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">grep AnonHugePages /proc/meminfo</span><br></pre></td></tr></table></figure></p>
+<p>If the AnonHugePages is not equal 0, the kernel is using Transparent HugePages.</p>
+<ul>
+<li><p>RHEL6<br>Add “transparent_hugepage=never” to the kernel boot line in the “/boot/grub/grub.conf” file.</p>
+</li>
+<li><p>RHEL7<br>RHEL7: edit the “/boot/grub2/grub.cfg” file using the grubby command.</p>
+<figure class="highlight bash hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">grubby --default-kernel</span><br><span class="line">   /boot/vmlinuz-4.1.12-61.1.6.el7uek.x86_64</span><br><span class="line">grubby --args=<span class="hljs-string">"transparent_hugepage=never"</span> --update-kernel /boot/vmlinuz-4.1.12-61.1.6.el7uek.x86_64</span><br><span class="line">grubby --info /boot/vmlinuz-4.1.12-61.1.6.el7uek.x86_64</span><br></pre></td></tr></table></figure>
+</li>
+</ul>
+<p>Server must be rebooted for this to take effect</p>
+<p>Alternatively, add the following lines into the “/etc/rc.local” file and reboot the server.<br><figure class="highlight sh hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line"><span class="hljs-keyword">if</span> <span class="hljs-built_in">test</span> -f /sys/kernel/mm/transparent_hugepage/enabled; <span class="hljs-keyword">then</span></span><br><span class="line">   <span class="hljs-built_in">echo</span> never &gt; /sys/kernel/mm/transparent_hugepage/enabled</span><br><span class="line"><span class="hljs-keyword">fi</span></span><br><span class="line"><span class="hljs-keyword">if</span> <span class="hljs-built_in">test</span> -f /sys/kernel/mm/transparent_hugepage/defrag; <span class="hljs-keyword">then</span></span><br><span class="line">   <span class="hljs-built_in">echo</span> never &gt; /sys/kernel/mm/transparent_hugepage/defrag</span><br><span class="line"><span class="hljs-keyword">fi</span></span><br></pre></td></tr></table></figure></p>
+<h1 id="4-Recommended-setting-for-SGA-gt-100G-in-RAC"><a href="#4-Recommended-setting-for-SGA-gt-100G-in-RAC" class="headerlink" title="4. Recommended setting for SGA &gt; 100G in RAC"></a>4. Recommended setting for SGA &gt; 100G in RAC</h1><p>For RAC system which SGA is over 100G, Oracle provide a best practice: <a href="https://support.oracle.com/epmos/faces/DocumentDisplay?_afrLoop=326147990144319&amp;id=1619155.1&amp;_adf.ctrl-state=v1xoqgu3h_589" target="_blank" rel="noopener">Best Practices and Recommendations for RAC databases with SGA size over 100GB (Doc ID 1619155.1)</a></p>
+<p>init.ora parameters:</p>
+<figure class="highlight sql hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">a. <span class="hljs-keyword">Set</span> _lm_sync_timeout <span class="hljs-keyword">to</span> <span class="hljs-number">1200</span></span><br><span class="line">(this recommendation <span class="hljs-keyword">is</span> valid <span class="hljs-keyword">only</span> <span class="hljs-keyword">for</span> <span class="hljs-keyword">databases</span> that are12<span class="hljs-number">.2</span> <span class="hljs-keyword">and</span> <span class="hljs-keyword">lower</span>)</span><br></pre></td></tr></table></figure>
+<blockquote>
+<p>Setting this will prevent some timeouts during reconfiguration and DRM. It’s a static parameter and rolling restart is supported.</p>
+</blockquote>
+<figure class="highlight sql hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">b. <span class="hljs-keyword">Set</span> shared_pool_size <span class="hljs-keyword">to</span> <span class="hljs-number">15</span>% <span class="hljs-keyword">or</span> larger <span class="hljs-keyword">of</span> the total SGA size.</span><br></pre></td></tr></table></figure>
+<blockquote>
+<p>For example, if SGA size is 1 TB, the shared pool size should be at least 150 GB. It’s a dynamic parameter.</p>
+</blockquote>
+<figure class="highlight sql hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">c. <span class="hljs-keyword">Set</span> _gc_policy_minimum <span class="hljs-keyword">to</span> <span class="hljs-number">15000</span></span><br></pre></td></tr></table></figure>
+<blockquote>
+<p>There is no need to set <code>_gc_policy_minimum</code> if DRM is disabled by setting <code>_gc_policy_time = 0</code>. <code>_gc_policy_minimum</code> is a dynamic parameter, <code>_gc_policy_time</code> is a static parameter and rolling restart is not supported. To disable DRM, instead of <code>_gc_policy_time</code>, <code>_lm_drm_disable</code> should be used as it’s dynamic.</p>
+</blockquote>
+<figure class="highlight sql hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">d. <span class="hljs-keyword">Set</span> _lm_tickets <span class="hljs-keyword">to</span> <span class="hljs-number">5000</span></span><br><span class="line">(this recommendation <span class="hljs-keyword">is</span> valid <span class="hljs-keyword">only</span> <span class="hljs-keyword">for</span> <span class="hljs-keyword">databases</span> that are12<span class="hljs-number">.2</span> <span class="hljs-keyword">and</span> <span class="hljs-keyword">lower</span>)</span><br></pre></td></tr></table></figure>
+<blockquote>
+<p>Default is 1000.   Allocating more tickets (used for sending messages) avoids issues where we ran out of tickets during the reconfiguration. It’s a static parameter and rolling restart is supported. When increasing the parameter, rolling restart is fine but a cold restart can be necessary when decreasing.</p>
+</blockquote>
+<figure class="highlight sql hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">e. <span class="hljs-keyword">Set</span> gcs_server_processes <span class="hljs-keyword">to</span> the twice the <span class="hljs-keyword">default</span> <span class="hljs-built_in">number</span> <span class="hljs-keyword">of</span> lms processes that <span class="hljs-keyword">are</span> allocated.</span><br><span class="line">(this recommendation <span class="hljs-keyword">is</span> valid <span class="hljs-keyword">only</span> <span class="hljs-keyword">for</span> <span class="hljs-keyword">databases</span> that are12<span class="hljs-number">.2</span> <span class="hljs-keyword">and</span> <span class="hljs-keyword">lower</span>)</span><br></pre></td></tr></table></figure>
+<blockquote>
+<p>The default number of lms processes depends on the number of CPUs/cores that the server has, so please refer to the gcs_server_processes init.ora parameter section in the Oracle Database Reference Guide for the default number of lms processes for your server.  Please make sure that the total number of lms processes of all databases on the server is less than the total number of CPUs/cores on the server.  Please refer to the Document 558185.1 It’s a static parameter and rolling restart is supported.</p>
+</blockquote>
+<p><strong>EOF</strong></p>
+
+    
+    </div>
+    
+    <div class="columns is-variable is-1 is-multiline is-mobile">
+    
+        <span class="column is-narrow"><a class="tag is-light article-tag" href="/tags/tuning/">#tuning</a></span>
+    
+    </div>
+    
+    
+    <div class="columns is-mobile is-multiline article-nav">
+        <span class="column is-12-mobile is-half-desktop  article-nav-prev">
+            
+            <a href="/Oracle-12c-Proactive-Bundle-Patch.html">Oracle 12c Proactive Bundle Patch</a>
+            
+        </span>
+        <span class="column is-12-mobile is-half-desktop  article-nav-next">
+            
+            <a href="/Correct-way-to-monitor-tablespace-usages.html">Correct way to monitor tablespace usages via SQLs</a>
+            
+        </span>
+    </div>
+    
+</article>
+
+
+
+
+    </div>
+</section>
+    <footer class="footer">
+    <div class="container">
+        <div class="columns content">
+            <div class="column is-narrow has-text-centered">
+                &copy; 2013 - 2018 Fung Kong&nbsp;
+                Powered by <a href="http://hexo.io/" target="_blank">Hexo</a> & <a
+                        href="http://github.com/ppoffice/hexo-theme-minos">Minos</a>
+            </div>
+            <div class="column is-hidden-mobile"></div>
+
+            
+            
+        </div>
+    </div>
+</footer>
+
+    <script src="//cdnjs.cloudflare.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
+<script src="//cdnjs.cloudflare.com/ajax/libs/moment.js/2.22.2/moment-with-locales.min.js"></script>
+
+<!-- test if the browser is outdated -->
+<div id="outdated">
+    <h6>Your browser is out-of-date!</h6>
+    <p>Update your browser to view this website correctly. <a id="btnUpdateBrowser" href="http://outdatedbrowser.com/">Update my browser now </a></p>
+    <p class="last"><a href="#" id="btnCloseUpdateBrowser" title="Close">&times;</a></p>
+</div>
+<script src="//cdnjs.cloudflare.com/ajax/libs/outdated-browser/1.1.5/outdatedbrowser.min.js"></script>
+<script>
+    $(document).ready(function () {
+        // plugin function, place inside DOM ready function
+        outdatedBrowser({
+            bgColor: '#f25648',
+            color: '#ffffff',
+            lowerThan: 'flex'
+        })
+    });
+</script>
+
+<script>
+    window.FontAwesomeConfig = {
+        searchPseudoElements: true
+    }
+    moment.locale("en-AU");
+</script>
+
+
+    
+    
+    
+    
+    
+    
+
+    
+
+
+<script src="/js/script.js"></script>
+
+    
+    <div class="searchbox ins-search">
+    <div class="searchbox-mask"></div>
+    <div class="searchbox-container ins-search-container">
+        <div class="searchbox-input-wrapper">
+            <input type="text" class="searchbox-input ins-search-input" placeholder="Type something..." />
+            <span class="searchbox-close ins-close ins-selectable"><i class="fa fa-times-circle"></i></span>
+        </div>
+        <div class="searchbox-result-wrapper ins-section-wrapper">
+            <div class="ins-section-container"></div>
+        </div>
+    </div>
+</div>
+<script>
+    (function (window) {
+        var INSIGHT_CONFIG = {
+            TRANSLATION: {
+                POSTS: 'Posts',
+                PAGES: 'Pages',
+                CATEGORIES: 'Categories',
+                TAGS: 'Tags',
+                UNTITLED: '(Untitled)',
+            },
+            CONTENT_URL: '/content.json',
+        };
+        window.INSIGHT_CONFIG = INSIGHT_CONFIG;
+    })(window);
+</script>
+<script src="/js/insight.js"></script>
+    
+</body>
+</html>
