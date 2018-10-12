@@ -67,9 +67,6 @@
                href="/">Home</a>
             
             <a class="navbar-item "
-               href="/archives">Archives</a>
-            
-            <a class="navbar-item "
                href="/about">About</a>
             
         </div>
@@ -96,145 +93,45 @@
 <section class="section">
     <div class="container">
     
-        <article class="article content gallery" itemscope itemprop="blogPost">
-    <h1 class="article-title is-size-3 is-size-4-mobile" itemprop="name">
-        
-            <a href="/bbed-demo.html" itemprop="url">BBED Demo</a>
-        
-    </h1>
-    <div class="article-meta columns is-variable is-1 is-multiline is-mobile is-size-7-mobile">
-        <span class="column is-narrow">
-            <time datetime="2014-09-05T02:46:13.000Z" itemprop="datePublished">Sep 4 2014</time>
-        </span>
-        
-        <span class="column is-narrow article-category">
-            <i class="far fa-folder"></i>
-            <a class="article-category-link" href="/categories/oracle/">oracle</a>
-        </span>
-        
-        
-    </div>
-    <div class="article-entry is-size-6-mobile" itemprop="articleBody">
     
-        <p>BBED功能有限，对很多类型的数据块都不支持。BBED虽然支持在open状态下修改数据块，但建议先干净的关闭数据库在进行BBED修改。正常关闭数据库能避开检查点进程覆盖掉bbed修改的块缓存。<br></p>
-        <p class="article-more-link">
-            <a href="/bbed-demo.html#more">Read More</a>
-        </p>
-    
-    </div>
-    
-    
-</article>
-
-
-
-
-    
-        <article class="article content gallery" itemscope itemprop="blogPost">
-    <h1 class="article-title is-size-3 is-size-4-mobile" itemprop="name">
-        
-            <a href="/bbed-structure.html" itemprop="url">BBED Structure</a>
-        
-    </h1>
-    <div class="article-meta columns is-variable is-1 is-multiline is-mobile is-size-7-mobile">
-        <span class="column is-narrow">
-            <time datetime="2014-09-01T08:07:05.000Z" itemprop="datePublished">Sep 1 2014</time>
-        </span>
-        
-        <span class="column is-narrow article-category">
-            <i class="far fa-folder"></i>
-            <a class="article-category-link" href="/categories/oracle/">oracle</a>
-        </span>
-        
-        
-    </div>
-    <div class="article-entry is-size-6-mobile" itemprop="articleBody">
-    
-        <p>BBED中map命令能显示数据块的数据结构，本文以bbed分析数据块头及数据块为例，说明map中的具体结构。<br></p>
-        <p class="article-more-link">
-            <a href="/bbed-structure.html#more">Read More</a>
-        </p>
-    
-    </div>
-    
-    
-</article>
-
-
-
-
-    
-        <article class="article content gallery" itemscope itemprop="blogPost">
-    <h1 class="article-title is-size-3 is-size-4-mobile" itemprop="name">
-        
-            <a href="/bbed-command.html" itemprop="url">BBED基本命令</a>
-        
-    </h1>
-    <div class="article-meta columns is-variable is-1 is-multiline is-mobile is-size-7-mobile">
-        <span class="column is-narrow">
-            <time datetime="2014-09-01T03:20:52.000Z" itemprop="datePublished">Aug 31 2014</time>
-        </span>
-        
-        <span class="column is-narrow article-category">
-            <i class="far fa-folder"></i>
-            <a class="article-category-link" href="/categories/oracle/">oracle</a>
-        </span>
-        
-        
-    </div>
-    <div class="article-entry is-size-6-mobile" itemprop="articleBody">
-    
-        <p>前文<a href="/bbed-in-linux.html">Linux下编译BBED</a>描述了如何在Linux下编译使用bbed，本文介绍bbed常用的一些命令。<br></p>
-        <p class="article-more-link">
-            <a href="/bbed-command.html#more">Read More</a>
-        </p>
-    
-    </div>
-    
-    
-</article>
-
-
-
-
-    
-        <article class="article content gallery" itemscope itemprop="blogPost">
-    <h1 class="article-title is-size-3 is-size-4-mobile" itemprop="name">
-        
-            <a href="/bbed-in-linux.html" itemprop="url">Linux下编译BBED</a>
-        
-    </h1>
-    <div class="article-meta columns is-variable is-1 is-multiline is-mobile is-size-7-mobile">
-        <span class="column is-narrow">
-            <time datetime="2014-09-01T02:24:14.000Z" itemprop="datePublished">Aug 31 2014</time>
-        </span>
-        
-        <span class="column is-narrow article-category">
-            <i class="far fa-folder"></i>
-            <a class="article-category-link" href="/categories/oracle/">oracle</a>
-        </span>
-        
-        
-    </div>
-    <div class="article-entry is-size-6-mobile" itemprop="articleBody">
-    
-        <p>BBED全称Block Browser and EDitor，是Oracle内部用于查看和修改数据块的工具。<br></p>
-        <p class="article-more-link">
-            <a href="/bbed-in-linux.html#more">Read More</a>
-        </p>
-    
-    </div>
-    
-    
-</article>
-
-
-
-
+            
+            <div id="myarchive">
+            <li>
+                    <time class="is-text-small" datetime="2014-09-05T02:46:13.000Z" itemprop="datePublished">
+                        2014-09-05</time>
+                    <a href="/bbed-demo.html">BBED Demo</a>
+                    </li>
+                    </div>
+            
+            <div id="myarchive">
+            <li>
+                    <time class="is-text-small" datetime="2014-09-01T08:07:05.000Z" itemprop="datePublished">
+                        2014-09-01</time>
+                    <a href="/bbed-structure.html">BBED Structure</a>
+                    </li>
+                    </div>
+            
+            <div id="myarchive">
+            <li>
+                    <time class="is-text-small" datetime="2014-09-01T03:20:52.000Z" itemprop="datePublished">
+                        2014-09-01</time>
+                    <a href="/bbed-command.html">BBED基本命令</a>
+                    </li>
+                    </div>
+            
+            <div id="myarchive">
+            <li>
+                    <time class="is-text-small" datetime="2014-09-01T02:24:14.000Z" itemprop="datePublished">
+                        2014-09-01</time>
+                    <a href="/bbed-in-linux.html">Linux下编译BBED</a>
+                    </li>
+                    </div>
+            
     
     
     </div>
 </section>
+
     <footer class="footer">
     <div class="container">
         <div class="columns content">

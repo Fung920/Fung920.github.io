@@ -1,7 +1,17 @@
 @charset "UTF-8";
 body, button, input, select, textarea {
-  font-family: "Ovo", "Georgia", "STZhongsong", "Microsoft YaHei", serif;
+  font-family: "Optima", "Candara", "Calibri", "Arial", "sans-serif", "Microsoft YaHei";
   font-size: 1.1rem; }
+
+#myarchive a:link {
+  color: blue;
+  text-decoration: underline; }
+
+#myarchive a:visited {
+  color: purple; }
+
+#myarchive a:hover {
+  color: #3273dc; }
 
 a.tag.article-tag {
   font-size: 0.9rem;
@@ -9,8 +19,8 @@ a.tag.article-tag {
 
 @media screen and (min-width: 1024px) {
   .container {
-    max-width: 850px;
-    width: 850px; }
+    max-width: 800px;
+    width: 800px; }
   .navbar.is-transparent .navbar-dropdown a.navbar-item:hover {
     color: #3273dc; } }
 
