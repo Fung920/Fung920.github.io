@@ -233,11 +233,14 @@ a.tag.article-tag {
         border-bottom-color: darkgray; }
 
 .footer {
-  font-size: .9rem;
+  font-size: 1.0rem;
   background: transparent; }
   .footer .content {
-    padding-top: 2rem;
-    border-top: 1px solid #dbdbdb; }
+    padding: 1px;
+    border-top: 1px dashed #dbdbdb; }
+
+.footer-padding {
+  padding: 0.5px; }
 
 .searchbox {
   display: none; }
