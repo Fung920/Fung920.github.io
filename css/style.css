@@ -1,7 +1,7 @@
 @charset "UTF-8";
 body, button, input, select, textarea {
-  font-family: "Optima", "Candara", "Calibri", "Arial", "sans-serif", "Microsoft YaHei";
-  font-size: 1.0rem; }
+  font-family: "Calibri", "Ubuntu", "Arial", "sans-serif", "Microsoft YaHei";
+  font-size: 1.1rem; }
 
 #myarchive a:link {
   color: blue;
@@ -12,6 +12,20 @@ body, button, input, select, textarea {
 
 #myarchive a:hover {
   color: #3273dc; }
+
+:not(.highlight) > table {
+  margin: 0 auto 1.5em auto; }
+  :not(.highlight) > table tr {
+    background-color: #fff;
+    border-top: 1px dashed #ccc;
+    border-bottom: 1px dashed #ccc; }
+    :not(.highlight) > table tr th, :not(.highlight) > table tr td {
+      padding: 6px 13px;
+      border: 1px dashed #ddd; }
+    :not(.highlight) > table tr th {
+      font-weight: bold; }
+  :not(.highlight) > table tr:nth-child(2n) {
+    background-color: #f8f8f8; }
 
 a.tag.article-tag {
   font-size: 0.9rem;
