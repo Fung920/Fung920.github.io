@@ -1,7 +1,8 @@
 @charset "UTF-8";
 body, button, input, select, textarea {
-  font-family: "Calibri", "Ubuntu", "Arial", "sans-serif", "Microsoft YaHei";
-  font-size: 1.0rem; }
+  font-family: "Verdana", "Calibri", "Ubuntu", "Arial", "sans-serif", "Microsoft YaHei";
+  font-size: 0.9rem;
+  color: black; }
 
 #myarchive a:link {
   color: blue;
@@ -325,7 +326,7 @@ a.tag.article-tag {
 
 code, pre {
   font-size: 0.85rem;
-  font-family: "Source Code Pro", monospace, "Microsoft YaHei"; }
+  font-family: "Source Code Pro", monospace, "Microsoft YaHei" "Ubuntu"; }
 
 figure.highlight {
   padding: 0;
@@ -352,7 +353,7 @@ figure.highlight {
     font-size: .8rem; }
     figure.highlight figcaption span {
       font-weight: 500;
-      font-family: "Source Code Pro", monospace, "Microsoft YaHei"; }
+      font-family: "Source Code Pro", monospace, "Microsoft YaHei" "Ubuntu"; }
     figure.highlight figcaption a {
       float: right;
       color: #9a9a9a; }
