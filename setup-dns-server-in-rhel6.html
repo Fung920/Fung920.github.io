@@ -135,7 +135,7 @@
 <figure class="highlight bash hljs"><figcaption><span>[Edit NIC Configuration]</span></figcaption><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">DNS1=192.168.56.101</span><br><span class="line">DNS2=192.168.56.102</span><br><span class="line">DOMAIN=oraclema.com</span><br></pre></td></tr></table></figure>
 <h4 id="3-3-Change-the-resolve-order"><a href="#3-3-Change-the-resolve-order" class="headerlink" title="3.3 Change the resolve order"></a>3.3 Change the resolve order</h4><p>This step grantee the hostname resolve by DNS instead of hosts files /etc/hosts.</p>
 <figure class="highlight bash hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">[root@node1 ~]<span class="hljs-comment"># cat /etc/host.conf</span></span><br><span class="line">order <span class="hljs-built_in">bind</span>,hosts</span><br><span class="line">multi on</span><br><span class="line">[root@node1 ~]<span class="hljs-comment"># grep -i dns /etc/nsswitch.conf |grep -v ^#</span></span><br><span class="line">hosts:      dns files</span><br></pre></td></tr></table></figure>
-<p>That’s it, I can setup my SCAN in Oracle RAC environment now.</p>
+<p>That&#39;s it, I can setup my SCAN in Oracle RAC environment now.</p>
 <p><br><b>EOF</b><br></p>
 
     

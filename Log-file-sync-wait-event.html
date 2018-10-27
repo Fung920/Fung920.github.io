@@ -1,0 +1,263 @@
+<!DOCTYPE html>
+<html class="has-navbar-fixed-top">
+<head>
+    <meta charset="utf-8">
+<title>Log file sync wait event - My Notebook</title>
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+
+<link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/outdated-browser/1.1.5/outdatedbrowser.min.css">
+
+
+
+
+
+
+
+
+
+
+<link rel="icon" href="/images/favicon.ico">
+
+
+<link rel="stylesheet" href="//fonts.googleapis.com/css?family=Ovo|Source+Code+Pro|Calibri|Ubuntu">
+<link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/bulma/0.6.2/css/bulma.min.css">
+
+
+
+<link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/highlight.js/9.12.0/styles/atom-one-light.min.css">
+
+<link rel="stylesheet" href="/css/style.css">
+
+<script defer src="//use.fontawesome.com/releases/v5.0.8/js/all.js"></script>
+
+
+    
+    
+    
+    
+    
+    
+
+    
+
+
+</head>
+<body>
+    
+<nav class="navbar is-transparent is-fixed-top navbar-main" role="navigation" aria-label="main navigation">
+    <div class="container">
+        <div class="navbar-brand">
+            <a class="navbar-item navbar-logo" href="/">
+                
+                    
+                    My Notebook
+                    
+                
+            </a>
+            <div class="navbar-burger">
+                <span></span>
+                <span></span>
+                <span></span>
+            </div>
+        </div>
+        
+        <div class="navbar-menu navbar-start">
+            
+            <a class="navbar-item "
+               href="/">Home</a>
+            
+            <a class="navbar-item "
+               href="/about">About</a>
+            
+        </div>
+        
+        <div class="navbar-menu navbar-end">
+            
+            <a class="navbar-item search" title="Search" href="javascript:;">
+                <i class="fas fa-search"></i>
+            </a>
+            
+            
+            
+        </div>
+    </div>
+</nav>
+
+    <section class="section">
+    <div class="container">
+    <article class="article content gallery" itemscope itemprop="blogPost">
+    <h1 class="article-title is-size-3 is-size-4-mobile" itemprop="name">
+        
+            Log file sync wait event
+        
+    </h1>
+    <div class="article-meta columns is-variable is-1 is-multiline is-mobile is-size-7-mobile">
+        <span class="column is-narrow">
+            <time datetime="2018-10-25T08:19:04.000Z" itemprop="datePublished">Oct 25 2018</time>
+        </span>
+        
+        <span class="column is-narrow article-category">
+            <i class="far fa-folder"></i>
+            <a class="article-category-link" href="/categories/oracle/">oracle</a>
+        </span>
+        
+        
+    </div>
+    <div class="article-entry is-size-6-mobile" itemprop="articleBody">
+    
+        <p>While user commit/rollback, commit will trigger log file sync, that is lgwr writing log buffer(memory) to log file(disk), before the commit/rollback completing, user will see the <code>log file sync</code> wait event.<br>Quote from MOS ID:1376916.1:</p>
+<blockquote class="colorquote info">At the time of commit, the user session will post LGWR to write the log buffer (containing the current unwritten redo, including this session's redo records) to the redo log file. Once LGWR knows that its write requests have completed, it will post the user session to notify it that this has completed. The user session waits on 'log file sync' while waiting for LGWR to post it back to confirm all redo it generated have made it safely onto disk.</blockquote>
+<blockquote class="colorquote info">The time between the user session posting the LGWR and the LG's  posting the user after the write has completed is the wait time for 'log file sync' that the user session will show.</blockquote>
+<p>In RAC system, <code>gc log flush sync</code> is another manifestation of <code>log file sync</code>.<br><a id="more"></a></p>
+<p>For diagnosing log file sync issue, we can:</p>
+<ol>
+<li>Check the AWR report and dynamic views</li>
+<li>Check the alert log, alert log shows how frequently redo log file are switching, recommended time for redo log switching is 15 mins to 30 mins</li>
+<li>As of 10.2.0.4, Oracle will write the warning message(&quot;log write elapsed time xxms, xxKB&quot;) to LG&#39;s trace file when writing takes more then 500ms, if the size is very small, we can consider the I/O is poor</li>
+<li>Check the hidden parameter <code>_use_adaptive_log_file_sync</code>, see its value is true or false</li>
+</ol>
+<h1 id="1-What-cause-log-file-sync"><a href="#1-What-cause-log-file-sync" class="headerlink" title="1. What cause log file sync"></a>1. What cause log file sync</h1><h2 id="1-1-Slow-Disk-I-O"><a href="#1-1-Slow-Disk-I-O" class="headerlink" title="1.1 Slow Disk I/O"></a>1.1 Slow Disk I/O</h2><p>If <code>log file sync</code> and <code>log file parallel write</code> are approximate equal, we can consider the Disk I/O is poor.<br>The average wait time on <code>log file sync</code> on HDD should be less then 20ms.</p>
+<p>Checking LGWR wait time:<br><figure class="highlight sql hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line"><span class="hljs-keyword">select</span> <span class="hljs-keyword">event</span>, state, seq#, seconds_in_wait, p1,p2</span><br><span class="line"><span class="hljs-keyword">from</span> gv$<span class="hljs-keyword">session</span></span><br><span class="line"><span class="hljs-keyword">where</span> program <span class="hljs-keyword">like</span> <span class="hljs-string">'%LGWR%'</span>;</span><br></pre></td></tr></table></figure></p>
+<p>In AWR report, check the statistics of <code>Log file parallel write per second</code>.</p>
+<ul>
+<li><p>Recommendation</p>
+<ul>
+<li>Identify any bottle neck of I/O subsystems, including bandwidth</li>
+<li>Avoid placing redo log in RAID 5/RAID 6 disk array</li>
+<li>Avoid placing redo log in SSD</li>
+<li>Identify any other processes are occupied too much IO operations</li>
+</ul>
+</li>
+<li><p>Example</p>
+</li>
+</ul>
+<p>Below example shows slow disk IO, we can see that, the avg wait ms is over 20ms.<br>TOP 10 wait event:</p>
+<p><img src="/images/log_file_sync1.jpg" alt="TOP 10 wait event"></p>
+<p>Log file parallel write:</p>
+<p><img src="/images/log_file_parallel_write.jpg" alt="Log file parallel write"></p>
+<p>If <code>log file sync</code> are greater then <code>log parallel write</code> and <code>log parallel write</code> is within the normal time, it doesn&#39;t mean I/O subsystem works fine, peak IO may occur during the past snapshot time, if nmon or oswatcher is implemented, there should be some clues with peak IO statistics.</p>
+<h2 id="1-2-High-commit-activity"><a href="#1-2-High-commit-activity" class="headerlink" title="1.2 High commit activity"></a>1.2 High commit activity</h2><p>In the AWR or Statspack report, if the average user calls per commit/rollback calculated as &quot;user calls/(user commits+user rollbacks)&quot; is less than 30, then commits are happening too frequently:<br>Excessive commit(5.2 user calls/user commit):</p>
+<p><img src="/images/excessive_commits.jpg" alt="Excessive commit"></p>
+<h2 id="1-3-High-CPUs"><a href="#1-3-High-CPUs" class="headerlink" title="1.3 High CPUs"></a>1.3 High CPUs</h2><p>If the <code>r</code> column of vmstat output is higher than CPU numbers, we can consider excessive consuming. Sometimes the IO response time is slower because of high CPU usages.</p>
+<h2 id="1-4-Bugs"><a href="#1-4-Bugs" class="headerlink" title="1.4 Bugs"></a>1.4 Bugs</h2><h1 id="2-Relevant-wait-events"><a href="#2-Relevant-wait-events" class="headerlink" title="2. Relevant wait events"></a>2. Relevant wait events</h1><p>In AWR report, some other wait events maybe company with <code>log file sync</code>. As shown previous top 10 event, <code>log buffer space</code> and <code>log file switch</code> also on the top 10 event.</p>
+<h2 id="2-1-use-adaptive-log-file-sync"><a href="#2-1-use-adaptive-log-file-sync" class="headerlink" title="2.1 _use_adaptive_log_file_sync"></a>2.1 _use_adaptive_log_file_sync</h2><p>From 11.2.0.3, underscore parameter <code>_use_adaptive_log_file_sync</code> will affect log write performance because it changes the default behavior of LGWR. See <a href="/use-adaptive-log-file-sync.html">Hidden parameter &#39;_use_adaptive_log_file_sync&#39;</a></p>
+<h2 id="2-2-log-file-blocksize"><a href="#2-2-log-file-blocksize" class="headerlink" title="2.2 log file blocksize"></a>2.2 log file blocksize</h2><p>Blocksize in <code>v$log</code> view shows how much size of the block size, the default size is 512 kb, on a busy oltp system, modify the size to 2M maybe is a better option.</p>
+<h2 id="2-3-log-file-size"><a href="#2-3-log-file-size" class="headerlink" title="2.3 log file size"></a>2.3 log file size</h2><p>First, if log file size is too small, alert.log will show lots of <code>log</code> and AWR report may show <code>log file switch (checkpoint incomplete)</code> wait event it the top 10 wait events.<br>Below AWR report shows excessive log switches, Oracle recommend that a log switch should occur at most once every 15 to 20 minutes.</p>
+<p><img src="/images/log_switch_freq1.jpg" alt="Excessive log switch"></p>
+<p>Under this circumstance, resize redo log file size is a better choice(current size is the default size:50M).</p>
+<p>Reference:<br><a href="https://support.oracle.com/epmos/faces/DocumentDisplay?_afrLoop=446818976135672&amp;id=1548261.1&amp;_adf.ctrl-state=o2nxn6cvz_62" target="_blank" rel="noopener">High Waits for &#39;Log File Sync&#39;: Known Issue Checklist for 11.2 (Doc ID 1548261.1)</a><br><a href="https://support.oracle.com/epmos/faces/DocumentDisplay?_afrLoop=446901390154542&amp;parent=DOCUMENT&amp;sourceId=1548261.1&amp;id=1376916.1&amp;_afrWindowMode=0&amp;_adf.ctrl-state=o2nxn6cvz_119" target="_blank" rel="noopener">Troubleshooting: &#39;Log file sync&#39; Waits (Doc ID 1376916.1)</a><br><a href="https://support.oracle.com/epmos/faces/DocumentDisplay?parent=DOCUMENT&amp;sourceId=1376916.1&amp;id=1064487.1" target="_blank" rel="noopener">Script to Collect Log File Sync Diagnostic Information (lfsdiag.sql)</a></p>
+<p><strong>EOF</strong></p>
+
+    
+    </div>
+    
+    <div class="columns is-variable is-1 is-multiline is-mobile">
+    
+        <span class="column is-narrow"><a class="tag is-light article-tag" href="/tags/tuning/">#tuning</a></span>
+    
+    </div>
+    
+    
+    <div class="columns is-mobile is-multiline article-nav">
+        <span class="column is-12-mobile is-half-desktop is-hidden-mobile article-nav-prev">
+            
+        </span>
+        <span class="column is-12-mobile is-half-desktop  article-nav-next">
+            
+            <a href="/adaptive-log-file-sync.html">Adaptive log file sync</a>
+            
+        </span>
+    </div>
+    
+</article>
+
+
+
+
+    </div>
+</section>
+    <footer class="footer footer-padding">
+    <div class="container content">
+            <div class="column is-narrow has-text-centered is-size-7-mobile">
+                &copy; 2013 - 2018
+                <a href="/">Fung Kong&nbsp;
+                </a>
+                Powered by <a href="http://hexo.io/" target="_blank">Hexo</a> & <a
+                        href="http://github.com/ppoffice/hexo-theme-minos">Minos</a>
+            </div>
+    </div>
+</footer>
+
+    <script src="//cdnjs.cloudflare.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
+<script src="//cdnjs.cloudflare.com/ajax/libs/moment.js/2.22.2/moment-with-locales.min.js"></script>
+
+<!-- test if the browser is outdated -->
+<div id="outdated">
+    <h6>Your browser is out-of-date!</h6>
+    <p>Update your browser to view this website correctly. <a id="btnUpdateBrowser" href="http://outdatedbrowser.com/">Update my browser now </a></p>
+    <p class="last"><a href="#" id="btnCloseUpdateBrowser" title="Close">&times;</a></p>
+</div>
+<script src="//cdnjs.cloudflare.com/ajax/libs/outdated-browser/1.1.5/outdatedbrowser.min.js"></script>
+<script>
+    $(document).ready(function () {
+        // plugin function, place inside DOM ready function
+        outdatedBrowser({
+            bgColor: '#f25648',
+            color: '#ffffff',
+            lowerThan: 'flex'
+        })
+    });
+</script>
+
+<script>
+    window.FontAwesomeConfig = {
+        searchPseudoElements: true
+    }
+    moment.locale("en-AU");
+</script>
+
+
+    
+    
+    
+    
+    
+    
+
+    
+
+
+<script src="/js/script.js"></script>
+
+    
+    <div class="searchbox ins-search">
+    <div class="searchbox-mask"></div>
+    <div class="searchbox-container ins-search-container">
+        <div class="searchbox-input-wrapper">
+            <input type="text" class="searchbox-input ins-search-input" placeholder="Type something..." />
+            <span class="searchbox-close ins-close ins-selectable"><i class="fa fa-times-circle"></i></span>
+        </div>
+        <div class="searchbox-result-wrapper ins-section-wrapper">
+            <div class="ins-section-container"></div>
+        </div>
+    </div>
+</div>
+<script>
+    (function (window) {
+        var INSIGHT_CONFIG = {
+            TRANSLATION: {
+                POSTS: 'Posts',
+                PAGES: 'Pages',
+                CATEGORIES: 'Categories',
+                TAGS: 'Tags',
+                UNTITLED: '(Untitled)',
+            },
+            CONTENT_URL: '/content.json',
+        };
+        window.INSIGHT_CONFIG = INSIGHT_CONFIG;
+    })(window);
+</script>
+<script src="/js/insight.js"></script>
+    
+</body>
+</html>

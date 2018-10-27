@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html class="has-navbar-fixed-top">
+<head>
+    <meta charset="utf-8">
+<title>Adaptive log file sync - My Notebook</title>
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+
+<link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/outdated-browser/1.1.5/outdatedbrowser.min.css">
+
+
+
+
+
+
+
+
+
+
+<link rel="icon" href="/images/favicon.ico">
+
+
+<link rel="stylesheet" href="//fonts.googleapis.com/css?family=Ovo|Source+Code+Pro|Calibri|Ubuntu">
+<link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/bulma/0.6.2/css/bulma.min.css">
+
+
+
+<link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/highlight.js/9.12.0/styles/atom-one-light.min.css">
+
+<link rel="stylesheet" href="/css/style.css">
+
+<script defer src="//use.fontawesome.com/releases/v5.0.8/js/all.js"></script>
+
+
+    
+    
+    
+    
+    
+    
+
+    
+
+
+</head>
+<body>
+    
+<nav class="navbar is-transparent is-fixed-top navbar-main" role="navigation" aria-label="main navigation">
+    <div class="container">
+        <div class="navbar-brand">
+            <a class="navbar-item navbar-logo" href="/">
+                
+                    
+                    My Notebook
+                    
+                
+            </a>
+            <div class="navbar-burger">
+                <span></span>
+                <span></span>
+                <span></span>
+            </div>
+        </div>
+        
+        <div class="navbar-menu navbar-start">
+            
+            <a class="navbar-item "
+               href="/">Home</a>
+            
+            <a class="navbar-item "
+               href="/about">About</a>
+            
+        </div>
+        
+        <div class="navbar-menu navbar-end">
+            
+            <a class="navbar-item search" title="Search" href="javascript:;">
+                <i class="fas fa-search"></i>
+            </a>
+            
+            
+            
+        </div>
+    </div>
+</nav>
+
+    <section class="section">
+    <div class="container">
+    <article class="article content gallery" itemscope itemprop="blogPost">
+    <h1 class="article-title is-size-3 is-size-4-mobile" itemprop="name">
+        
+            Adaptive log file sync
+        
+    </h1>
+    <div class="article-meta columns is-variable is-1 is-multiline is-mobile is-size-7-mobile">
+        <span class="column is-narrow">
+            <time datetime="2018-10-15T14:48:22.000Z" itemprop="datePublished">Oct 15 2018</time>
+        </span>
+        
+        <span class="column is-narrow article-category">
+            <i class="far fa-folder"></i>
+            <a class="article-category-link" href="/categories/oracle/">oracle</a>
+        </span>
+        
+        
+    </div>
+    <div class="article-entry is-size-6-mobile" itemprop="articleBody">
+    
+        <p>From Oracle 11.2.0.3, hidden parameter <code>_use_adaptive_log_file_sync</code> are changed default value from FALSE to TRUE.<br>Quote from Oracle community:<a href="https://community.oracle.com/thread/3520420" target="_blank" rel="noopener">_use_adaptive_log_file_sync</a><br>When <code>_use_adaptive_log_file_sync</code> is set to true, Oracle switches between two methods of communication between the LGWR and foreground processes to acknowledge that a commit has completed:</p>
+<ul>
+<li><p>Post/wait - conventional method available in previous Oracle releases.</p>
+<ul>
+<li>LGWR explicitly posts all processes waiting for the commit to complete.</li>
+</ul>
+</li>
+<li><p>Polling</p>
+<ul>
+<li>Foreground processes sleep and poll to see if the commit is complete.</li>
+<li>The advantage of this new method is to free LGWR from having to inform many processes waiting on commit to complete thereby freeing high CPU usage by the LGWR.</li>
+<li>Initially the LGWR uses post/wait and according to an internal algorithm evaluates whether polling is better.</li>
+</ul>
+</li>
+</ul>
+<p>Under high system load polling may perform better because the post/wait implementation typically does not scale well.<br>If the system load is low, then post/wait performs well and provides better response times than polling.<br>Oracle relies on internal statistics to determine which method should be used.<br>Because switching between post/wait and polling incurs an overhead, safe guards are in place in order to ensure that switches do not occur too frequently.<br>Switch is logged in LGWR tracefile<br><a id="more"></a><br>Below DB version is 12.2, should be different from 11g, the first parameter freq_threshold limits the mode switch frequency.<br><figure class="highlight sql hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br></pre></td><td class="code"><pre><span class="line"><span class="hljs-keyword">select</span> a.ksppinm <span class="hljs-keyword">name</span>, b.ksppstvl <span class="hljs-keyword">value</span>, a.ksppdesc description</span><br><span class="line"><span class="hljs-keyword">from</span> sys.x$ksppi a, sys.x$ksppcv b</span><br><span class="line"><span class="hljs-keyword">where</span> a.indx = b.indx <span class="hljs-keyword">and</span> a.ksppinm <span class="hljs-keyword">like</span> <span class="hljs-string">'_%adaptive_log%'</span>;</span><br><span class="line">NAME							VALUE	   DESCRIPTION</span><br><span class="line"><span class="hljs-comment">------------------------------------------------------- ---------- ----------------------------------------------------------------------------</span></span><br><span class="line">_adaptive_log_file_sync_high_switch_freq_threshold	3	   Threshold for frequent log file sync mode switches (per minute)</span><br><span class="line">_adaptive_log_file_sync_poll_aggressiveness		0	   Polling interval selection bias (conservative=0, aggressive=100)</span><br><span class="line">_adaptive_log_file_sync_sampling_count			128	   Evaluate post/wait versus polling every N writes</span><br><span class="line">_adaptive_log_file_sync_sampling_time			3	   Evaluate post/wait versus polling every N seconds</span><br><span class="line">_adaptive_log_file_sync_sched_delay_window		60	   Window (in seconds) for measuring average scheduling delay</span><br><span class="line">_adaptive_log_file_sync_use_polling_threshold		110	   Ratio of redo synch time to expected poll time as a percentage</span><br><span class="line">_adaptive_log_file_sync_use_postwait_threshold		50	   Percentage of foreground <span class="hljs-keyword">load</span> <span class="hljs-keyword">from</span> <span class="hljs-keyword">when</span> post/<span class="hljs-keyword">wait</span> was <span class="hljs-keyword">last</span> used</span><br><span class="line">_adaptive_log_file_sync_use_postwait_threshold_aging	<span class="hljs-number">1001</span>	   Permille <span class="hljs-keyword">of</span> foreground <span class="hljs-keyword">load</span> <span class="hljs-keyword">from</span> <span class="hljs-keyword">when</span> post/<span class="hljs-keyword">wait</span> was <span class="hljs-keyword">last</span> used</span><br><span class="line">_use_adaptive_log_file_sync				<span class="hljs-literal">FALSE</span>	   Adaptively <span class="hljs-keyword">switch</span> <span class="hljs-keyword">between</span> post/<span class="hljs-keyword">wait</span> <span class="hljs-keyword">and</span> polling</span><br></pre></td></tr></table></figure></p>
+<p>From <code>v$sysstat</code> view, polling status can be checked by below sql:<br><figure class="highlight sql hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">sys@LINORA&gt; select name,value from v$sysstat where name in ('redo synch poll writes','redo synch polls');</span><br><span class="line">NAME							VALUE</span><br><span class="line"><span class="hljs-comment">-------------------------------------------------- ----------</span></span><br><span class="line">redo synch poll writes					    0</span><br><span class="line">redo synch polls					    0</span><br></pre></td></tr></table></figure></p>
+<p>From AWR, <code>other instance activity stats</code> also shows the <code>redo synch poll writes</code> and <code>redo synch pools</code> activities information.</p>
+<p>Enabling adaptive log file sync may occur LGWR relative performance issue, from best practise, disable this feature is recommended:<br><figure class="highlight sql hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"><span class="hljs-keyword">alter</span> <span class="hljs-keyword">system</span> <span class="hljs-keyword">set</span> <span class="hljs-string">"_use_adaptive_log_file_sync"</span> = <span class="hljs-literal">false</span> <span class="hljs-keyword">scope</span>=<span class="hljs-keyword">spfile</span> <span class="hljs-keyword">sid</span>=<span class="hljs-string">'*'</span>;</span><br><span class="line"><span class="hljs-comment">--and recycle the instance</span></span><br></pre></td></tr></table></figure></p>
+<p>In summary, conventional way will reduce the wait time of <code>log file sync</code>, but LGWR background process will cost more overhead.<br>And polling way, it reduce LGWR&#39;s overhead, because the COMMIT foreground process will sleep after it inform LGWR to write the changed data into log, hence the COMMIT process will wait more time for event <code>log file sync</code>. For large OLTP system, this mechanism is not suitable.</p>
+<p>Reference:<br><a href="https://support.oracle.com/epmos/faces/DocumentDisplay?_afrLoop=439981931225234&amp;id=1462942.1&amp;_adf.ctrl-state=kw6ghokkn_57" target="_blank" rel="noopener">Adaptive Switching Between Log Write Methods can Cause ‘log file sync’ Waits (Doc ID 1462942.1)</a><br><a href="https://support.oracle.com/epmos/faces/DocumentDisplay?_afrLoop=440133138964903&amp;id=1541136.1&amp;_adf.ctrl-state=kw6ghokkn_114" target="_blank" rel="noopener">Adaptive Log File Sync Optimization (Doc ID 1541136.1)</a><br><strong>EOF</strong></p>
+
+    
+    </div>
+    
+    <div class="columns is-variable is-1 is-multiline is-mobile">
+    
+        <span class="column is-narrow"><a class="tag is-light article-tag" href="/tags/tuning/">#tuning</a></span>
+    
+    </div>
+    
+    
+    <div class="columns is-mobile is-multiline article-nav">
+        <span class="column is-12-mobile is-half-desktop  article-nav-prev">
+            
+            <a href="/Log-file-sync-wait-event.html">Log file sync wait event</a>
+            
+        </span>
+        <span class="column is-12-mobile is-half-desktop  article-nav-next">
+            
+            <a href="/Oracle-12c-Proactive-Bundle-Patch.html">Oracle 12c Proactive Bundle Patch</a>
+            
+        </span>
+    </div>
+    
+</article>
+
+
+
+
+    </div>
+</section>
+    <footer class="footer footer-padding">
+    <div class="container content">
+            <div class="column is-narrow has-text-centered is-size-7-mobile">
+                &copy; 2013 - 2018
+                <a href="/">Fung Kong&nbsp;
+                </a>
+                Powered by <a href="http://hexo.io/" target="_blank">Hexo</a> & <a
+                        href="http://github.com/ppoffice/hexo-theme-minos">Minos</a>
+            </div>
+    </div>
+</footer>
+
+    <script src="//cdnjs.cloudflare.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
+<script src="//cdnjs.cloudflare.com/ajax/libs/moment.js/2.22.2/moment-with-locales.min.js"></script>
+
+<!-- test if the browser is outdated -->
+<div id="outdated">
+    <h6>Your browser is out-of-date!</h6>
+    <p>Update your browser to view this website correctly. <a id="btnUpdateBrowser" href="http://outdatedbrowser.com/">Update my browser now </a></p>
+    <p class="last"><a href="#" id="btnCloseUpdateBrowser" title="Close">&times;</a></p>
+</div>
+<script src="//cdnjs.cloudflare.com/ajax/libs/outdated-browser/1.1.5/outdatedbrowser.min.js"></script>
+<script>
+    $(document).ready(function () {
+        // plugin function, place inside DOM ready function
+        outdatedBrowser({
+            bgColor: '#f25648',
+            color: '#ffffff',
+            lowerThan: 'flex'
+        })
+    });
+</script>
+
+<script>
+    window.FontAwesomeConfig = {
+        searchPseudoElements: true
+    }
+    moment.locale("en-AU");
+</script>
+
+
+    
+    
+    
+    
+    
+    
+
+    
+
+
+<script src="/js/script.js"></script>
+
+    
+    <div class="searchbox ins-search">
+    <div class="searchbox-mask"></div>
+    <div class="searchbox-container ins-search-container">
+        <div class="searchbox-input-wrapper">
+            <input type="text" class="searchbox-input ins-search-input" placeholder="Type something..." />
+            <span class="searchbox-close ins-close ins-selectable"><i class="fa fa-times-circle"></i></span>
+        </div>
+        <div class="searchbox-result-wrapper ins-section-wrapper">
+            <div class="ins-section-container"></div>
+        </div>
+    </div>
+</div>
+<script>
+    (function (window) {
+        var INSIGHT_CONFIG = {
+            TRANSLATION: {
+                POSTS: 'Posts',
+                PAGES: 'Pages',
+                CATEGORIES: 'Categories',
+                TAGS: 'Tags',
+                UNTITLED: '(Untitled)',
+            },
+            CONTENT_URL: '/content.json',
+        };
+        window.INSIGHT_CONFIG = INSIGHT_CONFIG;
+    })(window);
+</script>
+<script src="/js/insight.js"></script>
+    
+</body>
+</html>
