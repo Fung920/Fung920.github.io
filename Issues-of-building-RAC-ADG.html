@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html class="has-navbar-fixed-top">
+<head>
+    <meta charset="utf-8">
+<title>Issues of building RAC ADG - My Notebook</title>
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+
+<link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/outdated-browser/1.1.5/outdatedbrowser.min.css">
+
+
+<meta name="description" content="Oracle memoranda">
+
+
+
+
+
+
+
+
+
+<link rel="icon" href="/images/favicon.ico">
+
+
+<link rel="stylesheet" href="//fonts.googleapis.com/css?family=Ovo|Source+Code+Pro|Calibri|Ubuntu">
+<link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/bulma/0.6.2/css/bulma.min.css">
+
+
+
+<link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/highlight.js/9.12.0/styles/atom-one-light.min.css">
+
+<link rel="stylesheet" href="/css/style.css">
+
+<script defer src="//use.fontawesome.com/releases/v5.0.8/js/all.js"></script>
+
+
+    
+    
+    
+    
+    
+    
+
+    
+
+
+</head>
+<body>
+    
+<nav class="navbar is-transparent is-fixed-top navbar-main" role="navigation" aria-label="main navigation">
+    <div class="container">
+        <div class="navbar-brand">
+            <a class="navbar-item navbar-logo" href="/">
+                
+                    
+                    My Notebook
+                    
+                
+            </a>
+            <div class="navbar-burger">
+                <span></span>
+                <span></span>
+                <span></span>
+            </div>
+        </div>
+        
+        <div class="navbar-menu navbar-start">
+            
+            <a class="navbar-item "
+               href="/">Home</a>
+            
+            <a class="navbar-item "
+               href="/about">About</a>
+            
+        </div>
+        
+        <div class="navbar-menu navbar-end">
+            
+            <a class="navbar-item search" title="Search" href="javascript:;">
+                <i class="fas fa-search"></i>
+            </a>
+            
+            
+            
+        </div>
+    </div>
+</nav>
+
+    <section class="section">
+    <div class="container">
+    <article class="article content gallery" itemscope itemprop="blogPost">
+    <h1 class="article-title is-size-3 is-size-4-mobile" itemprop="name">
+        
+            Issues of building RAC ADG
+        
+    </h1>
+    <div class="article-meta columns is-variable is-1 is-multiline is-mobile is-size-7-mobile">
+        <span class="column is-narrow">
+            <time datetime="2019-01-11T04:45:18.000Z" itemprop="datePublished">Jan 11 2019</time>
+        </span>
+        
+        <span class="column is-narrow article-category">
+            <i class="far fa-folder"></i>
+            <a class="article-category-link" href="/categories/oracle/">oracle</a>
+        </span>
+        
+        
+    </div>
+    <div class="article-entry is-size-6-mobile" itemprop="articleBody">
+    
+        <p>The background of this case is that our customer want to build a RAC to RAC ADG, we used duplicate database from backup set to restore the ADG, but because the source database is very huge, about 16TB, all the backup sets were stored in NFS file system which shared by primary and standby. Customer&#39;s network bandwidth is 1000Mb, but the transportation speed is under 30MB/s, it took a very long time to restore the whole database.</p>
+<h1 id="1-Missing-directory"><a href="#1-Missing-directory" class="headerlink" title="1. Missing directory"></a>1. Missing directory</h1><p>The first problem we encountered is data file name non-normalization, because the ASM diskgroups are the same with both primary and standby database, we didn&#39;t specify the set new name command, almost all the datafiles in this backup piece were failed to be restored.But it didn&#39;t impact the whole restore progress, duplicate process would restore those missing datafiles from previous backupset, or recreate them with empty contents.<br><figure class="highlight sql hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br></pre></td><td class="code"><pre><span class="line"><span class="hljs-comment">--error messages because of datafile name's non-normalization</span></span><br><span class="line">channel ORA_AUX_DISK_1: restoring datafile 00555 to +dgdata5</span><br><span class="line">channel ORA_AUX_DISK_1: reading from <span class="hljs-keyword">backup</span> piece /nfs_file/fullbakcup_4htlbj6l_1_1</span><br><span class="line">channel ORA_AUX_DISK_1: ORA<span class="hljs-number">-19870</span>: <span class="hljs-keyword">error</span> <span class="hljs-keyword">while</span> restoring <span class="hljs-keyword">backup</span> piece /nfs_file/fullbakcup_4htlbj6l_1_1</span><br><span class="line"><span class="hljs-comment">--we didn't have +DGDATA3/proddb directory</span></span><br><span class="line">ORA<span class="hljs-number">-19504</span>: <span class="hljs-keyword">failed</span> <span class="hljs-keyword">to</span> <span class="hljs-keyword">create</span> <span class="hljs-keyword">file</span> <span class="hljs-string">"+DGDATA3/proddb/datafile/tbscrj_data_1_647.dbf"</span></span><br><span class="line">ORA<span class="hljs-number">-17502</span>: ksfdcre:<span class="hljs-number">4</span> <span class="hljs-keyword">Failed</span> <span class="hljs-keyword">to</span> <span class="hljs-keyword">create</span> <span class="hljs-keyword">file</span> +DGDATA3/proddb/<span class="hljs-keyword">datafile</span>/tbscrj_data_1_647.dbf</span><br><span class="line">ORA<span class="hljs-number">-15173</span>: entry <span class="hljs-string">'proddb'</span> does <span class="hljs-keyword">not</span> exist <span class="hljs-keyword">in</span> <span class="hljs-keyword">directory</span> <span class="hljs-string">'/'</span></span><br><span class="line">...</span><br><span class="line"></span><br><span class="line"><span class="hljs-comment">--duplicate process tring to restore from previous backup</span></span><br><span class="line">channel ORA_AUX_DISK_1: reading <span class="hljs-keyword">from</span> <span class="hljs-keyword">backup</span> piece /nfs_file/fullbakcup_4ptlgovj_1_1</span><br><span class="line">channel ORA_AUX_DISK_1: piece handle=/nfs_file/fullbakcup_4ptlgovj_1_1 tag=TAG20181221T175217</span><br><span class="line">channel ORA_AUX_DISK_1: restored <span class="hljs-keyword">backup</span> piece <span class="hljs-number">1</span></span><br><span class="line">channel ORA_AUX_DISK_1: <span class="hljs-keyword">restore</span> <span class="hljs-keyword">complete</span>, elapsed <span class="hljs-keyword">time</span>: <span class="hljs-number">20</span>:<span class="hljs-number">44</span>:<span class="hljs-number">49</span></span><br><span class="line"><span class="hljs-keyword">failover</span> <span class="hljs-keyword">to</span> previous <span class="hljs-keyword">backup</span></span><br><span class="line"></span><br><span class="line"><span class="hljs-comment">--re-creating missing datafile</span></span><br><span class="line">creating <span class="hljs-keyword">datafile</span> <span class="hljs-keyword">file</span> <span class="hljs-built_in">number</span>=<span class="hljs-number">331</span> <span class="hljs-keyword">name</span>=+DGDATA3/proddb/<span class="hljs-keyword">datafile</span>/tbscrj_data_1_647.dbf</span><br><span class="line">creating <span class="hljs-keyword">datafile</span> <span class="hljs-keyword">file</span> <span class="hljs-built_in">number</span>=<span class="hljs-number">340</span> <span class="hljs-keyword">name</span>=+dgdata3</span><br><span class="line"></span><br><span class="line"><span class="hljs-comment">--because previous backup recored in control files are years ago, the backup set can't be found now</span></span><br><span class="line">channel ORA_AUX_DISK_1: ORA<span class="hljs-number">-19870</span>: <span class="hljs-keyword">error</span> <span class="hljs-keyword">while</span> restoring <span class="hljs-keyword">backup</span> piece /<span class="hljs-keyword">backup</span>/DB_PRODDB_s70_p1_t939760538</span><br><span class="line">ORA<span class="hljs-number">-19505</span>: <span class="hljs-keyword">failed</span> <span class="hljs-keyword">to</span> identify <span class="hljs-keyword">file</span> <span class="hljs-string">"/backup/DB_PRODDB_s70_p1_t939760538"</span></span><br><span class="line">ORA<span class="hljs-number">-27037</span>: unable <span class="hljs-keyword">to</span> obtain <span class="hljs-keyword">file</span> <span class="hljs-keyword">status</span></span><br><span class="line">IBM AIX RISC <span class="hljs-keyword">System</span>/<span class="hljs-number">6000</span> <span class="hljs-keyword">Error</span>: <span class="hljs-number">2</span>: <span class="hljs-keyword">No</span> such <span class="hljs-keyword">file</span> <span class="hljs-keyword">or</span> <span class="hljs-keyword">directory</span></span><br><span class="line">Additional information: <span class="hljs-number">3</span></span><br></pre></td></tr></table></figure></p>
+<p>After restore finished, duplicate process would try to recover the standby, but the archived logs which need to be applied by recover process are years ago, recover process was failed again. All we need to do is restore those impacted files and recover them.</p>
+<h2 id="1-1-resolution"><a href="#1-1-resolution" class="headerlink" title="1.1 resolution"></a>1.1 resolution</h2><p>One of the resolution is restore the missing datafiles from backup set, or take data file copy from primary:</p>
+<ul>
+<li>restore from backup set</li>
+</ul>
+<p>Every time you issue a restore command, rman would read relevant backup piece once, it&#39;s recommended to use one restore command to restore multiple datafiles, especial your backup piece is very large:<br><figure class="highlight sql hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line">rman target / &lt;&lt;EOF</span><br><span class="line">run &#123;</span><br><span class="line">allocate channel c1 type disk;</span><br><span class="line">allocate channel c2 type disk;</span><br><span class="line"><span class="hljs-keyword">restore</span> <span class="hljs-keyword">datafile</span> <span class="hljs-number">340</span>, <span class="hljs-number">331</span>, <span class="hljs-number">342</span>;</span><br><span class="line"><span class="hljs-keyword">release</span> channel c1;</span><br><span class="line"><span class="hljs-keyword">release</span> channel c2;</span><br><span class="line">&#125;</span><br><span class="line">EOF</span><br></pre></td></tr></table></figure></p>
+<ul>
+<li>restore from datafile copy</li>
+</ul>
+<p>Take the datafile copy from primary:<br><figure class="highlight sql hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line">RMAN&gt;  backup as copy datafile 319 format '/arch2/data319.dbf';</span><br><span class="line">Starting <span class="hljs-keyword">backup</span> <span class="hljs-keyword">at</span> <span class="hljs-number">2019</span><span class="hljs-number">-01</span><span class="hljs-number">-04</span> <span class="hljs-number">10</span>:<span class="hljs-number">01</span>:<span class="hljs-number">24</span></span><br><span class="line"><span class="hljs-keyword">using</span> target <span class="hljs-keyword">database</span> control <span class="hljs-keyword">file</span> instead <span class="hljs-keyword">of</span> <span class="hljs-keyword">recovery</span> <span class="hljs-keyword">catalog</span></span><br><span class="line">allocated channel: ORA_DISK_1</span><br><span class="line">channel ORA_DISK_1: <span class="hljs-keyword">SID</span>=<span class="hljs-number">387</span> <span class="hljs-keyword">instance</span>=proddb2 device <span class="hljs-keyword">type</span>=DISK</span><br><span class="line">channel ORA_DISK_1: <span class="hljs-keyword">starting</span> <span class="hljs-keyword">datafile</span> copy</span><br><span class="line"><span class="hljs-keyword">input</span> <span class="hljs-keyword">datafile</span> <span class="hljs-keyword">file</span> <span class="hljs-built_in">number</span>=<span class="hljs-number">00319</span> <span class="hljs-keyword">name</span>=+DGDATA3/proddb/<span class="hljs-keyword">datafile</span>/tbscrj_fq_dzd_2017<span class="hljs-number">.382</span><span class="hljs-number">.940007677</span></span><br><span class="line"><span class="hljs-keyword">output</span> <span class="hljs-keyword">file</span> <span class="hljs-keyword">name</span>=/arch2/data319.dbf tag=TAG20190104T100125 RECID=<span class="hljs-number">4</span> STAMP=<span class="hljs-number">996660397</span></span><br><span class="line">channel ORA_DISK_1: <span class="hljs-keyword">datafile</span> copy <span class="hljs-keyword">complete</span>, elapsed <span class="hljs-keyword">time</span>: <span class="hljs-number">00</span>:<span class="hljs-number">05</span>:<span class="hljs-number">15</span></span><br><span class="line">Finished <span class="hljs-keyword">backup</span> <span class="hljs-keyword">at</span> <span class="hljs-number">2019</span><span class="hljs-number">-01</span><span class="hljs-number">-04</span> <span class="hljs-number">10</span>:<span class="hljs-number">06</span>:<span class="hljs-number">40</span></span><br></pre></td></tr></table></figure></p>
+<p>scp the standby and catalog with it:<br><figure class="highlight hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br></pre></td><td class="code"><pre><span class="line">RMAN&gt; catalog datafilecopy '/gglog/data319.dbf';</span><br><span class="line"></span><br><span class="line">  using target database control file instead of recovery catalog</span><br><span class="line">  cataloged datafile copy</span><br><span class="line">  datafile copy file name=/gglog/data319.dbf RECID=1085 STAMP=996663809</span><br><span class="line"></span><br><span class="line">RMAN&gt; list copy of datafile 319;</span><br><span class="line"></span><br><span class="line">  List of Datafile Copies</span><br><span class="line">  =======================</span><br><span class="line"></span><br><span class="line">  Key     File S Completion Time     Ckp SCN    Ckp Time</span><br><span class="line">  <span class="hljs-comment">------- ---- - ------------------- ---------- -------------------</span></span><br><span class="line">  1085    319  A 2019-01-04 11:03:29 16326666095593 2019-01-04 10:01:25</span><br><span class="line">          Name: /gglog/data319.dbf</span><br><span class="line">          Tag: TAG20190104T100125</span><br><span class="line">RMAN&gt; restore datafile 319;</span><br></pre></td></tr></table></figure></p>
+<h1 id="2-Backup-from-standby-side"><a href="#2-Backup-from-standby-side" class="headerlink" title="2. Backup from standby side"></a>2. Backup from standby side</h1><p>If you want to backup in standby side, you must resync catalog from primary, otherwise, it will get the below errors:<br><figure class="highlight sql hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line">resyncing from database with DB_UNIQUE_NAME PRODDB</span><br><span class="line">RMAN-00571: ===========================================================</span><br><span class="line">RMAN-00569: =============== ERROR MESSAGE STACK FOLLOWS ===============</span><br><span class="line">RMAN-00571: ===========================================================</span><br><span class="line">RMAN-03009: failure of resync command on default channel at 11/22/2016 10:49:00</span><br><span class="line">ORA-17629: Cannot connect to the remote database server</span><br><span class="line">ORA-17627: ORA-00942: table or view does not exist</span><br></pre></td></tr></table></figure></p>
+<ul>
+<li>resync catalog from primary</li>
+</ul>
+<figure class="highlight hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">RMAN&gt; connect catalog rman/&lt;rman password&gt;@RMAN_REMOTE_CAT</span><br><span class="line">connected to recovery catalog database</span><br><span class="line"></span><br><span class="line">RMAN&gt;  show all for db_unique_name PRODDB;</span><br></pre></td></tr></table></figure>
+<ul>
+<li>resync catalog from standby</li>
+</ul>
+<figure class="highlight hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">RMAN&gt; resync catalog;</span><br></pre></td></tr></table></figure>
+<p>After that, run the usual backup script in the standby.</p>
+<a id="more"></a>
+<p><strong>EOF</strong></p>
+
+    
+    </div>
+    
+    
+    <div class="columns is-mobile is-multiline article-nav">
+        <span class="column is-12-mobile is-half-desktop is-hidden-mobile article-nav-prev">
+            
+        </span>
+        <span class="column is-12-mobile is-half-desktop  article-nav-next">
+            
+            <a href="/Understand-DB-time.html">Understand DB time</a>
+            
+        </span>
+    </div>
+    
+</article>
+
+
+
+
+    </div>
+</section>
+    <footer class="footer footer-padding">
+    <div class="container content">
+            <div class="column is-narrow has-text-centered is-size-7-mobile">
+                &copy;  <a href="/">Kyun Kong&nbsp;</a>
+                2013 - 2019
+            </div>
+    </div>
+</footer>
+
+    <script src="//cdnjs.cloudflare.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
+<script src="//cdnjs.cloudflare.com/ajax/libs/moment.js/2.22.2/moment-with-locales.min.js"></script>
+
+<!-- test if the browser is outdated -->
+<div id="outdated">
+    <h6>Your browser is out-of-date!</h6>
+    <p>Update your browser to view this website correctly. <a id="btnUpdateBrowser" href="http://outdatedbrowser.com/">Update my browser now </a></p>
+    <p class="last"><a href="#" id="btnCloseUpdateBrowser" title="Close">&times;</a></p>
+</div>
+<script src="//cdnjs.cloudflare.com/ajax/libs/outdated-browser/1.1.5/outdatedbrowser.min.js"></script>
+<script>
+    $(document).ready(function () {
+        // plugin function, place inside DOM ready function
+        outdatedBrowser({
+            bgColor: '#f25648',
+            color: '#ffffff',
+            lowerThan: 'flex'
+        })
+    });
+</script>
+
+<script>
+    window.FontAwesomeConfig = {
+        searchPseudoElements: true
+    }
+    moment.locale("en-AU");
+</script>
+
+
+    
+    
+    
+    
+    
+    
+
+    
+
+
+<script src="/js/script.js"></script>
+
+    
+    <div class="searchbox ins-search">
+    <div class="searchbox-mask"></div>
+    <div class="searchbox-container ins-search-container">
+        <div class="searchbox-input-wrapper">
+            <input type="text" class="searchbox-input ins-search-input" placeholder="Type something..." />
+            <span class="searchbox-close ins-close ins-selectable"><i class="fa fa-times-circle"></i></span>
+        </div>
+        <div class="searchbox-result-wrapper ins-section-wrapper">
+            <div class="ins-section-container"></div>
+        </div>
+    </div>
+</div>
+<script>
+    (function (window) {
+        var INSIGHT_CONFIG = {
+            TRANSLATION: {
+                POSTS: 'Posts',
+                PAGES: 'Pages',
+                CATEGORIES: 'Categories',
+                TAGS: 'Tags',
+                UNTITLED: '(Untitled)',
+            },
+            CONTENT_URL: '/content.json',
+        };
+        window.INSIGHT_CONFIG = INSIGHT_CONFIG;
+    })(window);
+</script>
+<script src="/js/insight.js"></script>
+    
+</body>
+</html>
