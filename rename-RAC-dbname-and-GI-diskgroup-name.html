@@ -1,0 +1,277 @@
+<!DOCTYPE html>
+<html class="has-navbar-fixed-top">
+<head>
+    <meta charset="utf-8">
+<title>Rename RAC dbname and GI diskgroup name - My Notebook</title>
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+
+<link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/outdated-browser/1.1.5/outdatedbrowser.min.css">
+
+
+<meta name="description" content="Oracle memoranda">
+
+
+
+
+
+
+
+
+
+<link rel="icon" href="/images/favicon.ico">
+
+
+<link rel="stylesheet" href="//fonts.googleapis.com/css?family=Ovo|Source+Code+Pro|Calibri|Ubuntu">
+<link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/bulma/0.6.2/css/bulma.min.css">
+
+
+
+<link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/highlight.js/9.12.0/styles/atom-one-light.min.css">
+
+<link rel="stylesheet" href="/css/style.css">
+
+<script defer src="//use.fontawesome.com/releases/v5.0.8/js/all.js"></script>
+
+
+    
+    
+    
+    
+    
+    
+
+    
+
+
+</head>
+<body>
+    
+<nav class="navbar is-transparent is-fixed-top navbar-main" role="navigation" aria-label="main navigation">
+    <div class="container">
+        <div class="navbar-brand">
+            <a class="navbar-item navbar-logo" href="/">
+                
+                    
+                    My Notebook
+                    
+                
+            </a>
+            <div class="navbar-burger">
+                <span></span>
+                <span></span>
+                <span></span>
+            </div>
+        </div>
+        
+        <div class="navbar-menu navbar-start">
+            
+            <a class="navbar-item "
+               href="/">Home</a>
+            
+            <a class="navbar-item "
+               href="/about">About</a>
+            
+        </div>
+        
+        <div class="navbar-menu navbar-end">
+            
+            <a class="navbar-item search" title="Search" href="javascript:;">
+                <i class="fas fa-search"></i>
+            </a>
+            
+            
+            
+        </div>
+    </div>
+</nav>
+
+    <section class="section">
+    <div class="container">
+    <article class="article content gallery" itemscope itemprop="blogPost">
+    <h1 class="article-title is-size-3 is-size-4-mobile" itemprop="name">
+        
+            Rename RAC dbname and GI diskgroup name
+        
+    </h1>
+    <div class="article-meta columns is-variable is-1 is-multiline is-mobile is-size-7-mobile">
+        <span class="column is-narrow">
+            <time datetime="2019-02-21T08:40:11.000Z" itemprop="datePublished">Feb 21 2019</time>
+        </span>
+        
+        <span class="column is-narrow article-category">
+            <i class="far fa-folder"></i>
+            <a class="article-category-link" href="/categories/oracle/">oracle</a>
+        </span>
+        
+        
+    </div>
+    <div class="article-entry is-size-6-mobile" itemprop="articleBody">
+    
+        <p>Client wants to use Oracle OEM to manage all the database RACs, due to unoptimized plan of installation, they want to standardize naming conversion of DBNAME and diskgroup name, with <code>NID</code> utility, it&#39;s easy to modify the database name, but modify diskgroup name is a bit little complicated.</p>
+<a id="more"></a>
+<h1 id="1-Modify-DBNAME-with-nid"><a href="#1-Modify-DBNAME-with-nid" class="headerlink" title="1. Modify DBNAME with nid"></a>1. Modify DBNAME with nid</h1><p>First of all, backup is essential before any changes.</p>
+<ul>
+<li>Bring RAC database in exclusive mode</li>
+</ul>
+<figure class="highlight hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">SQL&gt; alter system set cluster_database=false scope=both;</span><br></pre></td></tr></table></figure>
+<ul>
+<li>Stop the database and bring database in mount mode</li>
+</ul>
+<figure class="highlight sql hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">$srvctl <span class="hljs-keyword">stop</span> <span class="hljs-keyword">database</span> -d orcl</span><br><span class="line">$sqlplus <span class="hljs-string">"/as sysdba"</span></span><br><span class="line"><span class="hljs-keyword">SQL</span>&gt; <span class="hljs-keyword">startup</span> <span class="hljs-keyword">mount</span></span><br></pre></td></tr></table></figure>
+<ul>
+<li>Modify dbname with nid</li>
+</ul>
+<figure class="highlight sql hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br></pre></td><td class="code"><pre><span class="line">&lt;localhost:/home/oracle&gt;$ nid target=/ dbname=ccms</span><br><span class="line">DBNEWID: <span class="hljs-keyword">Release</span> <span class="hljs-number">12.1</span><span class="hljs-number">.0</span><span class="hljs-number">.2</span><span class="hljs-number">.0</span> - Production <span class="hljs-keyword">on</span> Thu Feb <span class="hljs-number">21</span> <span class="hljs-number">11</span>:<span class="hljs-number">59</span>:<span class="hljs-number">50</span> <span class="hljs-number">2019</span></span><br><span class="line">Copyright (c) <span class="hljs-number">1982</span>, <span class="hljs-number">2014</span>, <span class="hljs-keyword">Oracle</span> <span class="hljs-keyword">and</span>/<span class="hljs-keyword">or</span> its affiliates.  All rights reserved.</span><br><span class="line">Connected <span class="hljs-keyword">to</span> <span class="hljs-keyword">database</span> ORCL (DBID=<span class="hljs-number">625082333</span>)</span><br><span class="line">Connected <span class="hljs-keyword">to</span> <span class="hljs-keyword">server</span> <span class="hljs-keyword">version</span> <span class="hljs-number">12.1</span><span class="hljs-number">.0</span></span><br><span class="line">Control Files <span class="hljs-keyword">in</span> <span class="hljs-keyword">database</span>:</span><br><span class="line">    +<span class="hljs-keyword">DATA</span>/ORCL/<span class="hljs-keyword">CONTROLFILE</span>/<span class="hljs-keyword">current</span><span class="hljs-number">.267</span><span class="hljs-number">.998418721</span></span><br><span class="line"><span class="hljs-keyword">Change</span> <span class="hljs-keyword">database</span> <span class="hljs-keyword">ID</span> <span class="hljs-keyword">and</span> <span class="hljs-keyword">database</span> <span class="hljs-keyword">name</span> ORCL <span class="hljs-keyword">to</span> CCMS? (Y/[N]) =&gt; y</span><br><span class="line">Proceeding <span class="hljs-keyword">with</span> operation</span><br><span class="line">Changing <span class="hljs-keyword">database</span> <span class="hljs-keyword">ID</span> <span class="hljs-keyword">from</span> <span class="hljs-number">625082333</span> <span class="hljs-keyword">to</span> <span class="hljs-number">2262823414</span></span><br><span class="line">Changing <span class="hljs-keyword">database</span> <span class="hljs-keyword">name</span> <span class="hljs-keyword">from</span> ORCL <span class="hljs-keyword">to</span> CCMS</span><br><span class="line">    Control <span class="hljs-keyword">File</span> +<span class="hljs-keyword">DATA</span>/ORCL/<span class="hljs-keyword">CONTROLFILE</span>/<span class="hljs-keyword">current</span><span class="hljs-number">.267</span><span class="hljs-number">.998418721</span> - modified</span><br><span class="line">    <span class="hljs-keyword">Datafile</span> +<span class="hljs-keyword">DATA</span>/ORCL/<span class="hljs-keyword">DATAFILE</span>/<span class="hljs-keyword">system</span><span class="hljs-number">.270</span><span class="hljs-number">.99841872</span> - dbid <span class="hljs-keyword">changed</span>, wrote <span class="hljs-keyword">new</span> <span class="hljs-keyword">name</span></span><br><span class="line">    <span class="hljs-keyword">Datafile</span> +<span class="hljs-keyword">DATA</span>/ORCL/<span class="hljs-keyword">DATAFILE</span>/<span class="hljs-keyword">sysaux</span><span class="hljs-number">.271</span><span class="hljs-number">.99841872</span> - dbid <span class="hljs-keyword">changed</span>, wrote <span class="hljs-keyword">new</span> <span class="hljs-keyword">name</span></span><br><span class="line">    <span class="hljs-keyword">Datafile</span> +<span class="hljs-keyword">DATA</span>/ORCL/<span class="hljs-keyword">DATAFILE</span>/undotbs1<span class="hljs-number">.272</span><span class="hljs-number">.99841872</span> - dbid <span class="hljs-keyword">changed</span>, wrote <span class="hljs-keyword">new</span> <span class="hljs-keyword">name</span></span><br><span class="line">    <span class="hljs-keyword">Datafile</span> +<span class="hljs-keyword">DATA</span>/ORCL/<span class="hljs-keyword">DATAFILE</span>/undotbs2<span class="hljs-number">.274</span><span class="hljs-number">.99841874</span> - dbid <span class="hljs-keyword">changed</span>, wrote <span class="hljs-keyword">new</span> <span class="hljs-keyword">name</span></span><br><span class="line">    <span class="hljs-keyword">Datafile</span> +<span class="hljs-keyword">DATA</span>/ORCL/<span class="hljs-keyword">DATAFILE</span>/<span class="hljs-keyword">users</span><span class="hljs-number">.275</span><span class="hljs-number">.99841874</span> - dbid <span class="hljs-keyword">changed</span>, wrote <span class="hljs-keyword">new</span> <span class="hljs-keyword">name</span></span><br><span class="line">    <span class="hljs-keyword">Datafile</span> +<span class="hljs-keyword">DATA</span>/ORCL/TEMPFILE/temp<span class="hljs-number">.273</span><span class="hljs-number">.99841872</span> - dbid <span class="hljs-keyword">changed</span>, wrote <span class="hljs-keyword">new</span> <span class="hljs-keyword">name</span></span><br><span class="line">    Control <span class="hljs-keyword">File</span> +<span class="hljs-keyword">DATA</span>/ORCL/<span class="hljs-keyword">CONTROLFILE</span>/<span class="hljs-keyword">current</span><span class="hljs-number">.267</span><span class="hljs-number">.998418721</span> - dbid <span class="hljs-keyword">changed</span>, wrote <span class="hljs-keyword">new</span> <span class="hljs-keyword">name</span></span><br><span class="line">    <span class="hljs-keyword">Instance</span> shut down</span><br><span class="line"><span class="hljs-keyword">Database</span> <span class="hljs-keyword">name</span> <span class="hljs-keyword">changed</span> <span class="hljs-keyword">to</span> CCMS.</span><br><span class="line"><span class="hljs-keyword">Modify</span> parameter <span class="hljs-keyword">file</span> <span class="hljs-keyword">and</span> generate a <span class="hljs-keyword">new</span> <span class="hljs-keyword">password</span> <span class="hljs-keyword">file</span> <span class="hljs-keyword">before</span> restarting.</span><br><span class="line"><span class="hljs-keyword">Database</span> <span class="hljs-keyword">ID</span> <span class="hljs-keyword">for</span> <span class="hljs-keyword">database</span> CCMS <span class="hljs-keyword">changed</span> <span class="hljs-keyword">to</span> <span class="hljs-number">2262823414.</span></span><br><span class="line">All previous backups <span class="hljs-keyword">and</span> <span class="hljs-keyword">archived</span> <span class="hljs-keyword">redo</span> <span class="hljs-keyword">logs</span> <span class="hljs-keyword">for</span> this <span class="hljs-keyword">database</span> <span class="hljs-keyword">are</span> unusable.</span><br><span class="line"><span class="hljs-keyword">Database</span> has been <span class="hljs-keyword">shutdown</span>, <span class="hljs-keyword">open</span> <span class="hljs-keyword">database</span> <span class="hljs-keyword">with</span> <span class="hljs-keyword">RESETLOGS</span> option.</span><br><span class="line">Succesfully <span class="hljs-keyword">changed</span> <span class="hljs-keyword">database</span> <span class="hljs-keyword">name</span> <span class="hljs-keyword">and</span> ID.</span><br><span class="line">DBNEWID - Completed succesfully.</span><br></pre></td></tr></table></figure>
+<ul>
+<li>Bring database back in mount mode and modify DBNAME in database</li>
+</ul>
+<figure class="highlight hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br></pre></td><td class="code"><pre><span class="line">SQL&gt; startup mount</span><br><span class="line">ORACLE instance started.</span><br><span class="line"></span><br><span class="line">Total System Global Area 3.2481E+11 bytes</span><br><span class="line">Fixed Size		    7668016 bytes</span><br><span class="line">Variable Size		 4.6171E+10 bytes</span><br><span class="line">Database Buffers	 2.7703E+11 bytes</span><br><span class="line">Redo Buffers		 1602940928 bytes</span><br><span class="line">ORA-01103: database name 'CCMS' in control file is not 'ORCL'</span><br><span class="line"></span><br><span class="line">SQL&gt; alter system set db_name=ccms scope=spfile;</span><br><span class="line">System altered.</span><br><span class="line"><span class="hljs-comment">--Bring database backup in cluster mode</span></span><br><span class="line">SQL&gt; alter system set cluster_database=true scope=spfile;</span><br><span class="line">System altered.</span><br><span class="line">SQL&gt; startup force mount</span><br></pre></td></tr></table></figure>
+<ul>
+<li>Open database with resetlogs option</li>
+</ul>
+<figure class="highlight sql hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br></pre></td><td class="code"><pre><span class="line">SQL&gt; alter database open resetlogs;</span><br><span class="line">Database altered.</span><br><span class="line">SQL&gt; show parameter name</span><br><span class="line">NAME				     TYPE	 VALUE</span><br><span class="line"><span class="hljs-comment">------------------------------------ ----------- ------------------------------</span></span><br><span class="line">cell_offloadgroup_name		     string</span><br><span class="line">db_file_name_convert		     string</span><br><span class="line">db_name 			     string	 CCMS</span><br><span class="line">db_unique_name			     string	 CCMS</span><br><span class="line">global_names			     boolean	 FALSE</span><br><span class="line">instance_name			     string	 orcl1</span><br><span class="line">lock_name_space 		     string</span><br><span class="line">log_file_name_convert		     string</span><br><span class="line">pdb_file_name_convert		     string</span><br><span class="line">processor_group_name		     string</span><br><span class="line">service_names			     string	 CCMS</span><br></pre></td></tr></table></figure>
+<ul>
+<li>Modify instance names</li>
+</ul>
+<figure class="highlight hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">SQL&gt; create pfile='/home/oracle/pfile.ora' from spfile;</span><br><span class="line"><span class="hljs-comment">--replace old instance name with new instance in pfile</span></span><br><span class="line"><span class="hljs-comment">--It's recommened create and initSID.ora file in $ORACLE_HOME/dbs</span></span><br><span class="line">SQL&gt; startup nomount</span><br><span class="line">SQL&gt; create spfile='+DATA/ORCL/spfile.ora' from pfile='/home/oracle/pfile.ora';</span><br></pre></td></tr></table></figure>
+<ul>
+<li>Remove old database and register new database</li>
+</ul>
+<figure class="highlight sql hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br></pre></td><td class="code"><pre><span class="line">SQL&gt; shutdown immediate</span><br><span class="line">$srvctl remove database -d orcl</span><br><span class="line">$srvctl add database -d ccms -o $ORACLE_HOME -spfile '+DATA/ORCL/spfile.ora' -startoption OPEN -policy AUTOMATIC -v</span><br><span class="line"><span class="hljs-comment">--add instance attach to GI</span></span><br><span class="line">$srvctl add instance -d ccms -i ccms1 -n localhost1</span><br><span class="line">$srvctl add instance -d ccms -i ccms2 -n localhost2</span><br><span class="line"><span class="hljs-comment">--check the status of database</span></span><br><span class="line">$srvctl config database -d ccms</span><br><span class="line">$crsctl stat res -t</span><br><span class="line">SQL&gt; show parameter name</span><br><span class="line"></span><br><span class="line">NAME				     TYPE	 VALUE</span><br><span class="line"><span class="hljs-comment">------------------------------------ ----------- ------------------------------</span></span><br><span class="line">cell_offloadgroup_name		     string</span><br><span class="line">db_file_name_convert		     string</span><br><span class="line">db_name 			     string	 ccms</span><br><span class="line">db_unique_name			     string	 ccms</span><br><span class="line">global_names			     boolean	 FALSE</span><br><span class="line">instance_name			     string	 ccms1</span><br><span class="line">lock_name_space 		     string</span><br><span class="line">log_file_name_convert		     string</span><br><span class="line">pdb_file_name_convert		     string</span><br><span class="line">processor_group_name		     string</span><br><span class="line">service_names			     string	 ccms</span><br></pre></td></tr></table></figure>
+<h1 id="2-Modify-ASM-diskgroup-name-with-renamedg"><a href="#2-Modify-ASM-diskgroup-name-with-renamedg" class="headerlink" title="2. Modify ASM diskgroup name with renamedg"></a>2. Modify ASM diskgroup name with <code>renamedg</code></h1><ul>
+<li>Dismount diskgroups which need to be renamed</li>
+</ul>
+<figure class="highlight sql hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">$srvctl <span class="hljs-keyword">stop</span> <span class="hljs-keyword">database</span> -d ccms</span><br><span class="line"><span class="hljs-comment">--with grid user dismount diskgroup with both node</span></span><br><span class="line">&lt;/home/grid&gt;$ sqlplus / <span class="hljs-keyword">as</span> <span class="hljs-keyword">sysasm</span></span><br><span class="line"><span class="hljs-keyword">SQL</span>&gt; <span class="hljs-keyword">alter</span> <span class="hljs-keyword">diskgroup</span> <span class="hljs-keyword">DATA</span> dismount;</span><br></pre></td></tr></table></figure>
+<ul>
+<li>Rename DG name with <code>renamedg</code></li>
+</ul>
+<figure class="highlight sql hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br></pre></td><td class="code"><pre><span class="line">&lt;/home/grid&gt;$ renamedg phase=both dgname=DATA \</span><br><span class="line">newdgname=DATADG asm_diskstring='/dev/asmdisk*' verbose=true</span><br><span class="line">Parsing parameters..</span><br><span class="line"></span><br><span class="line">Parameters in effect:</span><br><span class="line"></span><br><span class="line"> 	 Old DG name       : DATA</span><br><span class="line">	 New DG name          : DATADG</span><br><span class="line">	 Phases               :</span><br><span class="line">	 	 Phase 1</span><br><span class="line">	 	 Phase 2</span><br><span class="line">	 Discovery str        : /dev/asmdisk*</span><br><span class="line">	 Clean              : TRUE</span><br><span class="line">	 Raw only           : TRUE</span><br><span class="line">renamedg operation: phase=both dgname=DATA newdgname=DATADG asm_diskstring=/dev/asmdisk* verbose=true</span><br><span class="line">Executing phase 1</span><br><span class="line">Discovering the group</span><br><span class="line">Performing discovery with string:/dev/asmdisk*</span><br><span class="line">Identified disk UFS:/dev/asmdisk5 with disk number:1 and timestamp (33081105 1165527040)</span><br><span class="line">Identified disk UFS:/dev/asmdisk4 with disk number:0 and timestamp (33081105 1165527040)</span><br><span class="line">Checking for hearbeat...</span><br><span class="line">Re-discovering the group</span><br><span class="line">Performing discovery with string:/dev/asmdisk*</span><br><span class="line">Identified disk UFS:/dev/asmdisk5 with disk number:1 and timestamp (33081105 1165527040)</span><br><span class="line">Identified disk UFS:/dev/asmdisk4 with disk number:0 and timestamp (33081105 1165527040)</span><br><span class="line">Checking if the diskgroup is mounted or used by CSS</span><br><span class="line">Checking disk number:1</span><br><span class="line">Checking disk number:0</span><br><span class="line">Generating configuration file..</span><br><span class="line"></span><br><span class="line">ccms1.__large_pool_size=8053063680</span><br><span class="line">Completed phase 1</span><br><span class="line"></span><br><span class="line">ccms1.__data_transfer_cache_size=0</span><br><span class="line">Executing phase 2</span><br><span class="line">Looking for /dev/asmdisk5</span><br><span class="line">Modifying the header</span><br><span class="line">Looking for /dev/asmdisk4</span><br><span class="line">Modifying the header</span><br><span class="line">Completed phase 2</span><br><span class="line">Terminating kgfd context 0x7f09cb8ec0a0</span><br></pre></td></tr></table></figure>
+<ul>
+<li>Remove old diskgroup name in GI</li>
+</ul>
+<figure class="highlight sql hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">SQL&gt; alter diskgroup DATADG mount ;</span><br><span class="line">$srvctl modify database -db ccms -o $ORACLE_HOME -spfile '+DATADG/ORCL/spfile.ora' -diskgroup 'DATADG'</span><br><span class="line">$srvctl remove diskgroup -g DATA</span><br></pre></td></tr></table></figure>
+<ul>
+<li>Re-create controlfile to reflect new datafile localtion</li>
+</ul>
+<figure class="highlight hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br></pre></td><td class="code"><pre><span class="line">SQL&gt; alter database backup controlfile to trace as '/home/oracle/cntl.ctl';</span><br><span class="line"><span class="hljs-comment">--modify cntl.ctl to reflect new file locations</span></span><br><span class="line">SQL&gt; STARTUP NOMOUNT</span><br><span class="line"><span class="hljs-keyword">CREATE</span> <span class="hljs-keyword">CONTROLFILE</span> <span class="hljs-keyword">REUSE</span> <span class="hljs-keyword">DATABASE</span> <span class="hljs-string">"CCMS"</span> <span class="hljs-keyword">RESETLOGS</span>  <span class="hljs-keyword">NOARCHIVELOG</span></span><br><span class="line">    <span class="hljs-keyword">MAXLOGFILES</span> <span class="hljs-number">192</span></span><br><span class="line">    <span class="hljs-keyword">MAXLOGMEMBERS</span> <span class="hljs-number">3</span></span><br><span class="line">    MAXDATAFILES <span class="hljs-number">1024</span></span><br><span class="line">    <span class="hljs-keyword">MAXINSTANCES</span> <span class="hljs-number">32</span></span><br><span class="line">    <span class="hljs-keyword">MAXLOGHISTORY</span> <span class="hljs-number">2920</span></span><br><span class="line"><span class="hljs-keyword">LOGFILE</span></span><br><span class="line">  <span class="hljs-keyword">GROUP</span> <span class="hljs-number">1</span> <span class="hljs-string">'+CCMSDATADG/CCMS/ONLINELOG/group_1.268.1000814621'</span>  <span class="hljs-keyword">SIZE</span> <span class="hljs-number">50</span>M <span class="hljs-keyword">BLOCKSIZE</span> <span class="hljs-number">512</span>,</span><br><span class="line">  <span class="hljs-keyword">GROUP</span> <span class="hljs-number">2</span> <span class="hljs-string">'+CCMSDATADG/CCMS/ONLINELOG/group_2.269.1000814621'</span>  <span class="hljs-keyword">SIZE</span> <span class="hljs-number">50</span>M <span class="hljs-keyword">BLOCKSIZE</span> <span class="hljs-number">512</span></span><br><span class="line"><span class="hljs-comment">-- STANDBY LOGFILE</span></span><br><span class="line"><span class="hljs-keyword">DATAFILE</span></span><br><span class="line">  <span class="hljs-string">'+CCMSDATADG/FEELVIEW/DATAFILE/system.270.998418723'</span>,</span><br><span class="line">  <span class="hljs-string">'+CCMSDATADG/FEELVIEW/DATAFILE/sysaux.271.998418725'</span>,</span><br><span class="line">  <span class="hljs-string">'+CCMSDATADG/FEELVIEW/DATAFILE/undotbs1.272.998418727'</span>,</span><br><span class="line">  <span class="hljs-string">'+CCMSDATADG/FEELVIEW/DATAFILE/undotbs2.274.998418741'</span>,</span><br><span class="line">  <span class="hljs-string">'+CCMSDATADG/FEELVIEW/DATAFILE/users.275.998418741'</span></span><br><span class="line"><span class="hljs-built_in">CHARACTER</span> <span class="hljs-keyword">SET</span> AL32UTF8</span><br><span class="line">;</span><br><span class="line"><span class="hljs-comment">--open database with resetlogs option</span></span><br><span class="line">SQL&gt; alter database open resetlogs;</span><br></pre></td></tr></table></figure>
+<ul>
+<li>Modify pfile to reflect new controlfile location</li>
+</ul>
+<p>Don&#39;t forget to modify <code>cluster_database=true</code> and set <code>db_create_file_dest</code> to new diskgroup name.<br><figure class="highlight sql hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">SQL&gt; create spfile='+DATADG/ORCL/spfile.ora' from pfile='/home/oracle/pfile.ora'</span><br><span class="line">$srvctl <span class="hljs-keyword">stop</span> <span class="hljs-keyword">database</span> -d ccms</span><br><span class="line">$srvctl <span class="hljs-keyword">start</span> <span class="hljs-keyword">database</span> -d ccms</span><br></pre></td></tr></table></figure></p>
+<h1 id="3-Troubleshooting-amp-Tips"><a href="#3-Troubleshooting-amp-Tips" class="headerlink" title="3. Troubleshooting &amp; Tips"></a>3. Troubleshooting &amp; Tips</h1><ul>
+<li>Open resetlogs encountered ORA-01618</li>
+</ul>
+<figure class="highlight sql hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line"><span class="hljs-comment">--Enable log thread 2 in node 1</span></span><br><span class="line">SQL&gt; alter database enable thread 2;</span><br><span class="line"><span class="hljs-comment">--Create log file in node 2</span></span><br><span class="line"><span class="hljs-keyword">ALTER</span> <span class="hljs-keyword">DATABASE</span> <span class="hljs-keyword">ADD</span> <span class="hljs-keyword">LOGFILE</span> <span class="hljs-keyword">THREAD</span> <span class="hljs-number">2</span></span><br><span class="line">  <span class="hljs-keyword">GROUP</span> <span class="hljs-number">9</span> (<span class="hljs-string">'+DATADG'</span>) <span class="hljs-keyword">SIZE</span> <span class="hljs-number">4096</span>M <span class="hljs-keyword">BLOCKSIZE</span> <span class="hljs-number">512</span>,</span><br><span class="line">  <span class="hljs-keyword">GROUP</span> <span class="hljs-number">10</span> (<span class="hljs-string">'+DATADG'</span>) <span class="hljs-keyword">SIZE</span> <span class="hljs-number">4096</span>M <span class="hljs-keyword">BLOCKSIZE</span> <span class="hljs-number">512</span>,</span><br><span class="line">  <span class="hljs-keyword">GROUP</span> <span class="hljs-number">11</span> (<span class="hljs-string">'+DATADG'</span>) <span class="hljs-keyword">SIZE</span> <span class="hljs-number">4096</span>M <span class="hljs-keyword">BLOCKSIZE</span> <span class="hljs-number">512</span>,</span><br><span class="line">  <span class="hljs-keyword">GROUP</span> <span class="hljs-number">12</span> (<span class="hljs-string">'+DATADG'</span>) <span class="hljs-keyword">SIZE</span> <span class="hljs-number">4096</span>M <span class="hljs-keyword">BLOCKSIZE</span> <span class="hljs-number">512</span>;</span><br></pre></td></tr></table></figure>
+<p>Before using <code>renamedg</code>, all the diskgroups must be dismounted from all nodes, and it&#39;s recommended to specify <code>ask_disktrings</code> parameter in the command line. Otherwise, below error maybe occur:<br><figure class="highlight plain hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">KFNDG-00407: Could not find disks for disk group</span><br></pre></td></tr></table></figure></p>
+<p><strong>EOF</strong></p>
+
+    
+    </div>
+    
+    <div class="columns is-variable is-1 is-multiline is-mobile">
+    
+        <span class="column is-narrow"><a class="tag is-light article-tag" href="/tags/RAC/">#RAC</a></span>
+    
+    </div>
+    
+    
+    <div class="columns is-mobile is-multiline article-nav">
+        <span class="column is-12-mobile is-half-desktop is-hidden-mobile article-nav-prev">
+            
+        </span>
+        <span class="column is-12-mobile is-half-desktop  article-nav-next">
+            
+            <a href="/Issues-of-building-RAC-ADG.html">Issues of building RAC ADG</a>
+            
+        </span>
+    </div>
+    
+</article>
+
+
+
+
+    </div>
+</section>
+    <footer class="footer footer-padding">
+    <div class="container content">
+            <div class="column is-narrow has-text-centered is-size-7-mobile">
+                &copy;  <a href="/">Kyun Kong&nbsp;</a>
+                2013 - 2019
+            </div>
+    </div>
+</footer>
+
+    <script src="//cdnjs.cloudflare.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
+<script src="//cdnjs.cloudflare.com/ajax/libs/moment.js/2.22.2/moment-with-locales.min.js"></script>
+
+<!-- test if the browser is outdated -->
+<div id="outdated">
+    <h6>Your browser is out-of-date!</h6>
+    <p>Update your browser to view this website correctly. <a id="btnUpdateBrowser" href="http://outdatedbrowser.com/">Update my browser now </a></p>
+    <p class="last"><a href="#" id="btnCloseUpdateBrowser" title="Close">&times;</a></p>
+</div>
+<script src="//cdnjs.cloudflare.com/ajax/libs/outdated-browser/1.1.5/outdatedbrowser.min.js"></script>
+<script>
+    $(document).ready(function () {
+        // plugin function, place inside DOM ready function
+        outdatedBrowser({
+            bgColor: '#f25648',
+            color: '#ffffff',
+            lowerThan: 'flex'
+        })
+    });
+</script>
+
+<script>
+    window.FontAwesomeConfig = {
+        searchPseudoElements: true
+    }
+    moment.locale("en-AU");
+</script>
+
+
+    
+    
+    
+    
+    
+    
+
+    
+
+
+<script src="/js/script.js"></script>
+
+    
+    <div class="searchbox ins-search">
+    <div class="searchbox-mask"></div>
+    <div class="searchbox-container ins-search-container">
+        <div class="searchbox-input-wrapper">
+            <input type="text" class="searchbox-input ins-search-input" placeholder="Type something..." />
+            <span class="searchbox-close ins-close ins-selectable"><i class="fa fa-times-circle"></i></span>
+        </div>
+        <div class="searchbox-result-wrapper ins-section-wrapper">
+            <div class="ins-section-container"></div>
+        </div>
+    </div>
+</div>
+<script>
+    (function (window) {
+        var INSIGHT_CONFIG = {
+            TRANSLATION: {
+                POSTS: 'Posts',
+                PAGES: 'Pages',
+                CATEGORIES: 'Categories',
+                TAGS: 'Tags',
+                UNTITLED: '(Untitled)',
+            },
+            CONTENT_URL: '/content.json',
+        };
+        window.INSIGHT_CONFIG = INSIGHT_CONFIG;
+    })(window);
+</script>
+<script src="/js/insight.js"></script>
+    
+</body>
+</html>
