@@ -194,9 +194,13 @@ PowerPath跟linux自带的DM-Multipath是冲突的，如果要使用powerpath必
 用udev进行设备名称绑定
 <figure class="highlight plain hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br></pre></td><td class="code"><pre><span class="line">[root@oel6 rules.d]# cat 12-dm-permissions.rules </span><br><span class="line">ENV&#123;DM_NAME&#125;==&quot;data_mpath1&quot;,NAME=&quot;asmdisk1&quot;, OWNER:=&quot;grid&quot;, GROUP:=&quot;oinstall&quot;, MODE:=&quot;660&quot;</span><br><span class="line">ENV&#123;DM_NAME&#125;==&quot;data_mpath2&quot;,NAME=&quot;asmdisk2&quot;, OWNER:=&quot;grid&quot;, GROUP:=&quot;oinstall&quot;, MODE:=&quot;660&quot;</span><br><span class="line">[root@oel6 rules.d]# cat 99-oracle-asmdevices.rules </span><br><span class="line">KERNEL==&quot;sd*&quot;, SUBSYSTEM==&quot;block&quot;, ENV&#123;DEVTYPE&#125;==&quot;disk&quot;, ENV&#123;ID_SERIAL&#125;==&quot;1ATA_VBOX_HARDDISK_VB0d3ee45b-3ed72c0c&quot;, OWNER=&quot;grid&quot;, GROUP=&quot;oinstall&quot;, MODE=&quot;0660&quot;</span><br><span class="line">KERNEL==&quot;sd*&quot;, SUBSYSTEM==&quot;block&quot;, ENV&#123;DEVTYPE&#125;==&quot;disk&quot;, ENV&#123;ID_SERIAL&#125;==&quot;1ATA_VBOX_HARDDISK_VB3dc9cda2-488673dc&quot;, OWNER=&quot;grid&quot;, GROUP=&quot;oinstall&quot;, MODE=&quot;0660&quot;</span><br><span class="line">#restart udev</span><br><span class="line">udevadm control --reload-rules</span><br><span class="line">start_udev</span><br><span class="line">[root@oel6 rules.d]# ll /dev/asmdisk*</span><br><span class="line">brw-rw---- 1 grid oinstall 252, 2 Jun 10 20:50 /dev/asmdisk1</span><br><span class="line">brw-rw---- 1 grid oinstall 252, 3 Jun 10 20:50 /dev/asmdisk2</span><br></pre></td></tr></table></figure>
 
-<h1>5、 RHEL 7 udev</h1>
+<h1>5. RHEL 7 udev</h1>
 
 <figure class="highlight plain hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line">#RHEL7.4 ASM udev加盘</span><br><span class="line">/usr/bin/scsi-rescan</span><br><span class="line">multipath -ll</span><br><span class="line">vi /etc/udev/rule.d/99-oracle-asmdevices.rules</span><br><span class="line">--restart udev</span><br><span class="line">/sbin/udevadm trigger --type=devices --action=change</span><br></pre></td></tr></table></figure>
+
+* Udev rule
+
+<figure class="highlight sh hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br></pre></td><td class="code"><pre><span class="line"><span class="hljs-comment"># 获取磁盘UUID</span></span><br><span class="line">[root@cmsdb02l rules.d]<span class="hljs-comment"># udevadm info --query=all --name=/dev/mapper/ocr-disk01 |grep -i dm_uuid</span></span><br><span class="line">E: DM_UUID=mpath-36005c80058d78000000000001cd</span><br><span class="line"></span><br><span class="line"><span class="hljs-comment"># 添加udev规则绑定multipath磁盘，vi 99-oracle-asmdevices.rules</span></span><br><span class="line"><span class="hljs-comment"># OCR DISKs</span></span><br><span class="line">ACTION==<span class="hljs-string">"add|change"</span>, ENV&#123;DM_UUID&#125;==<span class="hljs-string">"mpath-36005c80058d78000000000001cd"</span>,SYMLINK+=<span class="hljs-string">"asmdisk1"</span>, GROUP=<span class="hljs-string">"oinstall"</span>, OWNER=<span class="hljs-string">"grid"</span>, MODE=<span class="hljs-string">"0660"</span></span><br><span class="line">ACTION==<span class="hljs-string">"add|change"</span>, ENV&#123;DM_UUID&#125;==<span class="hljs-string">"mpath-36005c80058d78000000000001ce"</span>, SYMLINK+=<span class="hljs-string">"asmdisk2"</span>, GROUP=<span class="hljs-string">"oinstall"</span>, OWNER=<span class="hljs-string">"grid"</span>, MODE=<span class="hljs-string">"0660"</span></span><br><span class="line">ACTION==<span class="hljs-string">"add|change"</span>, ENV&#123;DM_UUID&#125;==<span class="hljs-string">"mpath-36005c80058d78000000000001cf"</span>, SYMLINK+=<span class="hljs-string">"asmdisk3"</span>, GROUP=<span class="hljs-string">"oinstall"</span>, OWNER=<span class="hljs-string">"grid"</span>, MODE=<span class="hljs-string">"0660"</span></span><br><span class="line"></span><br><span class="line"><span class="hljs-comment"># 重新加载udev</span></span><br><span class="line">udevadm trigger --<span class="hljs-built_in">type</span>=devices --action=change</span><br></pre></td></tr></table></figure>
 
  <b>EOF</b> 
 
@@ -215,12 +219,12 @@ PowerPath跟linux自带的DM-Multipath是冲突的，如果要使用powerpath必
     <div class="columns is-mobile is-multiline article-nav">
         <span class="column is-12-mobile is-half-desktop  article-nav-prev">
             
-            <a href="/addnodes-in-11g-rac.html">11gr2 RAC增加节点</a>
+            <a href="/deletenodes-in-11g-rac.html">11gr2 RAC删除节点</a>
             
         </span>
         <span class="column is-12-mobile is-half-desktop  article-nav-next">
             
-            <a href="/manage-11gr2-rac-resource.html">11gr2 RAC Resource管理</a>
+            <a href="/addnodes-in-11g-rac.html">11gr2 RAC增加节点</a>
             
         </span>
     </div>
