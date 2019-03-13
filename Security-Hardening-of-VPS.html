@@ -2,7 +2,7 @@
 <html class="has-navbar-fixed-top">
 <head>
     <meta charset="utf-8">
-<title>Error for Oracle 12c in AIX rtld: 0712-001 - My Notebook</title>
+<title>Security Hardening of VPS - My Notebook</title>
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
 
 <link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/outdated-browser/1.1.5/outdatedbrowser.min.css">
@@ -90,12 +90,12 @@
     <article class="article content gallery" itemscope itemprop="blogPost">
     <h1 class="article-title is-size-3 is-size-4-mobile" itemprop="name">
         
-            Error for Oracle 12c in AIX rtld: 0712-001
+            Security Hardening of VPS
         
     </h1>
     <div class="article-meta columns is-variable is-1 is-multiline is-mobile is-size-7-mobile">
         <span class="column is-narrow">
-            <time datetime="2019-03-11T02:00:50.000Z" itemprop="datePublished">Mar 11 2019</time>
+            <time datetime="2019-03-13T04:23:59.000Z" itemprop="datePublished">Mar 13 2019</time>
         </span>
         
         <span class="column is-narrow article-category">
@@ -107,22 +107,31 @@
     </div>
     <div class="article-entry is-size-6-mobile" itemprop="articleBody">
     
-        <p>During HA testing, I shutdown one of node of RAC in AIX, after rebooting, the node couldn&#39;t join the cluster. I tried to start it manually, but failed with below issue:</p>
-<figure class="highlight sh hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line"><span class="hljs-built_in">exec</span>(): 0509-036 Cannot load program crsctl because of the following errors:</span><br><span class="line"></span><br><span class="line">rtld: 0712-001 Symbol CreateIoCompletionPort was referenced from module /opt/oracle/product/12.1.0/lib/libttsh12.so(), but a runtime definition of the symbol was not found.</span><br></pre></td></tr></table></figure>
-<p>This is due to incorrect setting of AIX IOCP.</p>
+        <p>For the perspective of security, Linux VPS should do some action for security hardening. Some of rules are also applicable for Linux server. This post based on CentOS 7.</p>
+<a id="more"></a>
+<h1 id="1-SSH-configuration"><a href="#1-SSH-configuration" class="headerlink" title="1. SSH configuration"></a>1. SSH configuration</h1><p>Modify <code>/etc/ssh/sshd_config</code>, to:</p>
 <ul>
-<li>Check if the IOCP installed:</li>
+<li>1.1 Disable root ssh login</li>
 </ul>
-<figure class="highlight sh hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line">[root@finmdb01a /]<span class="hljs-comment">#  lslpp -l bos.iocp.rte</span></span><br><span class="line">  Fileset                      Level  State      Description</span><br><span class="line">  ----------------------------------------------------------------------------</span><br><span class="line">Path: /usr/lib/objrepos</span><br><span class="line">  bos.iocp.rte               7.2.3.0  COMMITTED  I/O Completion Ports API</span><br><span class="line"></span><br><span class="line">Path: /etc/objrepos</span><br><span class="line">bos.iocp.rte               7.2.3.0  COMMITTED  I/O Completion Ports API</span><br></pre></td></tr></table></figure>
+<p>Disabled root log from ssh, you must create a normal user before do that.<br><figure class="highlight plain hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">PermitRootLogin no</span><br></pre></td></tr></table></figure></p>
 <ul>
-<li>Change IOCP setting from <code>smitty</code></li>
+<li>1.2 Modify default ssh port</li>
 </ul>
-<figure class="highlight sh hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line"><span class="hljs-comment"># smitty iocp</span></span><br><span class="line">Select Change / Show Characteristics of I/O Completion Ports.</span><br><span class="line">Change configured state at system restart from Defined to Available</span><br></pre></td></tr></table></figure>
+<figure class="highlight plain hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">Port xxx    # from 0 ~ 65535</span><br></pre></td></tr></table></figure>
+<p>But don&#39;t use any port from range 0 to 1024, most of them are known port for other important service, such as HTTP 80 port.</p>
 <ul>
-<li>Check the status of IOCP after rebooting</li>
+<li>1.3 Disable password authentication</li>
 </ul>
-<p>Should be Available status.<br><figure class="highlight sh hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">[root@finmdb01a /]<span class="hljs-comment">#  lsdev -Cc iocp</span></span><br><span class="line">iocp0 Available  I/O Completion Ports</span><br></pre></td></tr></table></figure></p>
-<p>This is a prerequisite to change IOCP parameter before installing database 12c in IBM AIX environment.</p>
+<p>Using RSA public keys instead:<br><figure class="highlight plain hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"># generate public rsa key from local server</span><br><span class="line">ssh-keygen -t rsa</span><br><span class="line"></span><br><span class="line"># copy public key to remote server</span><br><span class="line">ssh-copy-id -i ~/.ssh/id_rsa.pub &lt;Your Username for remote server&gt;@&lt;Your IP or Hostname&gt; -p &lt;Your SSH port&gt;</span><br></pre></td></tr></table></figure></p>
+<h1 id="2-Firewall-configuration"><a href="#2-Firewall-configuration" class="headerlink" title="2. Firewall configuration"></a>2. Firewall configuration</h1><p>Add ssh port to firewall whitelist.<br><figure class="highlight plain hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br></pre></td><td class="code"><pre><span class="line"># Install semanage first, for selinux policy management</span><br><span class="line">yum provides /usr/sbin/semanage</span><br><span class="line"># Tell selinux the new port</span><br><span class="line">semanage port -a -t ssh_port_t -p tcp &lt;PORT_NUM&gt;</span><br><span class="line"></span><br><span class="line"># Add whitelist to the firewall</span><br><span class="line">firewall-cmd --permanent --zone=public --add-port=&lt;PORT_NUM&gt;/tcp</span><br><span class="line">firewall-cmd --add-port &lt;PORT_NUM&gt;/tcp</span><br><span class="line"></span><br><span class="line"># Reload firewall</span><br><span class="line">firewall-cmd --reload</span><br><span class="line"></span><br><span class="line"># Restart sevice and check the result</span><br><span class="line">systemctl restart sshd.service</span><br><span class="line">semanage port -l | grep ssh</span><br><span class="line">ss -tnlp | grep ssh</span><br></pre></td></tr></table></figure></p>
+<h1 id="3-Other-configuration"><a href="#3-Other-configuration" class="headerlink" title="3. Other configuration"></a>3. Other configuration</h1><ul>
+<li>Generate random strong password:</li>
+</ul>
+<figure class="highlight plain hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">openssl rand -base64 10</span><br><span class="line"># or</span><br><span class="line">openssl rand -hex 10</span><br></pre></td></tr></table></figure>
+<ul>
+<li>Disable ping</li>
+</ul>
+<figure class="highlight plain hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">vi /etc/sysctl.conf</span><br><span class="line">net.ipv4.icmp_echo_ignore_all=1</span><br><span class="line"></span><br><span class="line">sysctl -p</span><br></pre></td></tr></table></figure>
 <p><strong>EOF</strong></p>
 
     
@@ -130,14 +139,12 @@
     
     
     <div class="columns is-mobile is-multiline article-nav">
-        <span class="column is-12-mobile is-half-desktop  article-nav-prev">
-            
-            <a href="/Security-Hardening-of-VPS.html">Security Hardening of VPS</a>
+        <span class="column is-12-mobile is-half-desktop is-hidden-mobile article-nav-prev">
             
         </span>
         <span class="column is-12-mobile is-half-desktop  article-nav-next">
             
-            <a href="/rename-RAC-dbname-and-GI-diskgroup-name.html">Rename RAC dbname and GI diskgroup name</a>
+            <a href="/Error-for-Oracle-12c-in-AIX-rtld-0712-001.html">Error for Oracle 12c in AIX rtld: 0712-001</a>
             
         </span>
     </div>
