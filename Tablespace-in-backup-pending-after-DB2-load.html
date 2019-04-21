@@ -124,9 +124,9 @@
 <ul>
 <li><strong>NONRECOVERABLE</strong><br>  Specifies that the load transaction is to be marked as nonrecoverable and that it will not be possible to recover it by a subsequent roll forward action. The roll forward utility will skip the transaction and will mark the table into which data was being loaded as &quot;invalid&quot;. The utility will also ignore any subsequent transactions against that table. After the roll forward operation is completed, such a table can only be dropped or restored from a backup (full or table space) taken after a commit point following the completion of the non-recoverable load operation.<br> <strong><em>With this option, table spaces are not put in backup pending state following the load operation, and a copy of the loaded data does not have to be made during the load operation. If one of COPY NO, COPY YES, or NONRECOVERABLE is not specified, and the database is not recoverable (logretain or logarchmeth1 is not enabled), then NONRECOVERABLE is the default</em></strong>.</li>
 </ul>
-<p>From the explanation, impacted database because in non-archive log mode, therefore default is <code>nonrecoverabel</code> option, after enabling archive log, the default behavior is change to <code>copy no</code>, which  would put database/tablespace in backup pending mode.</p>
+<p>From the explanation, impacted database because in non-archive log mode, therefore default is <code>nonrecoverable</code> option, after enabling archive log, the default behavior is change to <code>copy no</code>, which  would put database/tablespace in backup pending mode.</p>
 <p>With customer&#39;s environment, they don&#39;t want to change the load command. But no worries, there&#39;s a db2set registry <code>DB2_LOAD_COPY_NO_OVERRIDE</code> can achive this.</p>
-<p>This registry also have three options that identical to  load command: <code>copy no</code>, <code>copy yes</code> and <code>nonrecoverable</code>, after setting this registry to <code>nonrecoverable</code>(no recycle will be needed), issue is gone.<br>This registry will be ignored in HADR standby database. Only applicable for primary database.</p>
+<p>This registry also have three options that identical to  load command: <code>copy no</code>, <code>copy yes</code> and <code>nonrecoverable</code>, after setting this registry to <code>nonrecoverable</code>(no instance recycle will be needed), issue is gone.<br>This registry will be ignored in HADR standby database. Only applicable for primary database.</p>
 <p><strong>But because <code>nonrecvoerable</code> will not recover loaded table from redo log, it&#39;s highly recommended to take a full backup after load</strong>.</p>
 <p><strong>EOF</strong></p>
 <p>Reference: <a href="https://www.ibm.com/support/knowledgecenter/en/SSEPGG_9.7.0/com.ibm.db2.luw.admin.cmd.doc/doc/r0008305.html" target="_blank" rel="noopener">LOAD command</a><br>           <a href="https://www.ibm.com/support/knowledgecenter/en/SSEPGG_9.7.0/com.ibm.db2.luw.admin.regvars.doc/doc/r0005669.html#r0005669__M_DB2_LOAD_COPY_NO_OVERRIDE" target="_blank" rel="noopener">DB2 registry and environment variables</a></p>
@@ -171,7 +171,7 @@
     <script src="//cdnjs.cloudflare.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
 <script src="//cdnjs.cloudflare.com/ajax/libs/moment.js/2.22.2/moment-with-locales.min.js"></script>
 
-<!-- test if the browser is outdated -->
+<!-- test if the browser is outdated
 <div id="outdated">
     <h6>Your browser is out-of-date!</h6>
     <p>Update your browser to view this website correctly. <a id="btnUpdateBrowser" href="http://outdatedbrowser.com/">Update my browser now </a></p>
@@ -188,6 +188,7 @@
         })
     });
 </script>
+-->
 
 <script>
     window.FontAwesomeConfig = {
@@ -208,6 +209,7 @@
 
 
 <script src="/js/script.js"></script>
+
 
     
     <div class="searchbox ins-search">
