@@ -1,0 +1,251 @@
+<!DOCTYPE html>
+<html class="has-navbar-fixed-top">
+<head>
+    <meta charset="utf-8">
+<title>Updating Global Indexes Automatically - My Notebook</title>
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+
+<link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/outdated-browser/1.1.5/outdatedbrowser.min.css">
+
+
+<meta name="description" content="Oracle memoranda">
+
+
+
+
+
+
+
+
+
+<link rel="icon" href="/images/favicon.ico">
+
+
+<link rel="stylesheet" href="//fonts.googleapis.com/css?family=Ovo|Source+Code+Pro|Calibri|Ubuntu">
+<link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/bulma/0.6.2/css/bulma.min.css">
+
+
+
+<link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/highlight.js/9.12.0/styles/atom-one-light.min.css">
+
+<link rel="stylesheet" href="/css/style.css">
+
+<script defer src="//use.fontawesome.com/releases/v5.0.8/js/all.js"></script>
+
+
+    
+    
+    
+    
+    
+    
+
+    
+
+
+</head>
+<body>
+    
+<nav class="navbar is-transparent is-fixed-top navbar-main" role="navigation" aria-label="main navigation">
+    <div class="container">
+        <div class="navbar-brand">
+            <a class="navbar-item navbar-logo" href="/">
+                
+                    
+                    My Notebook
+                    
+                
+            </a>
+            <div class="navbar-burger">
+                <span></span>
+                <span></span>
+                <span></span>
+            </div>
+        </div>
+        
+        <div class="navbar-menu navbar-start">
+            
+            <a class="navbar-item "
+               href="/">Home</a>
+            
+            <a class="navbar-item "
+               href="/about">About</a>
+            
+        </div>
+        
+        <div class="navbar-menu navbar-end">
+            
+            <a class="navbar-item search" title="Search" href="javascript:;">
+                <i class="fas fa-search"></i>
+            </a>
+            
+            
+            
+        </div>
+    </div>
+</nav>
+
+    <section class="section">
+    <div class="container">
+    <article class="article content gallery" itemscope itemprop="blogPost">
+    <h1 class="article-title is-size-3 is-size-4-mobile" itemprop="name">
+        
+            Updating Global Indexes Automatically
+        
+    </h1>
+    <div class="article-meta columns is-variable is-1 is-multiline is-mobile is-size-7-mobile">
+        <span class="column is-narrow">
+            <time datetime="2019-06-26T02:38:29.000Z" itemprop="datePublished">Jun 26 2019</time>
+        </span>
+        
+        <span class="column is-narrow article-category">
+            <i class="far fa-folder"></i>
+            <a class="article-category-link" href="/categories/oracle/">oracle</a>
+        </span>
+        
+        
+    </div>
+    <div class="article-entry is-size-6-mobile" itemprop="articleBody">
+    
+        <p>By default, partition table maintenance such as drop/truncate partitions invalidate corresponding global index which mark them as <code>UNUSABLE</code>. User must rebuild the corresponding indexes. Database lets user override the default behavior by specifying <code>update indexes</code> clause. With this option, database will update the indexes at the same time it executes the maintenance  DDL statements,  and not mark them as <code>UNUSABLE</code>.</p>
+<p>Prior to 12c, update indexes is a time consuming operation, DBA must wait for the index rebuild complete.</p>
+<a id="more"></a>
+<p>As of 12c, a new feature is supported by Oracle database — Asynchronous Global Index Maintenance. </p>
+<blockquote>
+<p>The partition maintenance operations <code>DROP</code> <code>PARTITION</code> and <code>TRUNCATE</code> <code>PARTITION</code> are optimized by making the index maintenance for metadata only.</p>
+<p>Asynchronous global index maintenance for <code>DROP</code> and <code>TRUNCATE</code> is performed by default; however, the <code>UPDATE</code> <code>INDEXES</code> clause is still required for backward compatibility.</p>
+</blockquote>
+<h1 id="1-Limitations-of-asynchronous-global-index-maintenance"><a href="#1-Limitations-of-asynchronous-global-index-maintenance" class="headerlink" title="1. Limitations of asynchronous global index maintenance"></a>1. Limitations of asynchronous global index maintenance</h1><ul>
+<li><p>Only performed on the heap tables</p>
+</li>
+<li><p>No support for tables with object types</p>
+</li>
+<li><p>No support for tables with domain indexes</p>
+</li>
+<li><p>Not performed for the user SYS</p>
+</li>
+</ul>
+<h1 id="2-Scheduler-Jobs"><a href="#2-Scheduler-Jobs" class="headerlink" title="2. Scheduler Jobs"></a>2. Scheduler Jobs</h1><p>  There&#39;s an automatically maintenance scheduler job <code>SYS.PMO_DEFERRED_GIDX_MAINT_JOB</code> to clean up all global indexes. This job is schedule at 2:00AM by defaul. You can run this job at any time by calling <code>DBMS_SCHEDULER.RUN_JOB</code>,also, DBA can modify scheduler window for running this job.</p>
+  <figure class="highlight sql hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line"><span class="hljs-comment">-- query the maintenance window</span></span><br><span class="line"><span class="hljs-keyword">select</span> job_name , start_date,enabled,state,comments</span><br><span class="line"><span class="hljs-keyword">from</span> dba_scheduler_jobs</span><br><span class="line"><span class="hljs-keyword">where</span> job_name =<span class="hljs-string">'PMO_DEFERRED_GIDX_MAINT_JOB'</span>;</span><br><span class="line"></span><br><span class="line"><span class="hljs-comment">-- execute the job manually</span></span><br><span class="line">exec SYS.PMO_DEFERRED_GIDX_MAINT_JOB;</span><br></pre></td></tr></table></figure>
+<h1 id="3-Summary"><a href="#3-Summary" class="headerlink" title="3. Summary"></a>3. Summary</h1><p>  If we truncate/drop a partition tables with <code>update indexes</code>, we can maintenance index manually:</p>
+<ul>
+<li><p>Check the index status</p>
+<figure class="highlight sql hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"><span class="hljs-keyword">SELECT</span> table_name, index_name,</span><br><span class="line">       orphaned_entries,<span class="hljs-keyword">status</span></span><br><span class="line"><span class="hljs-keyword">FROM</span>   user_indexes</span><br><span class="line"><span class="hljs-keyword">ORDER</span> <span class="hljs-keyword">BY</span> <span class="hljs-number">1</span>;</span><br></pre></td></tr></table></figure>
+</li>
+</ul>
+<ul>
+<li><p>Execute one of the following SQLs</p>
+<figure class="highlight hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line"><span class="hljs-comment">-- This PL/SQL package procedure gathers the list of global indexes in the system that may require cleanup and runs the operations necessary to restore the indexes to a clean state.</span></span><br><span class="line">exec DBMS_PART.CLEANUP_GIDX('USERNAME','INDEX_NAME'); <span class="hljs-comment">-- specific index</span></span><br><span class="line"><span class="hljs-comment">--database level</span></span><br><span class="line">exec dbms_part.cleanup_gidx</span><br><span class="line"></span><br><span class="line"><span class="hljs-comment">--schema level</span></span><br><span class="line">exec dbms_part.cleanup_gidx(&lt;schema_name&gt;);</span><br><span class="line"></span><br><span class="line"><span class="hljs-comment">--table level</span></span><br><span class="line">exec dbms_part.cleanup_gidx(&lt;schema_name&gt;, &lt;table_name&gt;);</span><br></pre></td></tr></table></figure>
+<figure class="highlight plain hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">-- this SQL statement rebuilds the entire index or index partition as was done prior to Oracle Database 12.1 releases</span><br><span class="line">ALTER INDEX INDEX_NAME REBUILD;</span><br><span class="line"></span><br><span class="line">--This SQL statement cleans up any orphaned entries in index blocks</span><br><span class="line">ALTER INDEX  INDEX_NAME COALESCE CLEANUP;</span><br></pre></td></tr></table></figure>
+</li>
+<li><p>Check the index status again</p>
+</li>
+</ul>
+<p><strong>EOF</strong></p>
+
+    
+    </div>
+    
+    
+    <div class="columns is-mobile is-multiline article-nav">
+        <span class="column is-12-mobile is-half-desktop is-hidden-mobile article-nav-prev">
+            
+        </span>
+        <span class="column is-12-mobile is-half-desktop  article-nav-next">
+            
+            <a href="/Tablespace-in-backup-pending-after-DB2-load.html">Tablespace in backup pending after DB2 load</a>
+            
+        </span>
+    </div>
+    
+</article>
+
+
+
+
+    </div>
+</section>
+    <footer class="footer footer-padding">
+    <div class="container content">
+            <div class="column is-narrow has-text-centered is-size-7-mobile">
+                &copy;  <a href="/">Kyun Kong&nbsp;</a>
+                2013 - 2019
+            </div>
+    </div>
+</footer>
+
+    <script src="//cdnjs.cloudflare.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
+<script src="//cdnjs.cloudflare.com/ajax/libs/moment.js/2.22.2/moment-with-locales.min.js"></script>
+
+<!-- test if the browser is outdated
+<div id="outdated">
+    <h6>Your browser is out-of-date!</h6>
+    <p>Update your browser to view this website correctly. <a id="btnUpdateBrowser" href="http://outdatedbrowser.com/">Update my browser now </a></p>
+    <p class="last"><a href="#" id="btnCloseUpdateBrowser" title="Close">&times;</a></p>
+</div>
+<script src="//cdnjs.cloudflare.com/ajax/libs/outdated-browser/1.1.5/outdatedbrowser.min.js"></script>
+<script>
+    $(document).ready(function () {
+        // plugin function, place inside DOM ready function
+        outdatedBrowser({
+            bgColor: '#f25648',
+            color: '#ffffff',
+            lowerThan: 'flex'
+        })
+    });
+</script>
+-->
+
+<script>
+    window.FontAwesomeConfig = {
+        searchPseudoElements: true
+    }
+    moment.locale("en-AU");
+</script>
+
+
+    
+    
+    
+    
+    
+    
+
+    
+
+
+<script src="/js/script.js"></script>
+
+
+    
+    <div class="searchbox ins-search">
+    <div class="searchbox-mask"></div>
+    <div class="searchbox-container ins-search-container">
+        <div class="searchbox-input-wrapper">
+            <input type="text" class="searchbox-input ins-search-input" placeholder="Type something..." />
+            <span class="searchbox-close ins-close ins-selectable"><i class="fa fa-times-circle"></i></span>
+        </div>
+        <div class="searchbox-result-wrapper ins-section-wrapper">
+            <div class="ins-section-container"></div>
+        </div>
+    </div>
+</div>
+<script>
+    (function (window) {
+        var INSIGHT_CONFIG = {
+            TRANSLATION: {
+                POSTS: 'Posts',
+                PAGES: 'Pages',
+                CATEGORIES: 'Categories',
+                TAGS: 'Tags',
+                UNTITLED: '(Untitled)',
+            },
+            CONTENT_URL: '/content.json',
+        };
+        window.INSIGHT_CONFIG = INSIGHT_CONFIG;
+    })(window);
+</script>
+<script src="/js/insight.js"></script>
+    
+</body>
+</html>
