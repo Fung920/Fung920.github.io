@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html class="has-navbar-fixed-top">
+<head>
+    <meta charset="utf-8">
+<title>A brief introduction of MGMTDB - My scratchpad</title>
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+
+<link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/outdated-browser/1.1.5/outdatedbrowser.min.css">
+
+
+<meta name="description" content="Oracle memoranda">
+
+
+
+<meta name="keywords" content="oracle, database">
+
+
+
+
+
+
+
+<link rel="icon" href="/images/favicon.ico">
+
+
+<link rel="stylesheet" href="//fonts.googleapis.com/css?family=Ovo|Source+Code+Pro|Calibri|Ubuntu">
+<link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/bulma/0.6.2/css/bulma.min.css">
+
+
+
+<link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/highlight.js/9.12.0/styles/atom-one-light.min.css">
+
+<link rel="stylesheet" href="/css/style.css">
+
+<script defer src="//use.fontawesome.com/releases/v5.0.8/js/all.js"></script>
+
+
+    
+    
+    
+    
+    
+    
+
+    
+
+
+</head>
+<body>
+    
+<nav class="navbar is-transparent is-fixed-top navbar-main" role="navigation" aria-label="main navigation">
+    <div class="container">
+        <div class="navbar-brand">
+            <a class="navbar-item navbar-logo" href="/">
+                
+                    
+                    My Notebook
+                    
+                
+            </a>
+            <div class="navbar-burger">
+                <span></span>
+                <span></span>
+                <span></span>
+            </div>
+        </div>
+        
+        <div class="navbar-menu navbar-start">
+            
+            <a class="navbar-item "
+               href="/">Home</a>
+            
+            <a class="navbar-item "
+               href="/about">About</a>
+            
+        </div>
+        
+        <div class="navbar-menu navbar-end">
+            
+            <a class="navbar-item search" title="Search" href="javascript:;">
+                <i class="fas fa-search"></i>
+            </a>
+            
+            
+            
+        </div>
+    </div>
+</nav>
+
+    <section class="section">
+    <div class="container">
+    <article class="article content gallery" itemscope itemprop="blogPost">
+    <h1 class="article-title is-size-3 is-size-4-mobile" itemprop="name">
+        
+            A brief introduction of MGMTDB
+        
+    </h1>
+    <div class="article-meta columns is-variable is-1 is-multiline is-mobile is-size-7-mobile">
+        <span class="column is-narrow">
+            <time datetime="2019-07-31T12:23:40.000Z" itemprop="datePublished">Jul 31 2019</time>
+        </span>
+        
+        <span class="column is-narrow article-category">
+            <i class="far fa-folder"></i>
+            <a class="article-category-link" href="/categories/oracle/">oracle</a>
+        </span>
+        
+        
+    </div>
+    <div class="article-entry is-size-6-mobile" itemprop="articleBody">
+    
+        <p>From Oracle 12.1.0.2, MGMTDB is a mandatory database installed by Oracle itself.<br>The MGMTDB is a built-in database to store Grid Infrastructure Management Repository (GIMR). This repository enables such features as Cluster Health Monitor(aka CHM/OS, ora.crf), Oracle Database QoS Management, and Rapid Home Provisioning, and provides a historical metric repository that simplifies viewing of past performance and diagnosis of issues.<br><a id="more"></a><br>Management Repository is a single instance database that&#39;s managed by Oracle Clusterware in 12c. As it&#39;s a single instance database, it will be up and running on one node in the cluster; as it&#39;s managed by GI, in case the hosting node is down, the database will be automatically failed over to other node. In 12.2, MGMTLSNR also listens on public network, therefore ora.MGMTLSNR has dependency on VIP resource type, both MGMTLSNR and MGMTDB will failover when public network is down.</p>
+<p>In 12.1, by default, Management database uses the same shared storage as OCR/Voting File; in 12.2, fresh installation allows separate diskgroup for it.</p>
+<ul>
+<li><p>What&#39;s the implications of not configuring Management Database during installation/upgrade?<br>  In 12.1.0.1, GIMR is optional, if Management Database is not selected to be configured during installation/upgrade, all features (Cluster Health Monitor (CHM/OS) etc) that depend on it will be disabled.</p>
+<p>  This changed in 12.1.0.2, it&#39;s mandatory to have GIMR and it&#39;s not supported to be turned off with the exception of Exadata.</p>
+<p>  Starting with Oracle Grid Infrastructure 19c, the Grid Infrastructure Management Repository (GIMR) is optional for new installations of Oracle Standalone Cluster. Oracle Domain Services Clusters still require<br>the installation of a GIMR as a service component.</p>
+</li>
+<li><p>How to start Management Database if it&#39;s down?<br>  Management Database is managed by GI and should be up and running all the time automatically. In case it&#39;s down for some reason, the following srvctl command can be used to start it:</p>
+  <figure class="highlight plain hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">export ORACLE_SID=-MGMTDB</span><br><span class="line">srvctl start mgmtdb</span><br><span class="line">srvctl start mgmtlsnr</span><br></pre></td></tr></table></figure>
+</li>
+<li><p>How to &quot;cd&quot; to Management Database subdirectory to review trace file etc?</p>
+ <figure class="highlight plain hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line">cd -MGMTDB</span><br><span class="line">-bash: cd: -M: invalid option</span><br><span class="line">cd: usage: cd [-L|-P] [dir]</span><br><span class="line"></span><br><span class="line">cd ./-MGMTDB        ==&gt;&gt; this will work as &quot;./&quot; is specified</span><br><span class="line"></span><br><span class="line">more -MGMTDB_m000_9912.trc</span><br><span class="line">more: unknown option &quot;-M&quot;</span><br><span class="line">usage: more [-dflpcsu] [+linenum | +/pattern] name1 name2 ...</span><br><span class="line"></span><br><span class="line">more ./-MGMTDB_m000_9912.trc</span><br></pre></td></tr></table></figure>
+</li>
+<li><p>How much (shared) disk space should be allocated for the Management Database?<br>  Minimum:  At least 5.2 GB for the OCR volume that contains the Grid Infrastructure Management Repository (4.5 GB + 300 MB voting files + 400 MB OCR), plus 500 MB for each node for clusters greater than four nodes. For example, a six-node cluster allocation should be 6.2 GB.</p>
+</li>
+<li><p>What is the default MGMT listener port in 12.2?<br>  MGMT listener default is 1525 in 12.2 version.</p>
+</li>
+</ul>
+<p>Repost from:<br><a href="https://support.oracle.com/epmos/faces/DocumentDisplay?_afrLoop=164955974638136&amp;parent=DOCUMENT&amp;sourceId=2065175.1&amp;id=1568402.1&amp;_afrWindowMode=0&amp;_adf.ctrl-state=9e9ta6if6_58" target="_blank" rel="noopener">FAQ: 12c Grid Infrastructure Management Repository (GIMR) (Doc ID 1568402.1)</a></p>
+<p><strong>EOF</strong></p>
+
+    
+    </div>
+    
+    <div class="columns is-variable is-1 is-multiline is-mobile">
+    
+        <span class="column is-narrow"><a class="tag is-light article-tag" href="/tags/concept/">#concept</a></span>
+    
+    </div>
+    
+    
+    <div class="columns is-mobile is-multiline article-nav">
+        <span class="column is-12-mobile is-half-desktop is-hidden-mobile article-nav-prev">
+            
+        </span>
+        <span class="column is-12-mobile is-half-desktop  article-nav-next">
+            
+            <a href="/OCR-Voting-disk-replace-or-move.html">OCR Voting disk replace or move on 11g and above</a>
+            
+        </span>
+    </div>
+    
+</article>
+
+
+
+
+    </div>
+</section>
+    <footer class="footer footer-padding">
+    <div class="container content">
+            <div class="column is-narrow has-text-centered is-size-7-mobile">
+                &copy;  <a href="/">Kyun Kong&nbsp;</a>
+                2013 - 2019
+            </div>
+    </div>
+</footer>
+
+    <script src="//cdnjs.cloudflare.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
+<script src="//cdnjs.cloudflare.com/ajax/libs/moment.js/2.22.2/moment-with-locales.min.js"></script>
+
+<!-- test if the browser is outdated
+<div id="outdated">
+    <h6>Your browser is out-of-date!</h6>
+    <p>Update your browser to view this website correctly. <a id="btnUpdateBrowser" href="http://outdatedbrowser.com/">Update my browser now </a></p>
+    <p class="last"><a href="#" id="btnCloseUpdateBrowser" title="Close">&times;</a></p>
+</div>
+<script src="//cdnjs.cloudflare.com/ajax/libs/outdated-browser/1.1.5/outdatedbrowser.min.js"></script>
+<script>
+    $(document).ready(function () {
+        // plugin function, place inside DOM ready function
+        outdatedBrowser({
+            bgColor: '#f25648',
+            color: '#ffffff',
+            lowerThan: 'flex'
+        })
+    });
+</script>
+-->
+
+<script>
+    window.FontAwesomeConfig = {
+        searchPseudoElements: true
+    }
+    moment.locale("en-AU");
+</script>
+
+
+    
+    
+    
+    
+    
+    
+
+    
+
+
+<script src="/js/script.js"></script>
+
+
+    
+    <div class="searchbox ins-search">
+    <div class="searchbox-mask"></div>
+    <div class="searchbox-container ins-search-container">
+        <div class="searchbox-input-wrapper">
+            <input type="text" class="searchbox-input ins-search-input" placeholder="Type something..." />
+            <span class="searchbox-close ins-close ins-selectable"><i class="fa fa-times-circle"></i></span>
+        </div>
+        <div class="searchbox-result-wrapper ins-section-wrapper">
+            <div class="ins-section-container"></div>
+        </div>
+    </div>
+</div>
+<script>
+    (function (window) {
+        var INSIGHT_CONFIG = {
+            TRANSLATION: {
+                POSTS: 'Posts',
+                PAGES: 'Pages',
+                CATEGORIES: 'Categories',
+                TAGS: 'Tags',
+                UNTITLED: '(Untitled)',
+            },
+            CONTENT_URL: '/content.json',
+        };
+        window.INSIGHT_CONFIG = INSIGHT_CONFIG;
+    })(window);
+</script>
+<script src="/js/insight.js"></script>
+    
+</body>
+</html>

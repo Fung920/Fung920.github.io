@@ -1,0 +1,325 @@
+<!DOCTYPE html>
+<html class="has-navbar-fixed-top">
+<head>
+    <meta charset="utf-8">
+<title>OCR Voting disk replace or move on 11g and above - My scratchpad</title>
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+
+<link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/outdated-browser/1.1.5/outdatedbrowser.min.css">
+
+
+<meta name="description" content="Oracle memoranda">
+
+
+
+<meta name="keywords" content="oracle, database">
+
+
+
+
+
+
+
+<link rel="icon" href="/images/favicon.ico">
+
+
+<link rel="stylesheet" href="//fonts.googleapis.com/css?family=Ovo|Source+Code+Pro|Calibri|Ubuntu">
+<link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/bulma/0.6.2/css/bulma.min.css">
+
+
+
+<link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/highlight.js/9.12.0/styles/atom-one-light.min.css">
+
+<link rel="stylesheet" href="/css/style.css">
+
+<script defer src="//use.fontawesome.com/releases/v5.0.8/js/all.js"></script>
+
+
+    
+    
+    
+    
+    
+    
+
+    
+
+
+</head>
+<body>
+    
+<nav class="navbar is-transparent is-fixed-top navbar-main" role="navigation" aria-label="main navigation">
+    <div class="container">
+        <div class="navbar-brand">
+            <a class="navbar-item navbar-logo" href="/">
+                
+                    
+                    My Notebook
+                    
+                
+            </a>
+            <div class="navbar-burger">
+                <span></span>
+                <span></span>
+                <span></span>
+            </div>
+        </div>
+        
+        <div class="navbar-menu navbar-start">
+            
+            <a class="navbar-item "
+               href="/">Home</a>
+            
+            <a class="navbar-item "
+               href="/about">About</a>
+            
+        </div>
+        
+        <div class="navbar-menu navbar-end">
+            
+            <a class="navbar-item search" title="Search" href="javascript:;">
+                <i class="fas fa-search"></i>
+            </a>
+            
+            
+            
+        </div>
+    </div>
+</nav>
+
+    <section class="section">
+    <div class="container">
+    <article class="article content gallery" itemscope itemprop="blogPost">
+    <h1 class="article-title is-size-3 is-size-4-mobile" itemprop="name">
+        
+            OCR Voting disk replace or move on 11g and above
+        
+    </h1>
+    <div class="article-meta columns is-variable is-1 is-multiline is-mobile is-size-7-mobile">
+        <span class="column is-narrow">
+            <time datetime="2019-07-31T08:38:10.000Z" itemprop="datePublished">Jul 31 2019</time>
+        </span>
+        
+        <span class="column is-narrow article-category">
+            <i class="far fa-folder"></i>
+            <a class="article-category-link" href="/categories/oracle/">oracle</a>
+        </span>
+        
+        
+    </div>
+    <div class="article-entry is-size-6-mobile" itemprop="articleBody">
+    
+        <p>Essentially speaking, OCR disk is a two-way ASM disk, which can be replace via ASM disk rebalance method.<br>This post introduces another method by <code>ocrconfig</code> tool.<br>Assume we&#39;ve created a new diskgroup name OCR_NEW to replace old diskgroup OCR. <strong><em>Pay attention to compatible.asm parameter of diskgroup.</em></strong><br><a id="more"></a></p>
+<h2 id="1-Replace-voting-disk"><a href="#1-Replace-voting-disk" class="headerlink" title="1. Replace voting disk"></a>1. Replace voting disk</h2><figure class="highlight sql hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"><span class="hljs-comment">--root user</span></span><br><span class="line">crsctl <span class="hljs-keyword">replace</span> votedisk +OCR_NEW</span><br><span class="line"><span class="hljs-comment">--check the result</span></span><br><span class="line">crsctl <span class="hljs-keyword">query</span> css votedisk</span><br></pre></td></tr></table></figure>
+<h2 id="2-Replace-OCR"><a href="#2-Replace-OCR" class="headerlink" title="2. Replace OCR"></a>2. Replace OCR</h2><figure class="highlight sql hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line"><span class="hljs-comment">--root user</span></span><br><span class="line">ocrconfig -add +OCR_NEW</span><br><span class="line"><span class="hljs-comment">--check the result, the result should include +OCR_NEW and +OCR</span></span><br><span class="line">ocrchek</span><br><span class="line"></span><br><span class="line"><span class="hljs-comment">--delete old diskgroup</span></span><br><span class="line">ocrconfig -<span class="hljs-keyword">delete</span> +OCR</span><br></pre></td></tr></table></figure>
+<h2 id="3-Recreate-spfile-for-ASM"><a href="#3-Recreate-spfile-for-ASM" class="headerlink" title="3. Recreate spfile for ASM"></a>3. Recreate spfile for ASM</h2><ul>
+<li>Check current spfile location</li>
+</ul>
+<figure class="highlight sql hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line"><span class="hljs-comment">--grid user</span></span><br><span class="line">$ORACLE_HOME/bin/gpnptool get -o- | xmllint <span class="hljs-comment">--format - | grep -i spfile</span></span><br><span class="line">asmcmd spget</span><br></pre></td></tr></table></figure>
+<ul>
+<li>Recreate spfile to new diskgroup</li>
+</ul>
+<figure class="highlight sql hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line"><span class="hljs-comment">--grid user</span></span><br><span class="line"><span class="hljs-keyword">create</span> pfile=<span class="hljs-string">'/home/grid/asmpfile.ora'</span> <span class="hljs-keyword">from</span> <span class="hljs-keyword">spfile</span>;</span><br><span class="line"><span class="hljs-keyword">create</span> <span class="hljs-keyword">spfile</span>=<span class="hljs-string">'+OCR_NEW'</span> <span class="hljs-keyword">from</span> pfile=<span class="hljs-string">'/home/grid/asmpfile.ora'</span>;</span><br></pre></td></tr></table></figure>
+<h2 id="4-Move-password-file-to-new-diskgroup"><a href="#4-Move-password-file-to-new-diskgroup" class="headerlink" title="4. Move password file to new diskgroup"></a>4. Move password file to new diskgroup</h2><figure class="highlight sql hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"><span class="hljs-comment">--grid user</span></span><br><span class="line">asmcmd pwmove <span class="hljs-comment">--asm +OCR/orapwASM +OCR_NEW/orapwASM</span></span><br></pre></td></tr></table></figure>
+<h2 id="5-Migrate-mgmtdb-as-of-12c"><a href="#5-Migrate-mgmtdb-as-of-12c" class="headerlink" title="5. Migrate mgmtdb(as of 12c)"></a>5. Migrate mgmtdb(as of 12c)</h2><p>MGMTDB is a built-in CDB database managed by Oracle GI, it stores Cluster Health Monitor information, by default, this database is localted on OCR disk. If we move OCR to another diskgroup, ensure this database also need to be moved.</p>
+<h2 id="5-1-Migrate-by-RMAN-copy"><a href="#5-1-Migrate-by-RMAN-copy" class="headerlink" title="5.1 Migrate by RMAN copy"></a>5.1 Migrate by RMAN copy</h2><ul>
+<li>Check current status of mgmtdb</li>
+</ul>
+<figure class="highlight sql hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"><span class="hljs-comment">--grid user</span></span><br><span class="line">srvctl status diskgroup -g ocr</span><br><span class="line">srvctl config mgmtdb</span><br><span class="line">srvctl status mgmtdb</span><br></pre></td></tr></table></figure>
+<ul>
+<li>Restart mgmtdb to mount status</li>
+</ul>
+<figure class="highlight sql hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line"><span class="hljs-comment">--grid user</span></span><br><span class="line">srvctl <span class="hljs-keyword">stop</span> mgmtdb</span><br><span class="line">srvctl <span class="hljs-keyword">stop</span> mgmtlsnr</span><br></pre></td></tr></table></figure>
+<ul>
+<li>Backup mgmtdb</li>
+</ul>
+<figure class="highlight hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"><span class="hljs-comment">--grid user</span></span><br><span class="line">export ORACLE_SID=-MGMTDB</span><br><span class="line">RMAN&gt; startup mount</span><br><span class="line">RMAN&gt; backup database format '/home/grid/backup/rman_mgmtdb_%U' tag='bk_db_move_dg';</span><br></pre></td></tr></table></figure>
+<ul>
+<li>Restore spfile to new diskgroup</li>
+</ul>
+<figure class="highlight hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">RMAN&gt; restore spfile to "+OCR_NEW" from '/home/grid/backup';</span><br></pre></td></tr></table></figure>
+<p>Confirm the result:<br><figure class="highlight hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">srvctl config mgmtdb |grep Spfile</span><br><span class="line">SQL&gt; shutdown immediate</span><br><span class="line">SQL&gt; startup nomount</span><br><span class="line">SQL&gt; show parameter spfile</span><br></pre></td></tr></table></figure></p>
+<ul>
+<li>Restore controlfile to new diskgroup</li>
+</ul>
+<figure class="highlight hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">RMAN&gt; shutdown immediate</span><br><span class="line">RMAN&gt; startup nomount</span><br><span class="line">SQL&gt; show parameter control_file</span><br><span class="line">SQL&gt; alter system set control_files='+OCR_NEW' scope=spfile ;</span><br><span class="line">RMAN&gt; restore controlfile from '/home/grid/backup/xxxxx';</span><br></pre></td></tr></table></figure>
+<ul>
+<li>Migrate mgmtdb by rman copy</li>
+</ul>
+<figure class="highlight hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">RMAN&gt; alter database mount;</span><br><span class="line">RMAN&gt; backup as copy DEVICE TYPE DISK DATABASE FORMAT '+OCR_NEW';</span><br><span class="line">RMAN&gt; SWITCH DATABASE TO COPY;</span><br><span class="line"><span class="hljs-comment">--confirm the result, all tempfile should be resided in old diskgroup</span></span><br><span class="line">RMAN&gt; report schema;</span><br></pre></td></tr></table></figure>
+<ul>
+<li>Recreate temp file</li>
+</ul>
+<figure class="highlight hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line">RMAN&gt; run &#123;</span><br><span class="line"><span class="hljs-keyword">SET</span> NEWNAME <span class="hljs-keyword">FOR</span> TEMPFILE <span class="hljs-number">1</span> <span class="hljs-keyword">TO</span> <span class="hljs-string">'+OCR'</span>;</span><br><span class="line"><span class="hljs-keyword">SET</span> NEWNAME <span class="hljs-keyword">FOR</span> TEMPFILE <span class="hljs-number">2</span> <span class="hljs-keyword">TO</span> <span class="hljs-string">'+OCR'</span>;</span><br><span class="line"><span class="hljs-keyword">SET</span> NEWNAME <span class="hljs-keyword">FOR</span> TEMPFILE <span class="hljs-number">3</span> <span class="hljs-keyword">TO</span> <span class="hljs-string">'+OCR'</span>;</span><br><span class="line">SWITCH TEMPFILE ALL;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<ul>
+<li>Verify migration result</li>
+</ul>
+<figure class="highlight hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">RMAN&gt; startup</span><br><span class="line">RMAN&gt; report schema;</span><br><span class="line"><span class="hljs-comment">--delete copy</span></span><br><span class="line">RMAN&gt; delete copy;</span><br></pre></td></tr></table></figure>
+<ul>
+<li>Modify mgmtdb startup resource</li>
+</ul>
+<figure class="highlight sql hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line"><span class="hljs-comment">--grid user</span></span><br><span class="line">crsctl status res ora.mgmtdb -p |grep OCR</span><br><span class="line"></span><br><span class="line"><span class="hljs-comment">--replacing new diskgroup for start/stop dependency</span></span><br><span class="line">crsctl modify res ora.mgmtdb -attr "START_DEPENDENCIES='hard(ora.MGMTLSNR,ora.OCR_NEW.dg) weak(uniform:ora.ons) pullup(ora.MGMTLSNR,ora.OCR_NEW.dg)'" -unsupported</span><br><span class="line">crsctl modify res ora.mgmtdb -attr "STOP_DEPENDENCIES='hard(intermediate:ora.MGMTLSNR,intermediate:ora.asm,shutdown:ora.OCR_NEW.dg)'" -unsupported</span><br></pre></td></tr></table></figure>
+<p>The <code>unsupported</code> key word is for fixing below issue, because as 12c, Oracle does not support to modify ora<em> resource by crsctl, using srvctl to modify ora</em> resource instead, but didn&#39;t find anything about how to modify ora* resource by srvctl.</p>
+<figure class="highlight sql hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">CRS-4995: The command ‘Modify resource’ is invalid in crsctl. <span class="hljs-keyword">Use</span> srvctl <span class="hljs-keyword">for</span> this command.</span><br></pre></td></tr></table></figure>
+<ul>
+<li>Delete old diskgroup resource</li>
+</ul>
+<figure class="highlight sql hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="hljs-comment">--grid user, stop old diskgroup</span></span><br><span class="line">srvctl <span class="hljs-keyword">stop</span> <span class="hljs-keyword">diskgroup</span> -g OCR</span><br><span class="line"><span class="hljs-comment">--restart gi, if nothing wrong, old diskgroup can be dropped</span></span><br><span class="line"><span class="hljs-keyword">export</span> ORACLE_SID=+ASM1</span><br><span class="line"><span class="hljs-keyword">SQL</span>&gt; <span class="hljs-keyword">DROP</span> <span class="hljs-keyword">DISKGROUP</span> CRS <span class="hljs-keyword">INCLUDING</span> <span class="hljs-keyword">CONTENTS</span>;</span><br></pre></td></tr></table></figure>
+<h2 id="5-2-Migrate-by-recreating"><a href="#5-2-Migrate-by-recreating" class="headerlink" title="5.2 Migrate by recreating"></a>5.2 Migrate by recreating</h2><ul>
+<li>Backup current configuration</li>
+</ul>
+<figure class="highlight bash hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">[grid@racdb1:/home/grid]$ oclumon dumpnodeview -allnodes -v &gt; ./mgmtdb.bak</span><br></pre></td></tr></table></figure>
+<ul>
+<li>Stop and disable ora.crf resource on all nodes</li>
+</ul>
+<figure class="highlight sql hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line">[root@racdb1 ~]# /u01/app/12.1.0/grid/bin/crsctl stop res ora.crf -init</span><br><span class="line">CRS-2673: Attempting to <span class="hljs-keyword">stop</span> <span class="hljs-string">'ora.crf'</span> <span class="hljs-keyword">on</span> <span class="hljs-string">'racdb1'</span></span><br><span class="line">CRS<span class="hljs-number">-2677</span>: <span class="hljs-keyword">Stop</span> <span class="hljs-keyword">of</span> <span class="hljs-string">'ora.crf'</span> <span class="hljs-keyword">on</span> <span class="hljs-string">'racdb1'</span> succeeded</span><br><span class="line">[root@racdb2 ~]# /u01/app/<span class="hljs-number">12.1</span><span class="hljs-number">.0</span>/grid/<span class="hljs-keyword">bin</span>/crsctl <span class="hljs-keyword">stop</span> res ora.crf -init</span><br><span class="line">CRS<span class="hljs-number">-2673</span>: Attempting <span class="hljs-keyword">to</span> <span class="hljs-keyword">stop</span> <span class="hljs-string">'ora.crf'</span> <span class="hljs-keyword">on</span> <span class="hljs-string">'racdb2'</span></span><br><span class="line">CRS<span class="hljs-number">-2677</span>: <span class="hljs-keyword">Stop</span> <span class="hljs-keyword">of</span> <span class="hljs-string">'ora.crf'</span> <span class="hljs-keyword">on</span> <span class="hljs-string">'racdb2'</span> succeeded</span><br><span class="line"></span><br><span class="line"><span class="hljs-comment">--Disable ora.crf</span></span><br><span class="line">[root@racdb1 ~]# /u01/app/<span class="hljs-number">12.1</span><span class="hljs-number">.0</span>/grid/<span class="hljs-keyword">bin</span>/crsctl <span class="hljs-keyword">modify</span> res ora.crf -<span class="hljs-keyword">attr</span> ENABLED=<span class="hljs-number">0</span> -init</span><br><span class="line">[root@racdb2 ~]# /u01/app/<span class="hljs-number">12.1</span><span class="hljs-number">.0</span>/grid/<span class="hljs-keyword">bin</span>/crsctl <span class="hljs-keyword">modify</span> res ora.crf -<span class="hljs-keyword">attr</span> ENABLED=<span class="hljs-number">0</span> -init</span><br></pre></td></tr></table></figure>
+<ul>
+<li>Delete mgmtdb by dbca</li>
+</ul>
+<p>As grid user, locate the node mgmrdb is running:<br><figure class="highlight sql hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">srvctl status mgmtdb</span><br></pre></td></tr></table></figure></p>
+<p>As grid user, delete mgmtdb by dbca:</p>
+<figure class="highlight sql hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br></pre></td><td class="code"><pre><span class="line">[grid@racdb1:/home/grid]$ dbca -silent -deleteDatabase -sourceDB -MGMTDB</span><br><span class="line">Connecting to database</span><br><span class="line">4% complete</span><br><span class="line">9% complete</span><br><span class="line">14% complete</span><br><span class="line">19% complete</span><br><span class="line">23% complete</span><br><span class="line">28% complete</span><br><span class="line">47% complete</span><br><span class="line">Updating network configuration files</span><br><span class="line">48% complete</span><br><span class="line">52% complete</span><br><span class="line">Deleting instance and datafiles</span><br><span class="line">76% complete</span><br><span class="line">100% complete</span><br><span class="line">Look at the log file "/u01/app/grid/cfgtoollogs/dbca/_mgmtdb.log" for further details.</span><br></pre></td></tr></table></figure>
+<ul>
+<li>Recreate mgmtdb</li>
+</ul>
+<p>As grid user create container database:</p>
+<figure class="highlight sql hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br></pre></td><td class="code"><pre><span class="line">[grid@racdb1:/home/grid]$ dbca -silent -createDatabase -sid -MGMTDB -createAsContainerDatabase true \</span><br><span class="line">-templateName MGMTSeed_Database.dbc -gdbName _mgmtdb -storageType ASM \</span><br><span class="line">-diskGroupName +CRS -datafileJarLocation $ORACLE_HOME/assistants/dbca/templates \</span><br><span class="line">-characterset AL32UTF8 -autoGeneratePasswords -skipUserTemplateCheck</span><br><span class="line"></span><br><span class="line">Registering database with Oracle Grid Infrastructure</span><br><span class="line">5% complete</span><br><span class="line">Copying database files</span><br><span class="line">7% complete</span><br><span class="line">9% complete</span><br><span class="line">16% complete</span><br><span class="line">23% complete</span><br><span class="line">30% complete</span><br><span class="line">37% complete</span><br><span class="line">41% complete</span><br><span class="line">Creating and starting Oracle instance</span><br><span class="line">43% complete</span><br><span class="line">48% complete</span><br><span class="line">49% complete</span><br><span class="line">50% complete</span><br><span class="line">55% complete</span><br><span class="line">60% complete</span><br><span class="line">61% complete</span><br><span class="line">64% complete</span><br><span class="line">Completing Database Creation</span><br><span class="line">68% complete</span><br><span class="line">79% complete</span><br><span class="line">89% complete</span><br><span class="line">100% complete</span><br><span class="line">Look at the log file "/u01/app/grid/cfgtoollogs/dbca/_mgmtdb/_mgmtdb0.log" for further details.</span><br></pre></td></tr></table></figure>
+<p>As grid user, create PDB, be aware, -pdbname is the cluster name, any &#39;-&#39; of cluster should be replaced by &#39;_&#39;<br><figure class="highlight sql hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br></pre></td><td class="code"><pre><span class="line">[grid@racdb1:/home/grid]$ dbca -silent -createPluggableDatabase -sourceDB -MGMTDB \</span><br><span class="line">-pdbName racdb -createPDBFrom RMANBACKUP \</span><br><span class="line">-PDBBackUpfile $ORACLE_HOME/assistants/dbca/templates/mgmtseed_pdb.dfb \</span><br><span class="line">-PDBMetadataFile $ORACLE_HOME/assistants/dbca/templates/mgmtseed_pdb.xml \</span><br><span class="line">-createAsClone true</span><br><span class="line"></span><br><span class="line">Creating Pluggable Database</span><br><span class="line">4% complete</span><br><span class="line">12% complete</span><br><span class="line">21% complete</span><br><span class="line">38% complete</span><br><span class="line">55% complete</span><br><span class="line">85% complete</span><br><span class="line">Completing Pluggable Database Creation</span><br><span class="line">100% complete</span><br><span class="line">Look at the log file "/u01/app/grid/cfgtoollogs/dbca/_mgmtdb/racdb/_mgmtdb.log" for further details.</span><br></pre></td></tr></table></figure></p>
+<ul>
+<li>Post-creation</li>
+</ul>
+<figure class="highlight sql hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="hljs-comment">--check the status of mgmtdb with grid user</span></span><br><span class="line">srvctl status MGMTDB</span><br><span class="line"></span><br><span class="line"><span class="hljs-comment">--secure the mgmtdb credential</span></span><br><span class="line">mgmtca</span><br></pre></td></tr></table></figure>
+<ul>
+<li>Start ora.crf on all nodes</li>
+</ul>
+<figure class="highlight sql hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line"><span class="hljs-comment">--with root user on each node</span></span><br><span class="line">[root@racdb1 ~]# /u01/app/12.1.0/grid/bin/crsctl modify res ora.crf -attr ENABLED=1 -init</span><br><span class="line">[root@racdb2 ~]# /u01/app/12.1.0/grid/bin/crsctl modify res ora.crf -attr ENABLED=1 -init</span><br><span class="line">[root@racdb1 ~]# /u01/app/12.1.0/grid/bin/crsctl start res ora.crf -init</span><br><span class="line">CRS-2672: Attempting to <span class="hljs-keyword">start</span> <span class="hljs-string">'ora.crf'</span> <span class="hljs-keyword">on</span> <span class="hljs-string">'racdb2'</span></span><br><span class="line">CRS<span class="hljs-number">-2676</span>: <span class="hljs-keyword">Start</span> <span class="hljs-keyword">of</span> <span class="hljs-string">'ora.crf'</span> <span class="hljs-keyword">on</span> <span class="hljs-string">'racdb2'</span> succeeded</span><br></pre></td></tr></table></figure>
+<h2 id="5-3-Migrate-by-MOS-tool-mdbutil-pl"><a href="#5-3-Migrate-by-MOS-tool-mdbutil-pl" class="headerlink" title="5.3 Migrate by MOS tool mdbutil.pl"></a>5.3 Migrate by MOS tool <code>mdbutil.pl</code></h2><p>Below example is migrating mgmtdb from OCR to CRS.</p>
+<ul>
+<li>Check the status</li>
+</ul>
+<figure class="highlight bash hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line">[grid@racdb1:/home/grid]$ ./mdbutil.pl --status</span><br><span class="line">mdbutil.pl version : 1.98</span><br><span class="line">2019-07-31 19:13:43: I Checking CHM status...</span><br><span class="line">2019-07-31 19:14:06: I Listener MGMTLSNR is configured and running on racdb1</span><br><span class="line">2019-07-31 19:14:10: I Database MGMTDB is configured and running on racdb1</span><br><span class="line">2019-07-31 19:14:11: I Cluster Health Monitor (CHM) is configured and running</span><br><span class="line">--------------------------------------------------------------------------------</span><br><span class="line">CHM Repository Path = +OCR/_MGMTDB/8ECBF2858125261EE053C938A8C0A78B/DATAFILE/sysmgmtdata.259.1014914317</span><br><span class="line">MGMTDB space used on DG +OCR = 4187 Mb</span><br></pre></td></tr></table></figure>
+<ul>
+<li>Migrate mgmtdb files via mdbutil tool</li>
+</ul>
+<figure class="highlight sh hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br></pre></td><td class="code"><pre><span class="line">[grid@racdb1:/home/grid]$ ./mdbutil.pl --mvmgmtdb --target=+CRS</span><br><span class="line">mdbutil.pl version : 1.98</span><br><span class="line">Moving MGMTDB, it will be stopped, are you sure (Y/N)? y</span><br><span class="line">2019-07-31 19:15:57: I Checking <span class="hljs-keyword">for</span> the required paths under +CRS</span><br><span class="line">2019-07-31 19:16:06: I Creating new path +CRS/_MGMTDB/ONLINELOG</span><br><span class="line">2019-07-31 19:16:08: I Creating new path +CRS/_MGMTDB/DATAFILE</span><br><span class="line">2019-07-31 19:16:10: I Creating new path +CRS/_MGMTDB/DATAFILE/PDB<span class="hljs-variable">$SEED</span></span><br><span class="line">2019-07-31 19:16:10: I Creating new path +CRS/_MGMTDB/DATAFILE/TEMPFILE/PDB<span class="hljs-variable">$SEED</span></span><br><span class="line">2019-07-31 19:16:15: I Creating new path +CRS/_MGMTDB/DATAFILE/racdb_cluster</span><br><span class="line">2019-07-31 19:16:16: I Creating new path +CRS/_MGMTDB/TEMPFILE/racdb_cluster</span><br><span class="line">2019-07-31 19:16:17: I Getting MGMTDB Database files location</span><br><span class="line">2019-07-31 19:16:17: I Getting MGMTDB Temp files location</span><br><span class="line">2019-07-31 19:16:17: I Getting MGMTDB PDB PDB<span class="hljs-variable">$SEED</span> files location</span><br><span class="line">2019-07-31 19:16:18: I Getting MGMTDB PDB PDB<span class="hljs-variable">$SEED</span> Temp files location</span><br><span class="line">2019-07-31 19:16:18: I Getting MGMTDB PDB racdb_cluster files location</span><br><span class="line">2019-07-31 19:16:19: I Getting MGMTDB PDB racdb_cluster Temp files location</span><br><span class="line">2019-07-31 19:16:23: I Creating temporary PFILE</span><br><span class="line">2019-07-31 19:16:23: I Creating target SPFILE</span><br><span class="line">2019-07-31 19:16:28: I Stopping mgmtdb</span><br><span class="line">2019-07-31 19:16:51: I Copying MGMTDB DBFiles to +CRS</span><br><span class="line">2019-07-31 19:17:00: I Copying MGMTDB PDB<span class="hljs-variable">$SEED</span> DBFiles to +CRS</span><br><span class="line">2019-07-31 19:17:04: I Copying MGMTDB PDB DBFiles to +CRS</span><br><span class="line">2019-07-31 19:17:23: I Creating the CTRL File</span><br><span class="line">2019-07-31 19:19:03: I The CTRL File has been created and MGMTDB is now running from +CRS</span><br><span class="line">2019-07-31 19:19:03: I Setting MGMTDB SPFile location</span><br><span class="line">2019-07-31 19:19:07: I Modifing the init parameter</span><br><span class="line">2019-07-31 19:19:07: I Removing old MGMTDB</span><br><span class="line">2019-07-31 19:19:20: I Changing START_DEPENDENCIES</span><br><span class="line">2019-07-31 19:19:21: I Changing STOP_DEPENDENCIES</span><br><span class="line">2019-07-31 19:19:22: I Restarting MGMTDB using target SPFile</span><br><span class="line">2019-07-31 19:21:12: I MGMTDB Successfully moved to +CRS!</span><br></pre></td></tr></table></figure>
+<ul>
+<li>Check the result</li>
+</ul>
+<figure class="highlight sh hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line">[grid@racdb1:/home/grid]$ ./mdbutil.pl --status</span><br><span class="line">mdbutil.pl version : 1.98</span><br><span class="line">2019-07-31 19:23:18: I Checking CHM status...</span><br><span class="line">2019-07-31 19:23:20: I Listener MGMTLSNR is configured and running on racdb1</span><br><span class="line">2019-07-31 19:23:21: I Database MGMTDB is configured and running on racdb1</span><br><span class="line">2019-07-31 19:23:21: I Cluster Health Monitor (CHM) is configured and running</span><br><span class="line">--------------------------------------------------------------------------------</span><br><span class="line">CHM Repository Path = +CRS/_MGMTDB/DATAFILE/racdb_cluster/sysmgmtdata.20190731191620.dbf</span><br><span class="line">MGMTDB space used on DG +CRS = 742 Mb</span><br><span class="line">--------------------------------------------------------------------------------</span><br></pre></td></tr></table></figure>
+<p>Reference:<br><a href="https://support.    oracle.com/epmos/faces/DocumentDisplay?_afrLoop=150771986253294&amp;id=1589394.1&amp;_adf.ctrl-state=163b3koqeg_61" target="_blank" rel="noopener">How to Move/Recreate GI Management Repository to Different Shared Storage (Diskgroup, CFS or NFS etc) (Doc ID 1589394.1)</a><br><a href="https://support.oracle.com/epmos/faces/DocumentDisplay?_afrLoop=150867291521193&amp;id=1918102.1&amp;_adf.ctrl-state=163b3koqeg_175" target="_blank" rel="noopener">crsctl modify ora.* resource fails with CRS-4995 in 12.1.0.2 and above (Doc ID 1918102.1)</a><br><a href="https://support.oracle.com/epmos/faces/DocumentDisplay?_afrLoop=154466631555105&amp;id=2065175.1&amp;_adf.ctrl-state=163b3koqeg_290#aref_section31" target="_blank" rel="noopener">MDBUtil: GI Management Repository configuration tool (Doc ID 2065175.1)</a></p>
+<p><strong>EOF</strong></p>
+
+    
+    </div>
+    
+    <div class="columns is-variable is-1 is-multiline is-mobile">
+    
+        <span class="column is-narrow"><a class="tag is-light article-tag" href="/tags/how-to/">#how to</a></span>
+    
+    </div>
+    
+    
+    <div class="columns is-mobile is-multiline article-nav">
+        <span class="column is-12-mobile is-half-desktop  article-nav-prev">
+            
+            <a href="/MGMTDB-in-Oracle-12c-RAC.html">A brief introduction of MGMTDB</a>
+            
+        </span>
+        <span class="column is-12-mobile is-half-desktop  article-nav-next">
+            
+            <a href="/Migrating-Oracle-ASM-storage-via-ASM-disk-rebalance.html">Migrating Oracle ASM storage</a>
+            
+        </span>
+    </div>
+    
+</article>
+
+
+
+
+    </div>
+</section>
+    <footer class="footer footer-padding">
+    <div class="container content">
+            <div class="column is-narrow has-text-centered is-size-7-mobile">
+                &copy;  <a href="/">Kyun Kong&nbsp;</a>
+                2013 - 2019
+            </div>
+    </div>
+</footer>
+
+    <script src="//cdnjs.cloudflare.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
+<script src="//cdnjs.cloudflare.com/ajax/libs/moment.js/2.22.2/moment-with-locales.min.js"></script>
+
+<!-- test if the browser is outdated
+<div id="outdated">
+    <h6>Your browser is out-of-date!</h6>
+    <p>Update your browser to view this website correctly. <a id="btnUpdateBrowser" href="http://outdatedbrowser.com/">Update my browser now </a></p>
+    <p class="last"><a href="#" id="btnCloseUpdateBrowser" title="Close">&times;</a></p>
+</div>
+<script src="//cdnjs.cloudflare.com/ajax/libs/outdated-browser/1.1.5/outdatedbrowser.min.js"></script>
+<script>
+    $(document).ready(function () {
+        // plugin function, place inside DOM ready function
+        outdatedBrowser({
+            bgColor: '#f25648',
+            color: '#ffffff',
+            lowerThan: 'flex'
+        })
+    });
+</script>
+-->
+
+<script>
+    window.FontAwesomeConfig = {
+        searchPseudoElements: true
+    }
+    moment.locale("en-AU");
+</script>
+
+
+    
+    
+    
+    
+    
+    
+
+    
+
+
+<script src="/js/script.js"></script>
+
+
+    
+    <div class="searchbox ins-search">
+    <div class="searchbox-mask"></div>
+    <div class="searchbox-container ins-search-container">
+        <div class="searchbox-input-wrapper">
+            <input type="text" class="searchbox-input ins-search-input" placeholder="Type something..." />
+            <span class="searchbox-close ins-close ins-selectable"><i class="fa fa-times-circle"></i></span>
+        </div>
+        <div class="searchbox-result-wrapper ins-section-wrapper">
+            <div class="ins-section-container"></div>
+        </div>
+    </div>
+</div>
+<script>
+    (function (window) {
+        var INSIGHT_CONFIG = {
+            TRANSLATION: {
+                POSTS: 'Posts',
+                PAGES: 'Pages',
+                CATEGORIES: 'Categories',
+                TAGS: 'Tags',
+                UNTITLED: '(Untitled)',
+            },
+            CONTENT_URL: '/content.json',
+        };
+        window.INSIGHT_CONFIG = INSIGHT_CONFIG;
+    })(window);
+</script>
+<script src="/js/insight.js"></script>
+    
+</body>
+</html>
