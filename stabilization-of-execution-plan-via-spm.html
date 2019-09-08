@@ -1,0 +1,342 @@
+<!DOCTYPE html>
+<html class="has-navbar-fixed-top">
+<head>
+    <meta charset="utf-8">
+<title>使用SPM固定执行计划 - My Notebook</title>
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+
+<link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/outdated-browser/1.1.5/outdatedbrowser.min.css">
+
+
+<meta name="description" content="Oracle memoranda">
+
+
+
+<meta name="keywords" content="oracle, database">
+
+
+
+
+
+
+
+<link rel="icon" href="/images/favicon.ico">
+
+
+<link rel="stylesheet" href="//fonts.googleapis.com/css?family=Ovo|Source+Code+Pro|Calibri|Ubuntu">
+<link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/bulma/0.6.2/css/bulma.min.css">
+
+
+
+<link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/highlight.js/9.12.0/styles/atom-one-light.min.css">
+
+<link rel="stylesheet" href="/css/style.css">
+
+<script defer src="//use.fontawesome.com/releases/v5.0.8/js/all.js"></script>
+
+
+    
+    
+    
+    
+    
+    
+
+    
+
+
+</head>
+<body>
+    
+<nav class="navbar is-transparent is-fixed-top navbar-main" role="navigation" aria-label="main navigation">
+    <div class="container">
+        <div class="navbar-brand">
+            <a class="navbar-item navbar-logo" href="/">
+                
+                    
+                    My Notebook
+                    
+                
+            </a>
+            <div class="navbar-burger">
+                <span></span>
+                <span></span>
+                <span></span>
+            </div>
+        </div>
+        
+        <div class="navbar-menu navbar-start">
+            
+            <a class="navbar-item "
+               href="/">Home</a>
+            
+            <a class="navbar-item "
+               href="/about">About</a>
+            
+        </div>
+        
+        <div class="navbar-menu navbar-end">
+            
+            <a class="navbar-item search" title="Search" href="javascript:;">
+                <i class="fas fa-search"></i>
+            </a>
+            
+            
+            
+        </div>
+    </div>
+</nav>
+
+    <section class="section">
+    <div class="container">
+    <article class="article content gallery" itemscope itemprop="blogPost">
+    <h1 class="article-title is-size-3 is-size-4-mobile" itemprop="name">
+        
+            使用SPM固定执行计划
+        
+    </h1>
+    <div class="article-meta columns is-variable is-1 is-multiline is-mobile is-size-7-mobile">
+        <span class="column is-narrow">
+            <time datetime="2019-08-07T16:24:48.000Z" itemprop="datePublished">Aug 8 2019</time>
+        </span>
+        
+        <span class="column is-narrow article-category">
+            <i class="far fa-folder"></i>
+            <a class="article-category-link" href="/categories/oracle/">oracle</a>
+        </span>
+        
+        
+    </div>
+    <div class="article-entry is-size-6-mobile" itemprop="articleBody">
+    
+        <p>数据库在运行过程中，会由于各种原因的变化，存在执行计划不稳定的情况。Oracle 11g开始有SQL Plan Management来管理，稳定执行计划。<br>一般执行计划不稳定有以下几种原因引起（包括但不限于）：</p>
+<ul>
+<li>数据倾斜</li>
+<li>统计信息不准确</li>
+<li>数据库升级</li>
+</ul>
+<a id="more"></a>
+<h2 id="1-绑定变量带来的问题"><a href="#1-绑定变量带来的问题" class="headerlink" title="1. 绑定变量带来的问题"></a>1. 绑定变量带来的问题</h2><p>从Oracle 9i开始，引进了绑定变量窥视（bind peeking）新特性，在对数据倾斜的绑定变量中，在ORACLE第一次解析SQL时会将变量的真实值代入产生执行计划，以后对所有的同样的绑定变量SQL都采用这个执行计划了。这种特性在大部分情况下能结合绑定变量减少SQL的解析时间，但对存在数据倾斜的SQL有可能产生极其糟糕的执行计划。<br>在11g开始，引进自适应游标共享（Adaptive Cursor Sharing，ACS），对一个绑定变量生成多个子执行计划，以求减低数据倾斜对执行计划的影响,从而达到动态调整执行计划的目的。</p>
+<h3 id="1-1-绑定变量相关视图"><a href="#1-1-绑定变量相关视图" class="headerlink" title="1.1 绑定变量相关视图"></a>1.1 绑定变量相关视图</h3><p><code>v$sql</code>中新增IS_BIND_SENSITIVE和IS_BIND_AWARE字段：<br><figure class="highlight sql hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line"><span class="hljs-keyword">select</span> is_bind_sensitive, is_bind_aware, sql_id, child_number</span><br><span class="line"><span class="hljs-keyword">from</span> v$<span class="hljs-keyword">sql</span></span><br><span class="line"><span class="hljs-keyword">where</span> sql_id = <span class="hljs-string">'&amp;1'</span>;</span><br></pre></td></tr></table></figure></p>
+<p>如果游标中存在绑定变量，数据库会根据传入的实际值判断不同的值能否会影响执行计划，如果会，则游标被标记为<code>Bind-Sensitive</code>。在v$sql视图中的IS_BIND_SENSITIVE值则为Y。<br>当该SQL被执行过几次后，数据库会根据传入的实际值来决定是否需要修改执行计划，如果需要，则该游标是<code>Bind-Aware</code>，在v$sql视图中<code>IS_BIND_AWARE</code>也被标记为Y。</p>
+<p><code>V$SQL_CS_SELECTIVITY</code>视图则展示了不同值的selectivity。<br><code>V$SQL_CS_STATISTICS</code>视图展示了标记为<code>Bind-Sensitive</code>和<code>Bind-Aware</code>游标的一些统计信息，如内存读，CPU时间等。<br><figure class="highlight sql hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line"><span class="hljs-keyword">select</span>  child_number,</span><br><span class="line">bind_set_hash_value,</span><br><span class="line">peeked,</span><br><span class="line">executions,</span><br><span class="line">rows_processed,</span><br><span class="line">buffer_gets,</span><br><span class="line">cpu_time</span><br><span class="line"><span class="hljs-keyword">from</span> v$sql_cs_statistics</span><br><span class="line"><span class="hljs-keyword">where</span> sql_id = <span class="hljs-string">'&amp;1'</span>;</span><br></pre></td></tr></table></figure></p>
+<h3 id="1-2-查询绑定变量值"><a href="#1-2-查询绑定变量值" class="headerlink" title="1.2 查询绑定变量值"></a>1.2 查询绑定变量值</h3><ul>
+<li>从AWR查找</li>
+</ul>
+<figure class="highlight sql hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br></pre></td><td class="code"><pre><span class="line">col name for a30</span><br><span class="line">col value_string for a30</span><br><span class="line"><span class="hljs-keyword">set</span> line <span class="hljs-number">200</span> pagesize <span class="hljs-number">9999</span></span><br><span class="line"><span class="hljs-keyword">select</span> SNAP_ID,<span class="hljs-keyword">name</span>,datatype_string,value_string,datatype <span class="hljs-keyword">from</span> DBA_HIST_SQLBIND <span class="hljs-keyword">where</span> sql_id=<span class="hljs-string">'&amp;1'</span></span><br><span class="line"></span><br><span class="line"><span class="hljs-keyword">set</span> line <span class="hljs-number">200</span> pagesize <span class="hljs-number">9999</span></span><br><span class="line"><span class="hljs-keyword">col</span> bind1 <span class="hljs-keyword">for</span> a30</span><br><span class="line"><span class="hljs-keyword">col</span> bind2 <span class="hljs-keyword">for</span> a30</span><br><span class="line"><span class="hljs-keyword">col</span> bind3 <span class="hljs-keyword">for</span> a30</span><br><span class="line"><span class="hljs-keyword">col</span> bind4 <span class="hljs-keyword">for</span> a30</span><br><span class="line"><span class="hljs-keyword">select</span></span><br><span class="line">snap_id,SQL_ID,PLAN_HASH_VALUE,</span><br><span class="line">dbms_sqltune.extract_bind(bind_data,<span class="hljs-number">1</span>).value_string bind1,</span><br><span class="line">dbms_sqltune.extract_bind(bind_data,<span class="hljs-number">2</span>).value_string bind2,</span><br><span class="line">dbms_sqltune.extract_bind(bind_data,<span class="hljs-number">3</span>).value_string bind3,</span><br><span class="line">dbms_sqltune.extract_bind(bind_data,<span class="hljs-number">4</span>).value_string bind4</span><br><span class="line"><span class="hljs-keyword">from</span> dba_hist_sqlstat</span><br><span class="line"><span class="hljs-keyword">where</span> sql_id = <span class="hljs-string">'&amp;1'</span></span><br><span class="line"><span class="hljs-keyword">order</span> <span class="hljs-keyword">by</span> snap_id;</span><br></pre></td></tr></table></figure>
+<ul>
+<li>从cursor中查找</li>
+</ul>
+<figure class="highlight sql hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line"><span class="hljs-keyword">select</span> ADDRESS</span><br><span class="line">      ,HASH_VALUE</span><br><span class="line">      ,CHILD_NUMBER</span><br><span class="line">      ,<span class="hljs-keyword">name</span></span><br><span class="line">      ,DATATYPE_STRING</span><br><span class="line">      ,VALUE_STRING</span><br><span class="line">      ,LAST_CAPTURED</span><br><span class="line"><span class="hljs-keyword">from</span> v$sql_bind_capture <span class="hljs-keyword">where</span> sql_id =<span class="hljs-string">'&amp;1'</span>;</span><br></pre></td></tr></table></figure>
+<h3 id="1-3-从共享内存中删除游标"><a href="#1-3-从共享内存中删除游标" class="headerlink" title="1.3 从共享内存中删除游标"></a>1.3 从共享内存中删除游标</h3><ul>
+<li>通过SQL ID查找SQL地址及hash值</li>
+</ul>
+<figure class="highlight sql hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"><span class="hljs-comment">--查找sql的address和hash_value</span></span><br><span class="line"><span class="hljs-keyword">select</span> address, hash_value, sql_text</span><br><span class="line"><span class="hljs-keyword">from</span> v$sqlarea</span><br><span class="line"><span class="hljs-keyword">where</span> sql_id=<span class="hljs-string">'&amp;1'</span>;</span><br></pre></td></tr></table></figure>
+<ul>
+<li>调用dbms_shared_pool清除游标</li>
+</ul>
+<p>将产生的address及hash_value代入 &amp;1， &amp;2, 其中，c代表需要purge的类型是cursor，r表示trigger,q表示sequence等.</p>
+<figure class="highlight sql hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">exec dbms_shared_pool.purge('&amp;1,&amp;2','C');</span><br></pre></td></tr></table></figure>
+<h2 id="2-如何使用SPM管理执行计划"><a href="#2-如何使用SPM管理执行计划" class="headerlink" title="2. 如何使用SPM管理执行计划"></a>2. 如何使用SPM管理执行计划</h2><h3 id="2-1-相关术语"><a href="#2-1-相关术语" class="headerlink" title="2.1 相关术语"></a>2.1 相关术语</h3><ul>
+<li><p>SPM<br>  SPM是管理SQL执行计划的框架。其主要目的是防止由于执行计划改变而导致的SQL性能的退化。同时也提供了动态调整SQL执行计划的框架。</p>
+</li>
+<li><p>SQL Plan Baseline<br>  当一个新的执行计划产生时候，SPM不一定会立即启用它，只有确认这些执行计划不会带来性能下降或者能提升性能，SPM才会采用(Accepted),而这些accepted的执行计划则被成为baseline(以下简称基线)。</p>
+</li>
+<li><p>Plan Evolution<br>  把accepted的执行计划加入到基线的过程。</p>
+</li>
+<li><p>SQL Management Base(SMB)<br>  存储基线、执行计划历史等的数据字典。</p>
+</li>
+</ul>
+<h3 id="2-2-工作原理"><a href="#2-2-工作原理" class="headerlink" title="2.2 工作原理"></a>2.2 工作原理</h3><p>SPM通过两个动态初始化参数进行控制, 两个参数均为PDB级别可修改。</p>
+<ul>
+<li>optimizer_capture_sql_plan_baselines<br>  自动识别重复的SQL语句，并且为这些语句生成基线(<strong>从另一个侧面说明，SPM需要结合绑定变量使用，如果不使用绑定变量，建议使用SQL profile+ force_match参数</strong>)。该参数默认为false。</li>
+<li>optimizer_use_sql_plan_baselines<br>  启用或者关闭SMB中的基线，默认为true。当启用时，优化器会从SMB中查找相应的基线并且挑选cost最小的作为该SQL的执行计划;如果是新执行计划，数据库会自动把这些新计划以unaccepted状态加入到基线中。</li>
+</ul>
+<p>其工作流程如下图所示：<br><img width="500" src="/images/spm_flowchart.jpg"></p>
+<p>如果存在基线，优化器根据新产生的执行计划是否在基线中而作出不同选择：</p>
+<ul>
+<li>如果新计划在基线中，则会执行此计划</li>
+<li>如果新计划不在基线中，优化器会把新产生的执行计划标记为accepted，且加入到plan history中，接下来优化器会根据以下情况作出不同选择：<ul>
+<li>如果fixed plan存在于基线中，优化器会使用最低代价的fixed plan</li>
+<li>如果没有fixed plan，优化器挑选基线中代价最低的</li>
+<li>如果基线中不存在reproduced的执行计划，比如所有执行计划相关的索引都drop掉了，优化器会采用新产生的执行计划</li>
+</ul>
+</li>
+</ul>
+<h3 id="2-3-创建基线"><a href="#2-3-创建基线" class="headerlink" title="2.3 创建基线"></a>2.3 创建基线</h3><p>创建基线有以下几种方式：</p>
+<ul>
+<li>使用SQL Tuning Set(STS)</li>
+<li>从缓存/AWR中加载(new for 12.2)</li>
+<li>从其他库导出并导入</li>
+<li>自动收集(optimizer_capture_sql_plan_baselines=TRUE)</li>
+</ul>
+<h3 id="2-3-1-从缓存中进行加载"><a href="#2-3-1-从缓存中进行加载" class="headerlink" title="2.3.1 从缓存中进行加载"></a>2.3.1 从缓存中进行加载</h3><ul>
+<li>游标中已经存在较优的执行计划:</li>
+</ul>
+<figure class="highlight sql hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br></pre></td><td class="code"><pre><span class="line"><span class="hljs-keyword">declare</span></span><br><span class="line">  pls <span class="hljs-built_in">number</span>;</span><br><span class="line"><span class="hljs-keyword">begin</span></span><br><span class="line">  pls := DBMS_SPM.LOAD_PLANS_FROM_CURSOR_CACHE(sql_id  =&gt; <span class="hljs-string">'&amp;1'</span>,</span><br><span class="line">                                               <span class="hljs-comment">--plan_hash_value =&gt; &amp;2,</span></span><br><span class="line">                                               enabled  =&gt; <span class="hljs-string">'YES'</span>);</span><br><span class="line"><span class="hljs-keyword">end</span>;</span><br><span class="line">/</span><br><span class="line"></span><br><span class="line"><span class="hljs-keyword">set</span> serveroutput <span class="hljs-keyword">on</span></span><br><span class="line"></span><br><span class="line"><span class="hljs-keyword">var</span> n <span class="hljs-built_in">number</span></span><br><span class="line"><span class="hljs-keyword">begin</span></span><br><span class="line">:n:=dbms_spm.load_plans_from_cursor_cache(sql_id=&gt;<span class="hljs-string">'&amp;sql_id'</span>, plan_hash_value=&gt;&amp;plan_hash_value, <span class="hljs-keyword">fixed</span> =&gt;<span class="hljs-string">'NO'</span>, enabled=&gt;<span class="hljs-string">'YES'</span>);</span><br><span class="line"><span class="hljs-keyword">end</span>;</span><br><span class="line">/</span><br><span class="line"></span><br><span class="line">EXEC dbms_output.put_line('Number of plans loaded: ' || :n);</span><br></pre></td></tr></table></figure>
+<ul>
+<li>通过filter筛选SQL</li>
+</ul>
+<figure class="highlight plain hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">exec :pls := dbms_spm.load_plans_from_cursor_cache( -</span><br><span class="line">           attribute_name =&gt; &apos;SQL_TEXT&apos;, -</span><br><span class="line">           attribute_value =&gt; &apos;&amp;1&apos;);</span><br></pre></td></tr></table></figure>
+<h3 id="2-3-2-从AWR中加载"><a href="#2-3-2-从AWR中加载" class="headerlink" title="2.3.2 从AWR中加载"></a>2.3.2 从AWR中加载</h3><figure class="highlight hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">exec pls := dbms_spm.load_plans_from_awr(begin_snap =&gt; &amp;1, end_snap =&gt; &amp;2);</span><br></pre></td></tr></table></figure>
+<h3 id="2-4-查询基线"><a href="#2-4-查询基线" class="headerlink" title="2.4 查询基线"></a>2.4 查询基线</h3><p>通过以下视图查询基线状态:<br><figure class="highlight sql hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br></pre></td><td class="code"><pre><span class="line"><span class="hljs-keyword">select</span> sql_text, plan_name, enabled, accepted <span class="hljs-keyword">from</span> dba_sql_plan_baselines;</span><br><span class="line"></span><br><span class="line"><span class="hljs-comment">--通过sql_id查找基线</span></span><br><span class="line">col sql_handle for a30</span><br><span class="line">col plan_name for a50</span><br><span class="line"><span class="hljs-keyword">set</span> line <span class="hljs-number">200</span> pagesize <span class="hljs-number">9999</span></span><br><span class="line"><span class="hljs-keyword">select</span> s.sql_id, s.plan_hash_value, b.sql_handle, b.plan_name,</span><br><span class="line">b.signature, b.enabled, b.accepted, b.fixed, s.sql_text</span><br><span class="line"><span class="hljs-keyword">from</span> v$sqlarea s <span class="hljs-keyword">JOIN</span> dba_sql_plan_baselines b</span><br><span class="line"><span class="hljs-keyword">on</span> (s.exact_matching_signature = b.signature) <span class="hljs-keyword">and</span> s.sql_id = <span class="hljs-string">'&amp;1'</span>;</span><br><span class="line"></span><br><span class="line"><span class="hljs-comment">--查找仅来源于手动加载的基线</span></span><br><span class="line">col sql_handle for a30</span><br><span class="line">col plan_name for a30</span><br><span class="line">col creator for a30</span><br><span class="line"><span class="hljs-keyword">set</span> line <span class="hljs-number">200</span> pagesize <span class="hljs-number">200</span></span><br><span class="line"><span class="hljs-keyword">select</span> sql_handle, plan_name, origin, enabled, accepted,</span><br><span class="line"><span class="hljs-keyword">fixed</span>,creator,optimizer_cost,sql_text</span><br><span class="line"><span class="hljs-keyword">from</span> dba_sql_plan_baselines <span class="hljs-keyword">where</span> origin = <span class="hljs-string">'MANUAL-LOAD'</span>;</span><br></pre></td></tr></table></figure></p>
+<p><code>dba_sql_plan_baselines</code>中栏位的含义:<br>如果是Enabled=No或者是Reproduced=No, 则优化器不会考虑相关的执行计划。<br><img src="/images/baseline1.jpg" alt="SQL Baseline"></p>
+<p>可通过<strong><code>dbms_spm.alter_sql_plan_baseline</code></strong>去调整这些参数值。如:<br><figure class="highlight sql hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br></pre></td><td class="code"><pre><span class="line">var temp varchar2(4000)</span><br><span class="line">exec :temp := dbms_spm.alter_sql_plan_baseline(sql_handle=&gt;'&amp;SQL_HANDLE',plan_name=&gt;'&amp;SQL_PLAN',attribute_name=&gt;'enabled',attribute_value=&gt;'YES');</span><br><span class="line"></span><br><span class="line">var pbsts varchar2(30);</span><br><span class="line">exec :pbsts := dbms_spm.alter_sql_plan_baseline('&amp;SQL_HANDLE','&amp;SQL_PLAN','accepted','NO');</span><br><span class="line"></span><br><span class="line"><span class="hljs-keyword">SET</span> SERVEROUTPUT <span class="hljs-keyword">ON</span></span><br><span class="line"><span class="hljs-keyword">DECLARE</span></span><br><span class="line">  l_plans_altered  PLS_INTEGER;</span><br><span class="line"><span class="hljs-keyword">BEGIN</span></span><br><span class="line">  l_plans_altered := DBMS_SPM.alter_sql_plan_baseline(</span><br><span class="line">    sql_handle      =&gt; <span class="hljs-string">'&amp;SQL_HANDLE'</span>,</span><br><span class="line">    plan_name       =&gt; <span class="hljs-string">'&amp;SQL_PLAN'</span>,</span><br><span class="line">    attribute_name  =&gt; <span class="hljs-string">'fixed'</span>,</span><br><span class="line">    attribute_value =&gt; <span class="hljs-string">'YES'</span>);</span><br><span class="line"></span><br><span class="line">  DBMS_OUTPUT.put_line('Plans Altered: ' || l_plans_altered);</span><br><span class="line"><span class="hljs-keyword">END</span>;</span><br><span class="line">/</span><br></pre></td></tr></table></figure></p>
+<p>查询基线执行计划:<br><figure class="highlight sql hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line"><span class="hljs-keyword">SELECT</span> PLAN_TABLE_OUTPUT</span><br><span class="line"><span class="hljs-keyword">FROM</span>   V$<span class="hljs-keyword">SQL</span> s, DBA_SQL_PLAN_BASELINES b,</span><br><span class="line">       <span class="hljs-keyword">TABLE</span>(</span><br><span class="line">       DBMS_XPLAN.DISPLAY_SQL_PLAN_BASELINE(b.sql_handle,b.plan_name,<span class="hljs-string">'all'</span>)</span><br><span class="line">       ) t</span><br><span class="line"><span class="hljs-keyword">WHERE</span>  s.EXACT_MATCHING_SIGNATURE=b.SIGNATURE</span><br><span class="line"><span class="hljs-keyword">AND</span>    b.PLAN_NAME=s.SQL_PLAN_BASELINE</span><br><span class="line"><span class="hljs-keyword">AND</span>    s.SQL_ID=<span class="hljs-string">'&amp;SQL_ID'</span>;</span><br></pre></td></tr></table></figure></p>
+<h3 id="2-5-发展基线"><a href="#2-5-发展基线" class="headerlink" title="2.5 发展基线"></a>2.5 发展基线</h3><p>Plan Evolution(发展基线)就是优化器识别新执行计划(unaccepted)并加入到基线的过程。<br>创建发展基线的大致步骤（12c）：</p>
+<ul>
+<li>Create Evolve Task (dbms_spm.create_evolve_task)</li>
+<li>Execute Evolve Task (dbms_spm.execute_evolve_task)</li>
+<li>Report Evolve Task (dbms_spm.report_evolve_task)</li>
+<li>Accept Recommendation (dbms_spm.accept_sql_plan_baseline)</li>
+</ul>
+<h4 id="2-5-1-手工创建发展基线-12c"><a href="#2-5-1-手工创建发展基线-12c" class="headerlink" title="2.5.1 手工创建发展基线(12c)"></a>2.5.1 手工创建发展基线(12c)</h4><ul>
+<li>创建evolve任务</li>
+</ul>
+<figure class="highlight sql hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line">VARIABLE cnt NUMBER</span><br><span class="line">VARIABLE tk_name VARCHAR2(50)</span><br><span class="line">VARIABLE exe_name VARCHAR2(50)</span><br><span class="line">VARIABLE evol_out CLOB</span><br><span class="line"></span><br><span class="line"><span class="hljs-keyword">EXECUTE</span> :tk_name := DBMS_SPM.CREATE_EVOLVE_TASK(</span><br><span class="line">  sql_handle =&gt; <span class="hljs-string">'&amp;SQL_HANDLE'</span>,</span><br><span class="line">  plan_name  =&gt; <span class="hljs-string">'&amp;SQL_PLAN'</span>);</span><br><span class="line"></span><br><span class="line"><span class="hljs-keyword">SELECT</span> :tk_name <span class="hljs-keyword">FROM</span> DUAL;</span><br></pre></td></tr></table></figure>
+<ul>
+<li>执行该任务</li>
+</ul>
+<figure class="highlight sql hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"><span class="hljs-keyword">EXECUTE</span> :exe_name :=DBMS_SPM.EXECUTE_EVOLVE_TASK(task_name=&gt;:tk_name);</span><br><span class="line"><span class="hljs-keyword">SELECT</span> :exe_name <span class="hljs-keyword">FROM</span> DUAL;</span><br></pre></td></tr></table></figure>
+<ul>
+<li>查看报告</li>
+</ul>
+<figure class="highlight sql hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"><span class="hljs-keyword">EXECUTE</span> :evol_out := DBMS_SPM.REPORT_EVOLVE_TASK( task_name=&gt;:tk_name, execution_name=&gt;:exe_name );</span><br><span class="line"><span class="hljs-keyword">SELECT</span> :evol_out <span class="hljs-keyword">FROM</span> DUAL;</span><br></pre></td></tr></table></figure>
+<ul>
+<li>实施推荐</li>
+</ul>
+<figure class="highlight sql hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="hljs-keyword">EXECUTE</span> :cnt := DBMS_SPM.IMPLEMENT_EVOLVE_TASK( task_name=&gt;:tk_name, execution_name=&gt;:exe_name );</span><br></pre></td></tr></table></figure>
+<h4 id="2-5-2-手动发展基线-11g"><a href="#2-5-2-手动发展基线-11g" class="headerlink" title="2.5.2 手动发展基线(11g)"></a>2.5.2 手动发展基线(11g)</h4><figure class="highlight sql hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">var report clob;</span><br><span class="line">exec :report := dbms_spm.evolve_sql_plan_baseline('&amp;SQL_HANDLE');</span><br><span class="line">print :report</span><br></pre></td></tr></table></figure>
+<h4 id="2-5-3-自动发展基线-12c"><a href="#2-5-3-自动发展基线-12c" class="headerlink" title="2.5.3 自动发展基线(12c)"></a>2.5.3 自动发展基线(12c)</h4><p>通过<code>SYS_AUTO_SPM_EVOLVE_TASK</code>可以在12c中自动发展基线，</p>
+<p>查看当前自动任务配置信息：<br><figure class="highlight sql hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line">COLUMN parameter_name FORMAT A25</span><br><span class="line">COLUMN parameter_value FORMAT a25</span><br><span class="line"></span><br><span class="line"><span class="hljs-keyword">SELECT</span> parameter_name, parameter_value</span><br><span class="line"><span class="hljs-keyword">FROM</span>   dba_advisor_parameters</span><br><span class="line"><span class="hljs-keyword">WHERE</span>  task_name = <span class="hljs-string">'SYS_AUTO_SPM_EVOLVE_TASK'</span></span><br><span class="line"><span class="hljs-keyword">AND</span>    parameter_value != <span class="hljs-string">'UNUSED'</span></span><br><span class="line"><span class="hljs-keyword">ORDER</span> <span class="hljs-keyword">BY</span> parameter_name;</span><br></pre></td></tr></table></figure></p>
+<p>关闭自动任务:<br><figure class="highlight sql hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line"><span class="hljs-keyword">BEGIN</span></span><br><span class="line">  DBMS_SPM.set_evolve_task_parameter(</span><br><span class="line">    task_name =&gt; <span class="hljs-string">'SYS_AUTO_SPM_EVOLVE_TASK'</span>,</span><br><span class="line">    parameter =&gt; <span class="hljs-string">'ACCEPT_PLANS'</span>,</span><br><span class="line">    <span class="hljs-keyword">value</span>     =&gt; <span class="hljs-string">'FALSE'</span>);</span><br><span class="line"><span class="hljs-keyword">END</span>;</span><br><span class="line">/</span><br></pre></td></tr></table></figure></p>
+<p>查看自动任务执行结果：<br><figure class="highlight sql hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"><span class="hljs-keyword">SET</span> <span class="hljs-keyword">LONG</span> <span class="hljs-number">1000000</span> PAGESIZE <span class="hljs-number">1000</span> LONGCHUNKSIZE <span class="hljs-number">100</span> LINESIZE <span class="hljs-number">100</span></span><br><span class="line"><span class="hljs-keyword">SELECT</span> DBMS_SPM.report_auto_evolve_task <span class="hljs-keyword">FROM</span>  dual;</span><br></pre></td></tr></table></figure></p>
+<h3 id="2-6-删除基线"><a href="#2-6-删除基线" class="headerlink" title="2.6 删除基线"></a>2.6 删除基线</h3><figure class="highlight sql hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br></pre></td><td class="code"><pre><span class="line"><span class="hljs-comment">--指定某一个baseline删除</span></span><br><span class="line">dbms_spm.drop_sql_plan_baseline(sql_handle=&gt;'&amp;SQL_HANDLE',plan_name=&gt;'&amp;SQL_PLAN')</span><br><span class="line"></span><br><span class="line"><span class="hljs-comment">--根据sql handle删除</span></span><br><span class="line"><span class="hljs-keyword">DECLARE</span></span><br><span class="line">  v_dropped_plans <span class="hljs-built_in">number</span>;</span><br><span class="line"><span class="hljs-keyword">BEGIN</span></span><br><span class="line">  v_dropped_plans := DBMS_SPM.DROP_SQL_PLAN_BASELINE (</span><br><span class="line">     sql_handle =&gt; <span class="hljs-string">'&amp;SQL_HANDLE'</span></span><br><span class="line">);</span><br><span class="line">  DBMS_OUTPUT.PUT_LINE('dropped ' || v_dropped_plans || ' plans');</span><br><span class="line"><span class="hljs-keyword">END</span>;</span><br><span class="line">/</span><br><span class="line"></span><br><span class="line"><span class="hljs-comment">--或者指定plan name删除</span></span><br><span class="line"><span class="hljs-keyword">SET</span> SERVEROUTPUT <span class="hljs-keyword">ON</span></span><br><span class="line"><span class="hljs-keyword">DECLARE</span></span><br><span class="line">  l_plans_dropped  PLS_INTEGER;</span><br><span class="line"><span class="hljs-keyword">BEGIN</span></span><br><span class="line">  l_plans_dropped := DBMS_SPM.drop_sql_plan_baseline (</span><br><span class="line">    sql_handle =&gt; <span class="hljs-literal">NULL</span>,</span><br><span class="line">    plan_name  =&gt; <span class="hljs-string">'&amp;SQL_PLAN'</span>);</span><br><span class="line">  DBMS_OUTPUT.put_line(l_plans_dropped);</span><br><span class="line"><span class="hljs-keyword">END</span>;</span><br><span class="line">/</span><br></pre></td></tr></table></figure>
+<h3 id="2-7-管理SBM"><a href="#2-7-管理SBM" class="headerlink" title="2.7 管理SBM"></a>2.7 管理SBM</h3><ul>
+<li>查询当前SBM配置</li>
+</ul>
+<figure class="highlight sql hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line"><span class="hljs-keyword">SELECT</span> PARAMETER_NAME, PARAMETER_VALUE <span class="hljs-keyword">FROM</span> DBA_SQL_MANAGEMENT_CONFIG;</span><br><span class="line"></span><br><span class="line">PARAMETER_NAME					   PARAMETER_VALUE</span><br><span class="line"><span class="hljs-comment">-------------------------------------------------- ---------------</span></span><br><span class="line">SPACE_BUDGET_PERCENT						10</span><br><span class="line">PLAN_RETENTION_WEEKS						53</span><br></pre></td></tr></table></figure>
+<p>上述结果为默认配置，SBM可使用的空间上限为sysaux的10%，保留期限为53周。</p>
+<ul>
+<li>修改SBM配置</li>
+</ul>
+<figure class="highlight sql hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="hljs-comment">--修改空间限制为30%:</span></span><br><span class="line"><span class="hljs-keyword">EXECUTE</span> DBMS_SPM.CONFIGURE(<span class="hljs-string">'space_budget_percent'</span>,<span class="hljs-number">30</span>);</span><br><span class="line"></span><br><span class="line"><span class="hljs-comment">--修改SBM保留期限, 修改为105周，默认为53周</span></span><br><span class="line"><span class="hljs-keyword">EXECUTE</span> DBMS_SPM.CONFIGURE(<span class="hljs-string">'plan_retention_weeks'</span>,<span class="hljs-number">105</span>);</span><br></pre></td></tr></table></figure>
+<p><br><br>Reference:<br><a href="https://www.oracle.com/technetwork/database/bi-datawarehousing/twp-sql-plan-mgmt-12c-1963237.pdf" target="_blank" rel="noopener">SQL Plan Management with Oracle Database 12c Release 2</a><br><a href="https://docs.oracle.com/database/121/TGSQL/tgsql_spm.htm#TGSQL94621" target="_blank" rel="noopener">Managing SQL Plan Baselines</a><br><a href="https://support.oracle.com/epmos/faces/DocumentDisplay?_afrLoop=381083850018605&amp;id=789888.1&amp;displayIndex=10&amp;_afrWindowMode=0&amp;_adf.ctrl-state=sc2p27a0x_77#GOAL" target="_blank" rel="noopener">How to Load SQL Plans into SQL Plan Management (SPM) from the Automatic Workload Repository (AWR) (Doc ID 789888.1)</a><br><a href="https://support.oracle.com/epmos/faces/DocumentDisplay?_afrLoop=381244985698664&amp;id=1337116.1&amp;displayIndex=14&amp;_afrWindowMode=0&amp;_adf.ctrl-state=sc2p27a0x_216#aref_section31" target="_blank" rel="noopener">White Papers and Blog Entries for Oracle Optimizer (Doc ID 1337116.1)</a><br><a href="https://support.oracle.com/epmos/faces/DocumentDisplay?_afrLoop=381333370628274&amp;parent=DOCUMENT&amp;sourceId=1905305.1&amp;id=456518.1&amp;_afrWindowMode=0&amp;_adf.ctrl-state=sc2p27a0x_322" target="_blank" rel="noopener">How to Use SQL Plan Management (SPM) - Plan Stability Worked Example (Doc ID 456518.1)</a></p>
+<p><strong>EOF</strong></p>
+
+    
+    </div>
+    
+    <div class="columns is-variable is-1 is-multiline is-mobile">
+    
+        <span class="column is-narrow"><a class="tag is-light article-tag" href="/tags/tuning/">#tuning</a></span>
+    
+        <span class="column is-narrow"><a class="tag is-light article-tag" href="/tags/spm/">#spm</a></span>
+    
+    </div>
+    
+    
+    <div class="columns is-mobile is-multiline article-nav">
+        <span class="column is-12-mobile is-half-desktop  article-nav-prev">
+            
+            <a href="/Remote-Clone-Database-into-Existent-CDB.html">远程复制数据库到现有的CDB</a>
+            
+        </span>
+        <span class="column is-12-mobile is-half-desktop  article-nav-next">
+            
+            <a href="/fixed-table-statistics.html">Fixed Table统计信息</a>
+            
+        </span>
+    </div>
+    
+</article>
+
+
+
+
+    </div>
+</section>
+    <footer class="footer footer-padding">
+    <div class="container content">
+            <div class="column is-narrow has-text-centered is-size-7-mobile">
+                &copy;  <a href="/">Kyun Kong&nbsp;</a>
+                2013 - 2019
+            </div>
+    </div>
+</footer>
+
+    <script src="//cdnjs.cloudflare.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
+<script src="//cdnjs.cloudflare.com/ajax/libs/moment.js/2.22.2/moment-with-locales.min.js"></script>
+
+<!-- test if the browser is outdated
+<div id="outdated">
+    <h6>Your browser is out-of-date!</h6>
+    <p>Update your browser to view this website correctly. <a id="btnUpdateBrowser" href="http://outdatedbrowser.com/">Update my browser now </a></p>
+    <p class="last"><a href="#" id="btnCloseUpdateBrowser" title="Close">&times;</a></p>
+</div>
+<script src="//cdnjs.cloudflare.com/ajax/libs/outdated-browser/1.1.5/outdatedbrowser.min.js"></script>
+<script>
+    $(document).ready(function () {
+        // plugin function, place inside DOM ready function
+        outdatedBrowser({
+            bgColor: '#f25648',
+            color: '#ffffff',
+            lowerThan: 'flex'
+        })
+    });
+</script>
+-->
+
+<script>
+    window.FontAwesomeConfig = {
+        searchPseudoElements: true
+    }
+    moment.locale("en-AU");
+</script>
+
+
+    
+    
+    
+    
+    
+    
+
+    
+
+
+<script src="/js/script.js"></script>
+
+
+    
+    <div class="searchbox ins-search">
+    <div class="searchbox-mask"></div>
+    <div class="searchbox-container ins-search-container">
+        <div class="searchbox-input-wrapper">
+            <input type="text" class="searchbox-input ins-search-input" placeholder="Type something..." />
+            <span class="searchbox-close ins-close ins-selectable"><i class="fa fa-times-circle"></i></span>
+        </div>
+        <div class="searchbox-result-wrapper ins-section-wrapper">
+            <div class="ins-section-container"></div>
+        </div>
+    </div>
+</div>
+<script>
+    (function (window) {
+        var INSIGHT_CONFIG = {
+            TRANSLATION: {
+                POSTS: 'Posts',
+                PAGES: 'Pages',
+                CATEGORIES: 'Categories',
+                TAGS: 'Tags',
+                UNTITLED: '(Untitled)',
+            },
+            CONTENT_URL: '/content.json',
+        };
+        window.INSIGHT_CONFIG = INSIGHT_CONFIG;
+    })(window);
+</script>
+<script src="/js/insight.js"></script>
+    
+</body>
+</html>

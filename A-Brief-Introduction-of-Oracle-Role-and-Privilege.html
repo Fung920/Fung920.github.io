@@ -1,0 +1,242 @@
+<!DOCTYPE html>
+<html class="has-navbar-fixed-top">
+<head>
+    <meta charset="utf-8">
+<title>A Brief Introduction of Oracle Role and Privilege - My Notebook</title>
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+
+<link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/outdated-browser/1.1.5/outdatedbrowser.min.css">
+
+
+<meta name="description" content="Oracle memoranda">
+
+
+
+<meta name="keywords" content="oracle, database">
+
+
+
+
+
+
+
+<link rel="icon" href="/images/favicon.ico">
+
+
+<link rel="stylesheet" href="//fonts.googleapis.com/css?family=Ovo|Source+Code+Pro|Calibri|Ubuntu">
+<link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/bulma/0.6.2/css/bulma.min.css">
+
+
+
+<link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/highlight.js/9.12.0/styles/atom-one-light.min.css">
+
+<link rel="stylesheet" href="/css/style.css">
+
+<script defer src="//use.fontawesome.com/releases/v5.0.8/js/all.js"></script>
+
+
+    
+    
+    
+    
+    
+    
+
+    
+
+
+</head>
+<body>
+    
+<nav class="navbar is-transparent is-fixed-top navbar-main" role="navigation" aria-label="main navigation">
+    <div class="container">
+        <div class="navbar-brand">
+            <a class="navbar-item navbar-logo" href="/">
+                
+                    
+                    My Notebook
+                    
+                
+            </a>
+            <div class="navbar-burger">
+                <span></span>
+                <span></span>
+                <span></span>
+            </div>
+        </div>
+        
+        <div class="navbar-menu navbar-start">
+            
+            <a class="navbar-item "
+               href="/">Home</a>
+            
+            <a class="navbar-item "
+               href="/about">About</a>
+            
+        </div>
+        
+        <div class="navbar-menu navbar-end">
+            
+            <a class="navbar-item search" title="Search" href="javascript:;">
+                <i class="fas fa-search"></i>
+            </a>
+            
+            
+            
+        </div>
+    </div>
+</nav>
+
+    <section class="section">
+    <div class="container">
+    <article class="article content gallery" itemscope itemprop="blogPost">
+    <h1 class="article-title is-size-3 is-size-4-mobile" itemprop="name">
+        
+            A Brief Introduction of Oracle Role and Privilege
+        
+    </h1>
+    <div class="article-meta columns is-variable is-1 is-multiline is-mobile is-size-7-mobile">
+        <span class="column is-narrow">
+            <time datetime="2019-08-07T13:13:38.000Z" itemprop="datePublished">Aug 7 2019</time>
+        </span>
+        
+        <span class="column is-narrow article-category">
+            <i class="far fa-folder"></i>
+            <a class="article-category-link" href="/categories/oracle/">oracle</a>
+        </span>
+        
+        
+    </div>
+    <div class="article-entry is-size-6-mobile" itemprop="articleBody">
+    
+        <p>This brief introduction will cover with the fundamentals of Oracle privilege as well as roles, including how to retrieve all privilege for a user, and how to grant necessary roles or privilege to a user.<br><a id="more"></a></p>
+<h1 id="1-Basic-Views-of-privileges-and-roles"><a href="#1-Basic-Views-of-privileges-and-roles" class="headerlink" title="1. Basic Views of privileges and roles"></a>1. Basic Views of privileges and roles</h1><ul>
+<li>DBA_SYS_PRIVS</li>
+<li>DBA_TAB_PRIVS</li>
+<li>DBA_ROLE_PRIVS</li>
+<li>ROLE_SYS_PRIVS</li>
+<li>SESSION_PRIVS</li>
+</ul>
+<p><strong><em>When granting a privilege to user, the PRIVILEGE will infect immediate; but when granting a role to a user, already connected session have to reconnect or use <code>set role all</code> to refresh the new granted role privileges</em></strong></p>
+<h1 id="2-Script-to-find-all-privileges"><a href="#2-Script-to-find-all-privileges" class="headerlink" title="2. Script to find all privileges"></a>2. Script to find all privileges</h1><figure class="highlight sql hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line"><span class="hljs-keyword">select</span> privilege</span><br><span class="line">  <span class="hljs-keyword">from</span> dba_sys_privs</span><br><span class="line"> <span class="hljs-keyword">where</span> grantee = <span class="hljs-keyword">upper</span>(<span class="hljs-string">'&amp;1'</span>)</span><br><span class="line"><span class="hljs-keyword">union</span></span><br><span class="line"><span class="hljs-keyword">select</span> privilege</span><br><span class="line">  <span class="hljs-keyword">from</span> dba_sys_privs</span><br><span class="line"> <span class="hljs-keyword">where</span> grantee <span class="hljs-keyword">in</span></span><br><span class="line">       (<span class="hljs-keyword">select</span> granted_role <span class="hljs-keyword">from</span> dba_role_privs <span class="hljs-keyword">where</span> grantee = <span class="hljs-keyword">upper</span>(<span class="hljs-string">'&amp;1'</span>));</span><br></pre></td></tr></table></figure>
+<h1 id="3-Analysis-of-specific-roles"><a href="#3-Analysis-of-specific-roles" class="headerlink" title="3. Analysis of specific roles"></a>3. Analysis of specific roles</h1><p>Roles privileges can be retrieved from <code>role_sys_privs</code> view:</p>
+<p><strong><em>Resource role does not have create view privilege, but have unlimited tablespace</em></strong></p>
+<figure class="highlight sql hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br></pre></td><td class="code"><pre><span class="line">sys@LINORA&gt; select PRIVILEGE, role from role_sys_privs where role = upper('&amp;1');</span><br><span class="line">Enter value for 1: connect</span><br><span class="line">old   1: <span class="hljs-keyword">select</span> PRIVILEGE, <span class="hljs-keyword">role</span> <span class="hljs-keyword">from</span> role_sys_privs <span class="hljs-keyword">where</span> <span class="hljs-keyword">role</span> = <span class="hljs-keyword">upper</span>(<span class="hljs-string">'&amp;1'</span>)</span><br><span class="line"><span class="hljs-keyword">new</span>   <span class="hljs-number">1</span>: <span class="hljs-keyword">select</span> PRIVILEGE, <span class="hljs-keyword">role</span> <span class="hljs-keyword">from</span> role_sys_privs <span class="hljs-keyword">where</span> <span class="hljs-keyword">role</span> = <span class="hljs-keyword">upper</span>(<span class="hljs-string">'connect'</span>)</span><br><span class="line"></span><br><span class="line">PRIVILEGE			 <span class="hljs-keyword">ROLE</span></span><br><span class="line"><span class="hljs-comment">--------------------- ----------------------</span></span><br><span class="line"><span class="hljs-keyword">SET</span> <span class="hljs-keyword">CONTAINER</span>			 <span class="hljs-keyword">CONNECT</span></span><br><span class="line"><span class="hljs-keyword">CREATE</span> <span class="hljs-keyword">SESSION</span>			 <span class="hljs-keyword">CONNECT</span></span><br><span class="line"></span><br><span class="line"><span class="hljs-comment">-- resource role</span></span><br><span class="line">Enter <span class="hljs-keyword">value</span> <span class="hljs-keyword">for</span> <span class="hljs-number">1</span>: <span class="hljs-keyword">resource</span></span><br><span class="line"><span class="hljs-keyword">old</span>   <span class="hljs-number">1</span>: <span class="hljs-keyword">select</span> PRIVILEGE, <span class="hljs-keyword">role</span> <span class="hljs-keyword">from</span> role_sys_privs <span class="hljs-keyword">where</span> <span class="hljs-keyword">role</span> = <span class="hljs-keyword">upper</span>(<span class="hljs-string">'&amp;1'</span>)</span><br><span class="line"><span class="hljs-keyword">new</span>   <span class="hljs-number">1</span>: <span class="hljs-keyword">select</span> PRIVILEGE, <span class="hljs-keyword">role</span> <span class="hljs-keyword">from</span> role_sys_privs <span class="hljs-keyword">where</span> <span class="hljs-keyword">role</span> = <span class="hljs-keyword">upper</span>(<span class="hljs-string">'resource'</span>)</span><br><span class="line"></span><br><span class="line">PRIVILEGE			 <span class="hljs-keyword">ROLE</span></span><br><span class="line"><span class="hljs-comment">------------------ --------------------------------------------------</span></span><br><span class="line"><span class="hljs-keyword">CREATE</span> <span class="hljs-keyword">TRIGGER</span>			 <span class="hljs-keyword">RESOURCE</span></span><br><span class="line"><span class="hljs-keyword">CREATE</span> <span class="hljs-keyword">SEQUENCE</span> 		 <span class="hljs-keyword">RESOURCE</span></span><br><span class="line"><span class="hljs-keyword">CREATE</span> <span class="hljs-keyword">TYPE</span>			 <span class="hljs-keyword">RESOURCE</span></span><br><span class="line"><span class="hljs-keyword">CREATE</span> <span class="hljs-keyword">PROCEDURE</span>		 <span class="hljs-keyword">RESOURCE</span></span><br><span class="line"><span class="hljs-keyword">CREATE</span> CLUSTER			 <span class="hljs-keyword">RESOURCE</span></span><br><span class="line"><span class="hljs-keyword">CREATE</span> <span class="hljs-keyword">OPERATOR</span> 		 <span class="hljs-keyword">RESOURCE</span></span><br><span class="line"><span class="hljs-keyword">CREATE</span> <span class="hljs-keyword">INDEXTYPE</span>		 <span class="hljs-keyword">RESOURCE</span></span><br><span class="line"><span class="hljs-keyword">CREATE</span> <span class="hljs-keyword">TABLE</span>			 <span class="hljs-keyword">RESOURCE</span></span><br><span class="line"></span><br><span class="line"><span class="hljs-comment">-- olap user role</span></span><br><span class="line">Enter <span class="hljs-keyword">value</span> <span class="hljs-keyword">for</span> <span class="hljs-number">1</span>: olap_user</span><br><span class="line"><span class="hljs-keyword">old</span>   <span class="hljs-number">1</span>: <span class="hljs-keyword">select</span> PRIVILEGE, <span class="hljs-keyword">role</span> <span class="hljs-keyword">from</span> role_sys_privs <span class="hljs-keyword">where</span> <span class="hljs-keyword">role</span> = <span class="hljs-keyword">upper</span>(<span class="hljs-string">'&amp;1'</span>)</span><br><span class="line"><span class="hljs-keyword">new</span>   <span class="hljs-number">1</span>: <span class="hljs-keyword">select</span> PRIVILEGE, <span class="hljs-keyword">role</span> <span class="hljs-keyword">from</span> role_sys_privs <span class="hljs-keyword">where</span> <span class="hljs-keyword">role</span> = <span class="hljs-keyword">upper</span>(<span class="hljs-string">'olap_user'</span>)</span><br><span class="line"></span><br><span class="line">PRIVILEGE					<span class="hljs-keyword">ROLE</span></span><br><span class="line"><span class="hljs-comment">------------------------ --------------------------------------------------</span></span><br><span class="line"><span class="hljs-keyword">CREATE</span> <span class="hljs-keyword">CUBE</span> <span class="hljs-keyword">BUILD</span> PROCESS	 OLAP_USER</span><br><span class="line"><span class="hljs-keyword">CREATE</span> <span class="hljs-keyword">CUBE</span> <span class="hljs-keyword">DIMENSION</span>	 	 OLAP_USER</span><br><span class="line"><span class="hljs-keyword">CREATE</span> MEASURE FOLDER	 	 OLAP_USER</span><br><span class="line"><span class="hljs-keyword">CREATE</span> JOB		 OLAP_USER</span><br><span class="line"><span class="hljs-keyword">CREATE</span> <span class="hljs-keyword">CUBE</span>		 OLAP_USER</span><br><span class="line"><span class="hljs-keyword">CREATE</span> <span class="hljs-keyword">SEQUENCE</span>	 OLAP_USER</span><br><span class="line"><span class="hljs-keyword">CREATE</span> <span class="hljs-keyword">VIEW</span>		 OLAP_USER</span><br><span class="line"><span class="hljs-keyword">CREATE</span> <span class="hljs-keyword">TABLE</span>		 OLAP_USER</span><br></pre></td></tr></table></figure>
+<p>Based on above information, we can grant application user <code>OLAP_USER</code>, <code>CONNECT</code> and <code>RESOURCE</code> roles.</p>
+<h1 id="4-Identify-users-with-DBA-role"><a href="#4-Identify-users-with-DBA-role" class="headerlink" title="4. Identify users with DBA role"></a>4. Identify users with DBA role</h1><figure class="highlight sql hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line"><span class="hljs-keyword">set</span> line <span class="hljs-number">200</span></span><br><span class="line"><span class="hljs-keyword">col</span> grantee <span class="hljs-keyword">for</span> a30</span><br><span class="line"><span class="hljs-keyword">select</span> * <span class="hljs-keyword">from</span> dba_role_privs <span class="hljs-keyword">where</span> granted_role=<span class="hljs-string">'DBA'</span>;</span><br></pre></td></tr></table></figure>
+<p><strong>EOF</strong></p>
+
+    
+    </div>
+    
+    <div class="columns is-variable is-1 is-multiline is-mobile">
+    
+        <span class="column is-narrow"><a class="tag is-light article-tag" href="/tags/fundamentals/">#fundamentals</a></span>
+    
+    </div>
+    
+    
+    <div class="columns is-mobile is-multiline article-nav">
+        <span class="column is-12-mobile is-half-desktop  article-nav-prev">
+            
+            <a href="/rman-compression-and-unused-block-compression.html">RMAN Compression And Unused Block Compression</a>
+            
+        </span>
+        <span class="column is-12-mobile is-half-desktop  article-nav-next">
+            
+            <a href="/Security-Hardening-of-Oracle-Database.html">Security Hardening of Oracle Database</a>
+            
+        </span>
+    </div>
+    
+</article>
+
+
+
+
+    </div>
+</section>
+    <footer class="footer footer-padding">
+    <div class="container content">
+            <div class="column is-narrow has-text-centered is-size-7-mobile">
+                &copy;  <a href="/">Kyun Kong&nbsp;</a>
+                2013 - 2019
+            </div>
+    </div>
+</footer>
+
+    <script src="//cdnjs.cloudflare.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
+<script src="//cdnjs.cloudflare.com/ajax/libs/moment.js/2.22.2/moment-with-locales.min.js"></script>
+
+<!-- test if the browser is outdated
+<div id="outdated">
+    <h6>Your browser is out-of-date!</h6>
+    <p>Update your browser to view this website correctly. <a id="btnUpdateBrowser" href="http://outdatedbrowser.com/">Update my browser now </a></p>
+    <p class="last"><a href="#" id="btnCloseUpdateBrowser" title="Close">&times;</a></p>
+</div>
+<script src="//cdnjs.cloudflare.com/ajax/libs/outdated-browser/1.1.5/outdatedbrowser.min.js"></script>
+<script>
+    $(document).ready(function () {
+        // plugin function, place inside DOM ready function
+        outdatedBrowser({
+            bgColor: '#f25648',
+            color: '#ffffff',
+            lowerThan: 'flex'
+        })
+    });
+</script>
+-->
+
+<script>
+    window.FontAwesomeConfig = {
+        searchPseudoElements: true
+    }
+    moment.locale("en-AU");
+</script>
+
+
+    
+    
+    
+    
+    
+    
+
+    
+
+
+<script src="/js/script.js"></script>
+
+
+    
+    <div class="searchbox ins-search">
+    <div class="searchbox-mask"></div>
+    <div class="searchbox-container ins-search-container">
+        <div class="searchbox-input-wrapper">
+            <input type="text" class="searchbox-input ins-search-input" placeholder="Type something..." />
+            <span class="searchbox-close ins-close ins-selectable"><i class="fa fa-times-circle"></i></span>
+        </div>
+        <div class="searchbox-result-wrapper ins-section-wrapper">
+            <div class="ins-section-container"></div>
+        </div>
+    </div>
+</div>
+<script>
+    (function (window) {
+        var INSIGHT_CONFIG = {
+            TRANSLATION: {
+                POSTS: 'Posts',
+                PAGES: 'Pages',
+                CATEGORIES: 'Categories',
+                TAGS: 'Tags',
+                UNTITLED: '(Untitled)',
+            },
+            CONTENT_URL: '/content.json',
+        };
+        window.INSIGHT_CONFIG = INSIGHT_CONFIG;
+    })(window);
+</script>
+<script src="/js/insight.js"></script>
+    
+</body>
+</html>

@@ -1,0 +1,256 @@
+<!DOCTYPE html>
+<html class="has-navbar-fixed-top">
+<head>
+    <meta charset="utf-8">
+<title>利用rman增量备份恢复adg gap - My Notebook</title>
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+
+<link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/outdated-browser/1.1.5/outdatedbrowser.min.css">
+
+
+<meta name="description" content="Oracle memoranda">
+
+
+
+<meta name="keywords" content="oracle, database">
+
+
+
+
+
+
+
+<link rel="icon" href="/images/favicon.ico">
+
+
+<link rel="stylesheet" href="//fonts.googleapis.com/css?family=Ovo|Source+Code+Pro|Calibri|Ubuntu">
+<link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/bulma/0.6.2/css/bulma.min.css">
+
+
+
+<link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/highlight.js/9.12.0/styles/atom-one-light.min.css">
+
+<link rel="stylesheet" href="/css/style.css">
+
+<script defer src="//use.fontawesome.com/releases/v5.0.8/js/all.js"></script>
+
+
+    
+    
+    
+    
+    
+    
+
+    
+
+
+</head>
+<body>
+    
+<nav class="navbar is-transparent is-fixed-top navbar-main" role="navigation" aria-label="main navigation">
+    <div class="container">
+        <div class="navbar-brand">
+            <a class="navbar-item navbar-logo" href="/">
+                
+                    
+                    My Notebook
+                    
+                
+            </a>
+            <div class="navbar-burger">
+                <span></span>
+                <span></span>
+                <span></span>
+            </div>
+        </div>
+        
+        <div class="navbar-menu navbar-start">
+            
+            <a class="navbar-item "
+               href="/">Home</a>
+            
+            <a class="navbar-item "
+               href="/about">About</a>
+            
+        </div>
+        
+        <div class="navbar-menu navbar-end">
+            
+            <a class="navbar-item search" title="Search" href="javascript:;">
+                <i class="fas fa-search"></i>
+            </a>
+            
+            
+            
+        </div>
+    </div>
+</nav>
+
+    <section class="section">
+    <div class="container">
+    <article class="article content gallery" itemscope itemprop="blogPost">
+    <h1 class="article-title is-size-3 is-size-4-mobile" itemprop="name">
+        
+            利用rman增量备份恢复adg gap
+        
+    </h1>
+    <div class="article-meta columns is-variable is-1 is-multiline is-mobile is-size-7-mobile">
+        <span class="column is-narrow">
+            <time datetime="2019-09-04T09:43:08.000Z" itemprop="datePublished">Sep 4 2019</time>
+        </span>
+        
+        <span class="column is-narrow article-category">
+            <i class="far fa-folder"></i>
+            <a class="article-category-link" href="/categories/oracle/">oracle</a>
+        </span>
+        
+        
+    </div>
+    <div class="article-entry is-size-6-mobile" itemprop="articleBody">
+    
+        <p>由于网络变更，导致部分ADG链路中断，在部分数据库上，没有配置RMAN的删除归档策略，主库归档已经被删除，备库无法继续应用日志。</p>
+<h2 id="1-错误描述"><a href="#1-错误描述" class="headerlink" title="1. 错误描述"></a>1. 错误描述</h2><p>使用<code>dgmgrl</code>监控adg状态，出现以下错误：<br><figure class="highlight sql hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br></pre></td><td class="code"><pre><span class="line">DGMGRL&gt; show configuration;</span><br><span class="line">Configuration - ADG_CONFIG</span><br><span class="line">  Protection Mode: MaxAvailability</span><br><span class="line">  Databases:</span><br><span class="line">    CDB01 - Primary database</span><br><span class="line">      Error: ORA-16810: multiple errors or warnings detected for the database</span><br><span class="line">    CDB02 - Physical standby database</span><br><span class="line">Fast-<span class="hljs-keyword">Start</span> <span class="hljs-keyword">Failover</span>: DISABLED</span><br><span class="line">Configuration <span class="hljs-keyword">Status</span>:</span><br><span class="line"><span class="hljs-keyword">ERROR</span></span><br><span class="line"></span><br><span class="line">DGMGRL&gt; <span class="hljs-keyword">show</span> <span class="hljs-keyword">database</span> <span class="hljs-string">'CDB01'</span>;</span><br><span class="line">Database - CDB01</span><br><span class="line">  Role:            PRIMARY</span><br><span class="line">  Intended State:  TRANSPORT-ON</span><br><span class="line">  Instance(s):</span><br><span class="line">      cdb011</span><br><span class="line">      cdb012</span><br><span class="line">  Database Error(s):</span><br><span class="line">    ORA-16783: cannot resolve gap for database cdb02</span><br><span class="line">  Database Warning(s):</span><br><span class="line">    ORA-16629: database reports a different protection level from the protection mode</span><br><span class="line">Database Status:</span><br><span class="line">ERROR</span><br></pre></td></tr></table></figure></p>
+<p>通过以下SQL确实有gap：<br><figure class="highlight sql hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br></pre></td><td class="code"><pre><span class="line"><span class="hljs-keyword">set</span> line <span class="hljs-number">200</span> pagesize <span class="hljs-number">200</span></span><br><span class="line"><span class="hljs-keyword">col</span> hostname <span class="hljs-keyword">for</span> a30</span><br><span class="line"><span class="hljs-keyword">with</span></span><br><span class="line">    db <span class="hljs-keyword">as</span> (<span class="hljs-keyword">SELECT</span> <span class="hljs-keyword">NAME</span> DB_NAME, database_role db_role <span class="hljs-keyword">FROM</span> GV$<span class="hljs-keyword">DATABASE</span>),</span><br><span class="line">    inst <span class="hljs-keyword">as</span> (<span class="hljs-keyword">SELECT</span> inst_id,</span><br><span class="line">            <span class="hljs-keyword">UPPER</span>(<span class="hljs-keyword">SUBSTR</span>(HOST_NAME, <span class="hljs-number">1</span>, (<span class="hljs-keyword">DECODE</span>(<span class="hljs-keyword">INSTR</span>(HOST_NAME, <span class="hljs-string">'.'</span>), <span class="hljs-number">0</span>, <span class="hljs-keyword">LENGTH</span>(HOST_NAME), (<span class="hljs-keyword">INSTR</span>(HOST_NAME, <span class="hljs-string">'.'</span>) - <span class="hljs-number">1</span>))))) HOSTNAME</span><br><span class="line">           <span class="hljs-keyword">FROM</span> GV$<span class="hljs-keyword">INSTANCE</span>),</span><br><span class="line">    log1 <span class="hljs-keyword">as</span> (<span class="hljs-keyword">SELECT</span> <span class="hljs-keyword">thread</span>#, <span class="hljs-keyword">MAX</span>(<span class="hljs-keyword">SEQUENCE</span>#) LOG_ARCHIVED</span><br><span class="line">         <span class="hljs-keyword">FROM</span> GV$ARCHIVED_LOG</span><br><span class="line">         <span class="hljs-keyword">WHERE</span> DEST_ID = <span class="hljs-number">1</span></span><br><span class="line">            <span class="hljs-keyword">AND</span> <span class="hljs-keyword">ARCHIVED</span> = <span class="hljs-string">'YES'</span></span><br><span class="line">         <span class="hljs-keyword">group</span> <span class="hljs-keyword">by</span> <span class="hljs-keyword">thread</span>#),</span><br><span class="line">    <span class="hljs-keyword">log2</span> <span class="hljs-keyword">as</span>(</span><br><span class="line">        <span class="hljs-keyword">SELECT</span> <span class="hljs-keyword">thread</span>#, <span class="hljs-keyword">MAX</span>(<span class="hljs-keyword">SEQUENCE</span>#) LOG_APPLIED</span><br><span class="line">        <span class="hljs-keyword">FROM</span> GV$ARCHIVED_LOG</span><br><span class="line">        <span class="hljs-keyword">WHERE</span> DEST_ID = <span class="hljs-number">2</span></span><br><span class="line">            <span class="hljs-keyword">AND</span> APPLIED = <span class="hljs-string">'YES'</span></span><br><span class="line">        <span class="hljs-keyword">group</span> <span class="hljs-keyword">by</span> <span class="hljs-keyword">thread</span>#),</span><br><span class="line">    log3 <span class="hljs-keyword">as</span> (<span class="hljs-keyword">SELECT</span> <span class="hljs-keyword">thread</span>#,TO_CHAR(<span class="hljs-keyword">MAX</span>(COMPLETION_TIME), <span class="hljs-string">'yyyy-mm-dd HH24:MI'</span>) APPLIED_TIME</span><br><span class="line">        <span class="hljs-keyword">FROM</span> GV$ARCHIVED_LOG</span><br><span class="line">        <span class="hljs-keyword">WHERE</span> DEST_ID = <span class="hljs-number">2</span></span><br><span class="line">            <span class="hljs-keyword">AND</span> APPLIED = <span class="hljs-string">'YES'</span></span><br><span class="line">        <span class="hljs-keyword">group</span> <span class="hljs-keyword">by</span> <span class="hljs-keyword">thread</span>#)</span><br><span class="line"><span class="hljs-keyword">select</span> <span class="hljs-keyword">distinct</span> DB_NAME, db_role, HOSTNAME, LOG_ARCHIVED, LOG_APPLIED,APPLIED_TIME, LOG_ARCHIVED - LOG_APPLIED LOG_GAP</span><br><span class="line">  <span class="hljs-keyword">from</span> db, inst, log1, <span class="hljs-keyword">log2</span>, log3</span><br><span class="line"> <span class="hljs-keyword">where</span> log1.thread# = log2.thread#</span><br><span class="line">   <span class="hljs-keyword">and</span> log2.thread# = log3.thread#</span><br><span class="line">   <span class="hljs-keyword">and</span> inst.inst_id = log1.thread#;</span><br><span class="line"></span><br><span class="line">DB_NAME   DB_ROLE          HOSTNAME             LOG_ARCHIVED LOG_APPLIED APPLIED_TIME        LOG_GAP</span><br><span class="line"><span class="hljs-comment">--------- ---------------- -------------------- ------------ ----------- ---------------- ----------</span></span><br><span class="line">CDB01     PRIMARY          SZDB1                     3209        3184 2019-09-01 03:28         25</span><br><span class="line">CDB01     PRIMARY          SZDB2                     1862        1835 2019-09-01 11:22         27</span><br></pre></td></tr></table></figure></p>
+<h2 id="2-解决方案"><a href="#2-解决方案" class="headerlink" title="2. 解决方案"></a>2. 解决方案</h2><h3 id="2-1-停止standby应用日志"><a href="#2-1-停止standby应用日志" class="headerlink" title="2.1 停止standby应用日志"></a>2.1 停止standby应用日志</h3><p>Standby操作：<br><figure class="highlight sql hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">dgmgrl /</span><br><span class="line">edit database cdb02 <span class="hljs-keyword">set</span> state=<span class="hljs-string">'APPLY-OFF'</span>;</span><br><span class="line"><span class="hljs-keyword">show</span> <span class="hljs-keyword">database</span> cdb02</span><br></pre></td></tr></table></figure></p>
+<h3 id="2-2-主库从备库最后SCN进行增量备份"><a href="#2-2-主库从备库最后SCN进行增量备份" class="headerlink" title="2.2 主库从备库最后SCN进行增量备份"></a>2.2 主库从备库最后SCN进行增量备份</h3><p>备库查找当前SCN值:<br><figure class="highlight sql hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="hljs-keyword">select</span> current_scn <span class="hljs-keyword">from</span> gv$<span class="hljs-keyword">database</span>;</span><br></pre></td></tr></table></figure></p>
+<p>主库开始备份:<br><figure class="highlight hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="hljs-comment">--primary</span></span><br><span class="line">run&#123;</span><br><span class="line">allocate channel c1 type disk;</span><br><span class="line"><span class="hljs-keyword">backup</span> incremental <span class="hljs-keyword">from</span> <span class="hljs-keyword">scn</span> <span class="hljs-number">5125186024</span> <span class="hljs-keyword">database</span> <span class="hljs-keyword">format</span> <span class="hljs-string">'/tmpbak/backup/standby_%d_%t_%c_%p'</span>;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure></p>
+<h3 id="2-3-备库进行recover"><a href="#2-3-备库进行recover" class="headerlink" title="2.3 备库进行recover"></a>2.3 备库进行recover</h3><p>将备份片传送到备库相应位置，对备库进行还原:</p>
+<ul>
+<li><p>重启备库到mount状态</p>
+<figure class="highlight sql hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">srvctl <span class="hljs-keyword">stop</span> <span class="hljs-keyword">database</span> -d cdb02</span><br><span class="line">srvctl <span class="hljs-keyword">start</span> <span class="hljs-keyword">database</span> -d cdb02 -startoption <span class="hljs-keyword">mount</span></span><br></pre></td></tr></table></figure>
+</li>
+<li><p>对备库进行recover</p>
+<figure class="highlight hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line"><span class="hljs-comment">--standby</span></span><br><span class="line">rman target /</span><br><span class="line">catalog <span class="hljs-keyword">start</span> <span class="hljs-keyword">with</span> <span class="hljs-string">'/home/oracle/backup'</span>;</span><br><span class="line">run&#123;</span><br><span class="line">allocate channel c1 type disk;</span><br><span class="line">allocate channel c2 type disk;</span><br><span class="line">recover database noredo;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+</li>
+</ul>
+<h3 id="2-4-备库restore控制文件"><a href="#2-4-备库restore控制文件" class="headerlink" title="2.4 备库restore控制文件"></a>2.4 备库restore控制文件</h3><figure class="highlight sql hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line"><span class="hljs-comment">--primary</span></span><br><span class="line"><span class="hljs-comment">--主库备份standby控制文件</span></span><br><span class="line"><span class="hljs-keyword">alter</span> <span class="hljs-keyword">database</span> <span class="hljs-keyword">create</span> <span class="hljs-keyword">standby</span> <span class="hljs-keyword">controlfile</span> <span class="hljs-keyword">as</span> <span class="hljs-string">'/home/oracle/standby.ctl'</span>;</span><br><span class="line"></span><br><span class="line"><span class="hljs-comment">--重启备库，仅让其中一个节点启动到nomount状态</span></span><br><span class="line">srvctl <span class="hljs-keyword">stop</span> <span class="hljs-keyword">database</span> -d cdb02</span><br><span class="line"><span class="hljs-keyword">startup</span> nomount</span><br><span class="line"><span class="hljs-keyword">show</span> parameter control_files</span><br><span class="line"></span><br><span class="line">RMAN&gt; <span class="hljs-keyword">restore</span> <span class="hljs-keyword">controlfile</span> <span class="hljs-keyword">from</span> <span class="hljs-string">'/home/oracle/standby.ctl'</span>;</span><br></pre></td></tr></table></figure>
+<h3 id="2-5-catalog备库数据文件"><a href="#2-5-catalog备库数据文件" class="headerlink" title="2.5 catalog备库数据文件"></a>2.5 catalog备库数据文件</h3><p>控制文件重新还原过来，需要对数据库文件进行catalog，因为数据文件路径不一致需要对数据文件进行重命名。<br><figure class="highlight hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"><span class="hljs-comment">--standby</span></span><br><span class="line">MAN&gt; alter database mount;</span><br><span class="line">RMAN&gt; catalog start with '+DATA2/CDB02';</span><br><span class="line">RMAN&gt; switch database to copy;</span><br></pre></td></tr></table></figure></p>
+<p>由于路径不一致，有可能导致日志无法写入备库，建议在此时添加<code>log_file_name_convert</code>参数。<br><figure class="highlight sql hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="hljs-keyword">alter</span> <span class="hljs-keyword">system</span> <span class="hljs-keyword">set</span> log_file_name_convert =<span class="hljs-string">'+FRA/CDB01'</span>,<span class="hljs-string">'+FRA/CDB02'</span> <span class="hljs-keyword">scope</span>=<span class="hljs-keyword">spfile</span> <span class="hljs-keyword">sid</span>=<span class="hljs-string">'*'</span>;</span><br></pre></td></tr></table></figure></p>
+<p>在dgbroker启用后，同时要调整broker参数：<br><figure class="highlight sql hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">edit database cdb02 <span class="hljs-keyword">set</span> property <span class="hljs-string">'LogFileNameConvert'</span>=<span class="hljs-string">'+FRA/CDB01,+FRA/CDB02'</span>;</span><br></pre></td></tr></table></figure></p>
+<p>重启数据库到RAC模式:<br><figure class="highlight sql hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">shutdown immediate;</span><br><span class="line">srvctl <span class="hljs-keyword">start</span> <span class="hljs-keyword">database</span> -d cdb02</span><br></pre></td></tr></table></figure></p>
+<h3 id="2-6-清空备库standby日志"><a href="#2-6-清空备库standby日志" class="headerlink" title="2.6 清空备库standby日志"></a>2.6 清空备库standby日志</h3><figure class="highlight sql hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line"><span class="hljs-comment">--standby</span></span><br><span class="line"><span class="hljs-keyword">alter</span> <span class="hljs-keyword">database</span> <span class="hljs-keyword">clear</span> <span class="hljs-keyword">logfile</span> <span class="hljs-keyword">group</span> <span class="hljs-number">10</span>;</span><br><span class="line"><span class="hljs-keyword">alter</span> <span class="hljs-keyword">database</span> <span class="hljs-keyword">clear</span> <span class="hljs-keyword">logfile</span> <span class="hljs-keyword">group</span> <span class="hljs-number">11</span>;</span><br><span class="line"><span class="hljs-keyword">alter</span> <span class="hljs-keyword">database</span> <span class="hljs-keyword">clear</span> <span class="hljs-keyword">logfile</span> <span class="hljs-keyword">group</span> <span class="hljs-number">12</span>;</span><br><span class="line"><span class="hljs-keyword">alter</span> <span class="hljs-keyword">database</span> <span class="hljs-keyword">clear</span> <span class="hljs-keyword">logfile</span> <span class="hljs-keyword">group</span> <span class="hljs-number">13</span>;</span><br><span class="line"><span class="hljs-keyword">alter</span> <span class="hljs-keyword">database</span> <span class="hljs-keyword">clear</span> <span class="hljs-keyword">logfile</span> <span class="hljs-keyword">group</span> <span class="hljs-number">14</span>;</span><br><span class="line"><span class="hljs-keyword">alter</span> <span class="hljs-keyword">database</span> <span class="hljs-keyword">clear</span> <span class="hljs-keyword">logfile</span> <span class="hljs-keyword">group</span> <span class="hljs-number">15</span>;</span><br><span class="line"><span class="hljs-keyword">alter</span> <span class="hljs-keyword">database</span> <span class="hljs-keyword">clear</span> <span class="hljs-keyword">logfile</span> <span class="hljs-keyword">group</span> <span class="hljs-number">16</span>;</span><br></pre></td></tr></table></figure>
+<h3 id="2-7-开启备库日志应用"><a href="#2-7-开启备库日志应用" class="headerlink" title="2.7 开启备库日志应用"></a>2.7 开启备库日志应用</h3><figure class="highlight sql hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">edit database cdb02 <span class="hljs-keyword">set</span> state=<span class="hljs-string">'APPLY-ON'</span>;</span><br></pre></td></tr></table></figure>
+<h2 id="3-Trouble-shooting"><a href="#3-Trouble-shooting" class="headerlink" title="3. Trouble shooting"></a>3. Trouble shooting</h2><h3 id="3-1-备库日志路径与主库不一致"><a href="#3-1-备库日志路径与主库不一致" class="headerlink" title="3.1 备库日志路径与主库不一致"></a>3.1 备库日志路径与主库不一致</h3><p>主库后台日志报以下错误：<br><figure class="highlight sql hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line">Wed Sep 04 16:25:03 2019</span><br><span class="line">Errors in file /u01/app/oracle/diag/rdbms/cdb01/cdb011/trace/cdb011_arc0_153792.trc:</span><br><span class="line">ORA-16041: Remote File Server fatal error</span><br><span class="line">Wed Sep 04 16:25:03 2019</span><br><span class="line">ARC0: FAL archive failed with error 16041.  See trace for details</span><br><span class="line">Wed Sep 04 16:25:03 2019</span><br><span class="line">Errors in file /u01/app/oracle/diag/rdbms/cdb01/cdb011/trace/cdb011_arc0_153792.trc:</span><br><span class="line">ORA-16055: FAL request rejected</span><br><span class="line">ARCH: FAL archive failed. Archiver continuing</span><br></pre></td></tr></table></figure></p>
+<p>DGBroker报以下错误：<br><figure class="highlight sql hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><span class="line">DGMGRL&gt; show database agxxxprof</span><br><span class="line"></span><br><span class="line"> Database - cdb02</span><br><span class="line"> Role: PHYSICAL STANDBY</span><br><span class="line"> Intended State: APPLY-ON</span><br><span class="line"> Transport Lag: 0 seconds (computed 1 second ago)</span><br><span class="line"> Apply Lag: 0 seconds (computed 1 second ago)</span><br><span class="line"> Average Apply Rate: 2.12 MByte/s</span><br><span class="line"> Real Time Query: OFF</span><br><span class="line"> Instance(s):</span><br><span class="line">      cdb02</span><br><span class="line">         Database Warning(s): ORA-16789: standby redo logs configured incorrectly</span><br><span class="line"> Database Status: WARNING</span><br></pre></td></tr></table></figure></p>
+<p>解决方法：<br>主库重新添加备库日志，如果主备库路径不一致，备库需要添加<code>log_file_name_convert</code>参数进行路径转换。<br><figure class="highlight sql hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br></pre></td><td class="code"><pre><span class="line"><span class="hljs-keyword">alter</span> <span class="hljs-keyword">database</span> <span class="hljs-keyword">drop</span> <span class="hljs-keyword">standby</span> <span class="hljs-keyword">logfile</span> <span class="hljs-keyword">group</span> <span class="hljs-number">1</span>;</span><br><span class="line"><span class="hljs-keyword">alter</span> <span class="hljs-keyword">database</span> <span class="hljs-keyword">drop</span> <span class="hljs-keyword">standby</span> <span class="hljs-keyword">logfile</span> <span class="hljs-keyword">group</span> <span class="hljs-number">2</span>;</span><br><span class="line"><span class="hljs-keyword">alter</span> <span class="hljs-keyword">database</span> <span class="hljs-keyword">drop</span> <span class="hljs-keyword">standby</span> <span class="hljs-keyword">logfile</span> <span class="hljs-keyword">group</span> <span class="hljs-number">3</span>;</span><br><span class="line"><span class="hljs-keyword">alter</span> <span class="hljs-keyword">database</span> <span class="hljs-keyword">drop</span> <span class="hljs-keyword">standby</span> <span class="hljs-keyword">logfile</span> <span class="hljs-keyword">group</span> <span class="hljs-number">4</span>;</span><br><span class="line"><span class="hljs-keyword">alter</span> <span class="hljs-keyword">database</span> <span class="hljs-keyword">drop</span> <span class="hljs-keyword">standby</span> <span class="hljs-keyword">logfile</span> <span class="hljs-keyword">group</span> <span class="hljs-number">5</span>;</span><br><span class="line"><span class="hljs-keyword">alter</span> <span class="hljs-keyword">database</span> <span class="hljs-keyword">drop</span> <span class="hljs-keyword">standby</span> <span class="hljs-keyword">logfile</span> <span class="hljs-keyword">group</span> <span class="hljs-number">6</span>;</span><br><span class="line"><span class="hljs-keyword">alter</span> <span class="hljs-keyword">database</span> <span class="hljs-keyword">drop</span> <span class="hljs-keyword">standby</span> <span class="hljs-keyword">logfile</span> <span class="hljs-keyword">group</span> <span class="hljs-number">7</span>;</span><br><span class="line"><span class="hljs-keyword">alter</span> <span class="hljs-keyword">database</span> <span class="hljs-keyword">drop</span> <span class="hljs-keyword">standby</span> <span class="hljs-keyword">logfile</span> <span class="hljs-keyword">group</span> <span class="hljs-number">8</span>;</span><br><span class="line"></span><br><span class="line"><span class="hljs-keyword">alter</span> <span class="hljs-keyword">database</span> <span class="hljs-keyword">add</span> <span class="hljs-keyword">standby</span> <span class="hljs-keyword">logfile</span> <span class="hljs-keyword">thread</span> <span class="hljs-number">1</span> <span class="hljs-keyword">group</span> <span class="hljs-number">1</span> (<span class="hljs-string">'+FRA'</span>) <span class="hljs-keyword">size</span> <span class="hljs-number">4096</span>M <span class="hljs-keyword">blocksize</span> <span class="hljs-number">4096</span>;</span><br><span class="line"><span class="hljs-keyword">alter</span> <span class="hljs-keyword">database</span> <span class="hljs-keyword">add</span> <span class="hljs-keyword">standby</span> <span class="hljs-keyword">logfile</span> <span class="hljs-keyword">thread</span> <span class="hljs-number">1</span> <span class="hljs-keyword">group</span> <span class="hljs-number">2</span> (<span class="hljs-string">'+FRA'</span>) <span class="hljs-keyword">size</span> <span class="hljs-number">2048</span>M <span class="hljs-keyword">blocksize</span> <span class="hljs-number">4096</span>;</span><br><span class="line"><span class="hljs-keyword">alter</span> <span class="hljs-keyword">database</span> <span class="hljs-keyword">add</span> <span class="hljs-keyword">standby</span> <span class="hljs-keyword">logfile</span> <span class="hljs-keyword">thread</span> <span class="hljs-number">1</span> <span class="hljs-keyword">group</span> <span class="hljs-number">3</span> (<span class="hljs-string">'+FRA'</span>) <span class="hljs-keyword">size</span> <span class="hljs-number">2048</span>M <span class="hljs-keyword">blocksize</span> <span class="hljs-number">4096</span>;</span><br><span class="line"><span class="hljs-keyword">alter</span> <span class="hljs-keyword">database</span> <span class="hljs-keyword">add</span> <span class="hljs-keyword">standby</span> <span class="hljs-keyword">logfile</span> <span class="hljs-keyword">thread</span> <span class="hljs-number">1</span> <span class="hljs-keyword">group</span> <span class="hljs-number">4</span> (<span class="hljs-string">'+FRA'</span>) <span class="hljs-keyword">size</span> <span class="hljs-number">2048</span>M <span class="hljs-keyword">blocksize</span> <span class="hljs-number">4096</span>;</span><br><span class="line"><span class="hljs-keyword">alter</span> <span class="hljs-keyword">database</span> <span class="hljs-keyword">add</span> <span class="hljs-keyword">standby</span> <span class="hljs-keyword">logfile</span> <span class="hljs-keyword">thread</span> <span class="hljs-number">2</span> <span class="hljs-keyword">group</span> <span class="hljs-number">5</span> (<span class="hljs-string">'+FRA'</span>) <span class="hljs-keyword">size</span> <span class="hljs-number">2048</span>M <span class="hljs-keyword">blocksize</span> <span class="hljs-number">4096</span>;</span><br><span class="line"><span class="hljs-keyword">alter</span> <span class="hljs-keyword">database</span> <span class="hljs-keyword">add</span> <span class="hljs-keyword">standby</span> <span class="hljs-keyword">logfile</span> <span class="hljs-keyword">thread</span> <span class="hljs-number">2</span> <span class="hljs-keyword">group</span> <span class="hljs-number">6</span> (<span class="hljs-string">'+FRA'</span>) <span class="hljs-keyword">size</span> <span class="hljs-number">2048</span>M <span class="hljs-keyword">blocksize</span> <span class="hljs-number">4096</span>;</span><br><span class="line"><span class="hljs-keyword">alter</span> <span class="hljs-keyword">database</span> <span class="hljs-keyword">add</span> <span class="hljs-keyword">standby</span> <span class="hljs-keyword">logfile</span> <span class="hljs-keyword">thread</span> <span class="hljs-number">2</span> <span class="hljs-keyword">group</span> <span class="hljs-number">7</span> (<span class="hljs-string">'+FRA'</span>) <span class="hljs-keyword">size</span> <span class="hljs-number">2048</span>M <span class="hljs-keyword">blocksize</span> <span class="hljs-number">4096</span>;</span><br><span class="line"><span class="hljs-keyword">alter</span> <span class="hljs-keyword">database</span> <span class="hljs-keyword">add</span> <span class="hljs-keyword">standby</span> <span class="hljs-keyword">logfile</span> <span class="hljs-keyword">thread</span> <span class="hljs-number">2</span> <span class="hljs-keyword">group</span> <span class="hljs-number">8</span> (<span class="hljs-string">'+FRA'</span>) <span class="hljs-keyword">size</span> <span class="hljs-number">2048</span>M <span class="hljs-keyword">blocksize</span> <span class="hljs-number">4096</span>;</span><br></pre></td></tr></table></figure></p>
+<p><strong>EOF</strong></p>
+
+    
+    </div>
+    
+    <div class="columns is-variable is-1 is-multiline is-mobile">
+    
+        <span class="column is-narrow"><a class="tag is-light article-tag" href="/tags/dataguard/">#dataguard</a></span>
+    
+        <span class="column is-narrow"><a class="tag is-light article-tag" href="/tags/how-to/">#how to</a></span>
+    
+        <span class="column is-narrow"><a class="tag is-light article-tag" href="/tags/rman/">#rman</a></span>
+    
+    </div>
+    
+    
+    <div class="columns is-mobile is-multiline article-nav">
+        <span class="column is-12-mobile is-half-desktop  article-nav-prev">
+            
+            <a href="/how-to-identify-sql-id-just-run.html">如何确认刚刚执行的SQL ID</a>
+            
+        </span>
+        <span class="column is-12-mobile is-half-desktop  article-nav-next">
+            
+            <a href="/How-to-create-active-dataguard-with-farsync-by-using-dataguard-broker.html">12c使用dataguard broker配置带farsync的active dataguard</a>
+            
+        </span>
+    </div>
+    
+</article>
+
+
+
+
+    </div>
+</section>
+    <footer class="footer footer-padding">
+    <div class="container content">
+            <div class="column is-narrow has-text-centered is-size-7-mobile">
+                &copy;  <a href="/">Kyun Kong&nbsp;</a>
+                2013 - 2019
+            </div>
+    </div>
+</footer>
+
+    <script src="//cdnjs.cloudflare.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
+<script src="//cdnjs.cloudflare.com/ajax/libs/moment.js/2.22.2/moment-with-locales.min.js"></script>
+
+<!-- test if the browser is outdated
+<div id="outdated">
+    <h6>Your browser is out-of-date!</h6>
+    <p>Update your browser to view this website correctly. <a id="btnUpdateBrowser" href="http://outdatedbrowser.com/">Update my browser now </a></p>
+    <p class="last"><a href="#" id="btnCloseUpdateBrowser" title="Close">&times;</a></p>
+</div>
+<script src="//cdnjs.cloudflare.com/ajax/libs/outdated-browser/1.1.5/outdatedbrowser.min.js"></script>
+<script>
+    $(document).ready(function () {
+        // plugin function, place inside DOM ready function
+        outdatedBrowser({
+            bgColor: '#f25648',
+            color: '#ffffff',
+            lowerThan: 'flex'
+        })
+    });
+</script>
+-->
+
+<script>
+    window.FontAwesomeConfig = {
+        searchPseudoElements: true
+    }
+    moment.locale("en-AU");
+</script>
+
+
+    
+    
+    
+    
+    
+    
+
+    
+
+
+<script src="/js/script.js"></script>
+
+
+    
+    <div class="searchbox ins-search">
+    <div class="searchbox-mask"></div>
+    <div class="searchbox-container ins-search-container">
+        <div class="searchbox-input-wrapper">
+            <input type="text" class="searchbox-input ins-search-input" placeholder="Type something..." />
+            <span class="searchbox-close ins-close ins-selectable"><i class="fa fa-times-circle"></i></span>
+        </div>
+        <div class="searchbox-result-wrapper ins-section-wrapper">
+            <div class="ins-section-container"></div>
+        </div>
+    </div>
+</div>
+<script>
+    (function (window) {
+        var INSIGHT_CONFIG = {
+            TRANSLATION: {
+                POSTS: 'Posts',
+                PAGES: 'Pages',
+                CATEGORIES: 'Categories',
+                TAGS: 'Tags',
+                UNTITLED: '(Untitled)',
+            },
+            CONTENT_URL: '/content.json',
+        };
+        window.INSIGHT_CONFIG = INSIGHT_CONFIG;
+    })(window);
+</script>
+<script src="/js/insight.js"></script>
+    
+</body>
+</html>

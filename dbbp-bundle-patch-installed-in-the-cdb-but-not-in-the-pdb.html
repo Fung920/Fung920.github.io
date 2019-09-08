@@ -1,0 +1,261 @@
+<!DOCTYPE html>
+<html class="has-navbar-fixed-top">
+<head>
+    <meta charset="utf-8">
+<title>dbbp bundle patch installed in the cdb but not in the pdb - My Notebook</title>
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+
+<link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/outdated-browser/1.1.5/outdatedbrowser.min.css">
+
+
+<meta name="description" content="Oracle memoranda">
+
+
+
+<meta name="keywords" content="oracle, database">
+
+
+
+
+
+
+
+<link rel="icon" href="/images/favicon.ico">
+
+
+<link rel="stylesheet" href="//fonts.googleapis.com/css?family=Ovo|Source+Code+Pro|Calibri|Ubuntu">
+<link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/bulma/0.6.2/css/bulma.min.css">
+
+
+
+<link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/highlight.js/9.12.0/styles/atom-one-light.min.css">
+
+<link rel="stylesheet" href="/css/style.css">
+
+<script defer src="//use.fontawesome.com/releases/v5.0.8/js/all.js"></script>
+
+
+    
+    
+    
+    
+    
+    
+
+    
+
+
+</head>
+<body>
+    
+<nav class="navbar is-transparent is-fixed-top navbar-main" role="navigation" aria-label="main navigation">
+    <div class="container">
+        <div class="navbar-brand">
+            <a class="navbar-item navbar-logo" href="/">
+                
+                    
+                    My Notebook
+                    
+                
+            </a>
+            <div class="navbar-burger">
+                <span></span>
+                <span></span>
+                <span></span>
+            </div>
+        </div>
+        
+        <div class="navbar-menu navbar-start">
+            
+            <a class="navbar-item "
+               href="/">Home</a>
+            
+            <a class="navbar-item "
+               href="/about">About</a>
+            
+        </div>
+        
+        <div class="navbar-menu navbar-end">
+            
+            <a class="navbar-item search" title="Search" href="javascript:;">
+                <i class="fas fa-search"></i>
+            </a>
+            
+            
+            
+        </div>
+    </div>
+</nav>
+
+    <section class="section">
+    <div class="container">
+    <article class="article content gallery" itemscope itemprop="blogPost">
+    <h1 class="article-title is-size-3 is-size-4-mobile" itemprop="name">
+        
+            dbbp bundle patch installed in the cdb but not in the pdb
+        
+    </h1>
+    <div class="article-meta columns is-variable is-1 is-multiline is-mobile is-size-7-mobile">
+        <span class="column is-narrow">
+            <time datetime="2019-08-16T06:37:03.000Z" itemprop="datePublished">Aug 16 2019</time>
+        </span>
+        
+        <span class="column is-narrow article-category">
+            <i class="far fa-folder"></i>
+            <a class="article-category-link" href="/categories/oracle/">oracle</a>
+        </span>
+        
+        
+    </div>
+    <div class="article-entry is-size-6-mobile" itemprop="articleBody">
+    
+        <p>从远程数据库复制过来后，由于DBBP版本不一致，开启PDB的时候出现错误，且PDB处于restricted模式:<br><figure class="highlight sql hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line">SQL&gt; show pdbs</span><br><span class="line"></span><br><span class="line">    CON_ID CON_NAME			  OPEN MODE  RESTRICTED</span><br><span class="line"><span class="hljs-comment">---------- ------------------------------ ---------- ----------</span></span><br><span class="line">	 2 PDB$SEED			  READ ONLY  NO</span><br><span class="line">	 3 SLDB1			  READ WRITE YES</span><br></pre></td></tr></table></figure></p>
+<p>查询<code>pdb_plug_in_violations</code><br><figure class="highlight sql hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br></pre></td><td class="code"><pre><span class="line">MESSAGE 				 STATUS 	    ACTION</span><br><span class="line"><span class="hljs-comment">---------------------------------------- ------------------ ----------------------------------------</span></span><br><span class="line">DBBP bundle patch 190115 (DATABASE BUNDL PENDING	    <span class="hljs-keyword">Call</span> datapatch <span class="hljs-keyword">to</span> <span class="hljs-keyword">install</span> <span class="hljs-keyword">in</span> the PDB <span class="hljs-keyword">or</span></span><br><span class="line">E <span class="hljs-keyword">PATCH</span> <span class="hljs-number">12.1</span><span class="hljs-number">.0</span><span class="hljs-number">.2</span><span class="hljs-number">.190115</span>): Installed <span class="hljs-keyword">in</span> t		    the CDB</span><br><span class="line">he PDB but <span class="hljs-keyword">not</span> <span class="hljs-keyword">in</span> the CDB.</span><br><span class="line"></span><br><span class="line">DBBP bundle <span class="hljs-keyword">patch</span> <span class="hljs-number">190416</span> (<span class="hljs-keyword">DATABASE</span> BUNDL PENDING	    <span class="hljs-keyword">Call</span> datapatch <span class="hljs-keyword">to</span> <span class="hljs-keyword">install</span> <span class="hljs-keyword">in</span> the PDB <span class="hljs-keyword">or</span></span><br><span class="line">E <span class="hljs-keyword">PATCH</span> <span class="hljs-number">12.1</span><span class="hljs-number">.0</span><span class="hljs-number">.2</span><span class="hljs-number">.190416</span>): Installed <span class="hljs-keyword">in</span> t		    the CDB</span><br><span class="line">he CDB but <span class="hljs-keyword">not</span> <span class="hljs-keyword">in</span> the PDB.</span><br><span class="line"></span><br><span class="line"><span class="hljs-keyword">SQL</span> <span class="hljs-keyword">patch</span> <span class="hljs-keyword">ID</span>/UID <span class="hljs-number">28790654</span>/<span class="hljs-number">22620251</span> (<span class="hljs-keyword">Data</span> PENDING	    <span class="hljs-keyword">Call</span> datapatch <span class="hljs-keyword">to</span> <span class="hljs-keyword">install</span> <span class="hljs-keyword">in</span> the PDB <span class="hljs-keyword">or</span></span><br><span class="line">base PSU <span class="hljs-number">12.1</span><span class="hljs-number">.0</span><span class="hljs-number">.2</span><span class="hljs-number">.190115</span>, <span class="hljs-keyword">Oracle</span> JavaVM 		    the CDB</span><br><span class="line">Component (JAN2019)): Installed <span class="hljs-keyword">in</span> the P</span><br><span class="line">DB but <span class="hljs-keyword">not</span> <span class="hljs-keyword">in</span> the CDB.</span><br></pre></td></tr></table></figure></p>
+<ul>
+<li>相关版本</li>
+</ul>
+<p>Linora为源库，是non-cdb; db2srv是目标库，是cdb<br><figure class="highlight sql hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br></pre></td><td class="code"><pre><span class="line"> /u01/app/oracle/product/12c/db_1  (opatch version 12.2.0.1.17)</span><br><span class="line"><span class="hljs-comment">------------------------------</span></span><br><span class="line">  Patch ID  |     linora     |</span><br><span class="line"><span class="hljs-comment">------------------------------</span></span><br><span class="line">  28731800  |        -       | Database Bundle Patch : 12.1.0.2.190115 (28731800)</span><br><span class="line">  28790654  |        -       | Database PSU 12.1.0.2.190115, Oracle JavaVM Component (JAN2019)</span><br><span class="line"><span class="hljs-comment">------------------------------</span></span><br><span class="line"></span><br><span class="line">  /u02/app/oracle/product/12.1.0.2/db_1  (opatch version 12.2.0.1.17)</span><br><span class="line"><span class="hljs-comment">------------------------------</span></span><br><span class="line">  Patch ID  |     db2srv     |</span><br><span class="line"><span class="hljs-comment">------------------------------</span></span><br><span class="line">  29141038  |        -       | Database Bundle Patch : 12.1.0.2.190416 (29141038)</span><br><span class="line">  29251241  |        -       | Database PSU 12.1.0.2.190416, Oracle JavaVM Component (APR2019)</span><br></pre></td></tr></table></figure></p>
+<ul>
+<li>datapatch衍生问题</li>
+</ul>
+<p>根据<code>pdb_plug_in_violations</code>提示，执行datapatch, 结果因为两边jvm版本不一致，发生如下错误:<br>有些情况下，需要将CDB/PDB启动到startup upgrade模式下，才能进行datapatch</p>
+<figure class="highlight sql hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br></pre></td><td class="code"><pre><span class="line">cd $ORACLE_HOME/Opatch</span><br><span class="line">./datapatch -verbose</span><br><span class="line"></span><br><span class="line">Adding patches to installation queue and performing prereq checks...</span><br><span class="line">Installation queue:</span><br><span class="line">  For the following PDBs: CDB$ROOT PDB$SEED SLDB1</span><br><span class="line">    Nothing to roll back</span><br><span class="line">    The following patches will be applied:</span><br><span class="line">      29251241 (Database PSU 12.1.0.2.190416, Oracle JavaVM Component (APR2019))</span><br><span class="line">  For the following PDBs: SLDB2</span><br><span class="line">    The following patches will be rolled back:</span><br><span class="line">      28790654 (Database PSU 12.1.0.2.190115, Oracle JavaVM Component (JAN2019))</span><br><span class="line">    The following patches will be applied:</span><br><span class="line">      29251241 (Database PSU 12.1.0.2.190416, Oracle JavaVM Component (APR2019))</span><br><span class="line">      29141038 (DATABASE BUNDLE PATCH 12.1.0.2.190416)</span><br><span class="line"></span><br><span class="line">Validating logfiles...</span><br><span class="line">Patch 28790654 <span class="hljs-keyword">rollback</span> (pdb SLDB2): <span class="hljs-keyword">WITH</span> <span class="hljs-keyword">ERRORS</span></span><br><span class="line">  <span class="hljs-keyword">logfile</span>: /u02/app/<span class="hljs-keyword">oracle</span>/cfgtoollogs/sqlpatch/<span class="hljs-number">28790654</span>/<span class="hljs-number">22620251</span>/<span class="hljs-number">28790654</span>_rollback_CDB12C_SLDB1_2019Aug16_14_10_11.log (<span class="hljs-keyword">errors</span>)</span><br><span class="line">    <span class="hljs-keyword">Error</span> <span class="hljs-keyword">at</span> line <span class="hljs-number">595</span>: ORA<span class="hljs-number">-29548</span>: <span class="hljs-keyword">Java</span> <span class="hljs-keyword">system</span> <span class="hljs-keyword">class</span> reported: could <span class="hljs-keyword">not</span> identify <span class="hljs-keyword">release</span> specified <span class="hljs-keyword">in</span></span><br><span class="line">    <span class="hljs-keyword">Error</span> <span class="hljs-keyword">at</span> line <span class="hljs-number">627</span>: ORA<span class="hljs-number">-29548</span>: <span class="hljs-keyword">Java</span> <span class="hljs-keyword">system</span> <span class="hljs-keyword">class</span> reported: could <span class="hljs-keyword">not</span> identify <span class="hljs-keyword">release</span> specified <span class="hljs-keyword">in</span></span><br><span class="line">    <span class="hljs-keyword">Error</span> <span class="hljs-keyword">at</span> line <span class="hljs-number">635</span>: ORA<span class="hljs-number">-29548</span>: <span class="hljs-keyword">Java</span> <span class="hljs-keyword">system</span> <span class="hljs-keyword">class</span> reported: could <span class="hljs-keyword">not</span> identify <span class="hljs-keyword">release</span> specified <span class="hljs-keyword">in</span></span><br><span class="line"><span class="hljs-keyword">Patch</span> <span class="hljs-number">29251241</span> <span class="hljs-keyword">apply</span> (pdb SLDB2): <span class="hljs-keyword">WITH</span> <span class="hljs-keyword">ERRORS</span></span><br><span class="line">  <span class="hljs-keyword">logfile</span>: /u02/app/<span class="hljs-keyword">oracle</span>/cfgtoollogs/sqlpatch/<span class="hljs-number">29251241</span>/<span class="hljs-number">22839506</span>/<span class="hljs-number">29251241</span>_apply_CDB12C_SLDB1_2019Aug16_14_10_32.log (<span class="hljs-keyword">errors</span>)</span><br><span class="line">    <span class="hljs-keyword">Error</span> <span class="hljs-keyword">at</span> line <span class="hljs-number">663</span>: ORA<span class="hljs-number">-29548</span>: <span class="hljs-keyword">Java</span> <span class="hljs-keyword">system</span> <span class="hljs-keyword">class</span> reported: could <span class="hljs-keyword">not</span> identify <span class="hljs-keyword">release</span> specified <span class="hljs-keyword">in</span></span><br><span class="line">    <span class="hljs-keyword">Error</span> <span class="hljs-keyword">at</span> line <span class="hljs-number">695</span>: ORA<span class="hljs-number">-29548</span>: <span class="hljs-keyword">Java</span> <span class="hljs-keyword">system</span> <span class="hljs-keyword">class</span> reported: could <span class="hljs-keyword">not</span> identify <span class="hljs-keyword">release</span> specified <span class="hljs-keyword">in</span></span><br><span class="line">    <span class="hljs-keyword">Error</span> <span class="hljs-keyword">at</span> line <span class="hljs-number">703</span>: ORA<span class="hljs-number">-29548</span>: <span class="hljs-keyword">Java</span> <span class="hljs-keyword">system</span> <span class="hljs-keyword">class</span> reported: could <span class="hljs-keyword">not</span> identify <span class="hljs-keyword">release</span> specified <span class="hljs-keyword">in</span></span><br></pre></td></tr></table></figure>
+<p>此时查询pdb的<code>dba_registry_sqlpatch</code>, 会发现database的补丁已经应用，但是OJVM因为上述错误无法应用。<br><figure class="highlight sql hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br></pre></td><td class="code"><pre><span class="line">SQL&gt; alter session set container = sldb2;</span><br><span class="line"></span><br><span class="line">ACTION_TIME	     ACTION	STATUS	   DESCRIPTION					 VERSION      PATCH_ID BUNDLE_SER</span><br><span class="line"><span class="hljs-comment">-------------------- ---------- ---------- --------------------------------------------- ---------- ---------- ----------</span></span><br><span class="line">16-AUG-2019 09:18:16 APPLY	SUCCESS    DATABASE BUNDLE PATCH 12.1.0.2.190115	 12.1.0.2     28731800 DBBP</span><br><span class="line">16-AUG-2019 09:24:23 APPLY	SUCCESS    Database PSU 12.1.0.2.190115, Oracle JavaVM C 12.1.0.2     28790654</span><br><span class="line">					   omponent (JAN2019)</span><br><span class="line"></span><br><span class="line">16-AUG-2019 15:38:08 <span class="hljs-keyword">ROLLBACK</span>	<span class="hljs-keyword">WITH</span> <span class="hljs-keyword">ERROR</span> <span class="hljs-keyword">Database</span> PSU <span class="hljs-number">12.1</span><span class="hljs-number">.0</span><span class="hljs-number">.2</span><span class="hljs-number">.190115</span>, <span class="hljs-keyword">Oracle</span> JavaVM C <span class="hljs-number">12.1</span><span class="hljs-number">.0</span><span class="hljs-number">.2</span>     <span class="hljs-number">28790654</span></span><br><span class="line">				S	   omponent (JAN2019)</span><br><span class="line"></span><br><span class="line"><span class="hljs-number">16</span>-AUG<span class="hljs-number">-2019</span> <span class="hljs-number">15</span>:<span class="hljs-number">38</span>:<span class="hljs-number">08</span> <span class="hljs-keyword">APPLY</span>	<span class="hljs-keyword">WITH</span> <span class="hljs-keyword">ERROR</span> <span class="hljs-keyword">Database</span> PSU <span class="hljs-number">12.1</span><span class="hljs-number">.0</span><span class="hljs-number">.2</span><span class="hljs-number">.190416</span>, <span class="hljs-keyword">Oracle</span> JavaVM C <span class="hljs-number">12.1</span><span class="hljs-number">.0</span><span class="hljs-number">.2</span>     <span class="hljs-number">29251241</span></span><br><span class="line">				S	   omponent (APR2019)</span><br><span class="line"></span><br><span class="line"><span class="hljs-number">16</span>-AUG<span class="hljs-number">-2019</span> <span class="hljs-number">15</span>:<span class="hljs-number">38</span>:<span class="hljs-number">09</span> <span class="hljs-keyword">APPLY</span>	<span class="hljs-keyword">SUCCESS</span>    <span class="hljs-keyword">DATABASE</span> BUNDLE <span class="hljs-keyword">PATCH</span> <span class="hljs-number">12.1</span><span class="hljs-number">.0</span><span class="hljs-number">.2</span><span class="hljs-number">.190416</span>	 <span class="hljs-number">12.1</span><span class="hljs-number">.0</span><span class="hljs-number">.2</span>     <span class="hljs-number">29141038</span> DBBP</span><br></pre></td></tr></table></figure></p>
+<p>MOS查询出来两个bug：<br>Bug 17610418 - ORA-29548 from plugged in different version non CDB as PDB [17610418.8]<br>Bug 16986421 - ORA-29548 from plug in of lower version PDB with Java [16986421.8]<br>但是这个两个bug是在12.1.0.2 server patch set已经fixed，已经找不到单独的patch。</p>
+<ul>
+<li>解决方案</li>
+</ul>
+<p>尝试在复制前，将目标库的OJVM补丁回退到原始状态，等PDB复制过来后，再进行补丁的安装，问题得到解决.</p>
+<h2 id="总结"><a href="#总结" class="headerlink" title="总结"></a>总结</h2><ul>
+<li><ol>
+<li>PDB出现DBBP相关的错误时，查询CDB及PDB的<code>dba_registry_sqlpatch</code>，比较两者的区别</li>
+</ol>
+</li>
+<li><ol start="2">
+<li>根据上述结果，评估是否可以进行datapatch</li>
+</ol>
+</li>
+<li><ol start="3">
+<li>在进行远程复制的时候，如果两边OJVM版本不一致，可以考虑现在目标端回滚OJVM，再进行远程复制</li>
+</ol>
+</li>
+</ul>
+<p><br><br><strong>Reference</strong>:<br><a href="https://support.oracle.com/epmos/faces/DocumentDisplay?_afrLoop=520987474833173&amp;id=1635482.1&amp;_afrWindowMode=0&amp;_adf.ctrl-state=15i0wfigbx_300" target="_blank" rel="noopener">After running datapatch, PDB plugin or cloned db returns violations shown in PDB_PLUG_IN_VIOLATION (Doc ID 1635482.1)</a></p>
+<p><strong>EOF</strong></p>
+
+    
+    </div>
+    
+    <div class="columns is-variable is-1 is-multiline is-mobile">
+    
+        <span class="column is-narrow"><a class="tag is-light article-tag" href="/tags/multitenant/">#multitenant</a></span>
+    
+        <span class="column is-narrow"><a class="tag is-light article-tag" href="/tags/patch/">#patch</a></span>
+    
+    </div>
+    
+    
+    <div class="columns is-mobile is-multiline article-nav">
+        <span class="column is-12-mobile is-half-desktop  article-nav-prev">
+            
+            <a href="/How-to-create-active-dataguard-with-farsync-by-using-dataguard-broker.html">12c使用dataguard broker配置带farsync的active dataguard</a>
+            
+        </span>
+        <span class="column is-12-mobile is-half-desktop  article-nav-next">
+            
+            <a href="/Prerequisite-Check-CheckActiveFilesAndExecutables-Failed.html">Prerequisite Check &#34;CheckActiveFilesAndExecutables&#34; Failed</a>
+            
+        </span>
+    </div>
+    
+</article>
+
+
+
+
+    </div>
+</section>
+    <footer class="footer footer-padding">
+    <div class="container content">
+            <div class="column is-narrow has-text-centered is-size-7-mobile">
+                &copy;  <a href="/">Kyun Kong&nbsp;</a>
+                2013 - 2019
+            </div>
+    </div>
+</footer>
+
+    <script src="//cdnjs.cloudflare.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
+<script src="//cdnjs.cloudflare.com/ajax/libs/moment.js/2.22.2/moment-with-locales.min.js"></script>
+
+<!-- test if the browser is outdated
+<div id="outdated">
+    <h6>Your browser is out-of-date!</h6>
+    <p>Update your browser to view this website correctly. <a id="btnUpdateBrowser" href="http://outdatedbrowser.com/">Update my browser now </a></p>
+    <p class="last"><a href="#" id="btnCloseUpdateBrowser" title="Close">&times;</a></p>
+</div>
+<script src="//cdnjs.cloudflare.com/ajax/libs/outdated-browser/1.1.5/outdatedbrowser.min.js"></script>
+<script>
+    $(document).ready(function () {
+        // plugin function, place inside DOM ready function
+        outdatedBrowser({
+            bgColor: '#f25648',
+            color: '#ffffff',
+            lowerThan: 'flex'
+        })
+    });
+</script>
+-->
+
+<script>
+    window.FontAwesomeConfig = {
+        searchPseudoElements: true
+    }
+    moment.locale("en-AU");
+</script>
+
+
+    
+    
+    
+    
+    
+    
+
+    
+
+
+<script src="/js/script.js"></script>
+
+
+    
+    <div class="searchbox ins-search">
+    <div class="searchbox-mask"></div>
+    <div class="searchbox-container ins-search-container">
+        <div class="searchbox-input-wrapper">
+            <input type="text" class="searchbox-input ins-search-input" placeholder="Type something..." />
+            <span class="searchbox-close ins-close ins-selectable"><i class="fa fa-times-circle"></i></span>
+        </div>
+        <div class="searchbox-result-wrapper ins-section-wrapper">
+            <div class="ins-section-container"></div>
+        </div>
+    </div>
+</div>
+<script>
+    (function (window) {
+        var INSIGHT_CONFIG = {
+            TRANSLATION: {
+                POSTS: 'Posts',
+                PAGES: 'Pages',
+                CATEGORIES: 'Categories',
+                TAGS: 'Tags',
+                UNTITLED: '(Untitled)',
+            },
+            CONTENT_URL: '/content.json',
+        };
+        window.INSIGHT_CONFIG = INSIGHT_CONFIG;
+    })(window);
+</script>
+<script src="/js/insight.js"></script>
+    
+</body>
+</html>

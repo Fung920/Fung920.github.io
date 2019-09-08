@@ -1,0 +1,304 @@
+<!DOCTYPE html>
+<html class="has-navbar-fixed-top">
+<head>
+    <meta charset="utf-8">
+<title>远程复制数据库到现有的CDB - My Notebook</title>
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+
+<link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/outdated-browser/1.1.5/outdatedbrowser.min.css">
+
+
+<meta name="description" content="Oracle memoranda">
+
+
+
+<meta name="keywords" content="oracle, database">
+
+
+
+
+
+
+
+<link rel="icon" href="/images/favicon.ico">
+
+
+<link rel="stylesheet" href="//fonts.googleapis.com/css?family=Ovo|Source+Code+Pro|Calibri|Ubuntu">
+<link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/bulma/0.6.2/css/bulma.min.css">
+
+
+
+<link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/highlight.js/9.12.0/styles/atom-one-light.min.css">
+
+<link rel="stylesheet" href="/css/style.css">
+
+<script defer src="//use.fontawesome.com/releases/v5.0.8/js/all.js"></script>
+
+
+    
+    
+    
+    
+    
+    
+
+    
+
+
+</head>
+<body>
+    
+<nav class="navbar is-transparent is-fixed-top navbar-main" role="navigation" aria-label="main navigation">
+    <div class="container">
+        <div class="navbar-brand">
+            <a class="navbar-item navbar-logo" href="/">
+                
+                    
+                    My Notebook
+                    
+                
+            </a>
+            <div class="navbar-burger">
+                <span></span>
+                <span></span>
+                <span></span>
+            </div>
+        </div>
+        
+        <div class="navbar-menu navbar-start">
+            
+            <a class="navbar-item "
+               href="/">Home</a>
+            
+            <a class="navbar-item "
+               href="/about">About</a>
+            
+        </div>
+        
+        <div class="navbar-menu navbar-end">
+            
+            <a class="navbar-item search" title="Search" href="javascript:;">
+                <i class="fas fa-search"></i>
+            </a>
+            
+            
+            
+        </div>
+    </div>
+</nav>
+
+    <section class="section">
+    <div class="container">
+    <article class="article content gallery" itemscope itemprop="blogPost">
+    <h1 class="article-title is-size-3 is-size-4-mobile" itemprop="name">
+        
+            远程复制数据库到现有的CDB
+        
+    </h1>
+    <div class="article-meta columns is-variable is-1 is-multiline is-mobile is-size-7-mobile">
+        <span class="column is-narrow">
+            <time datetime="2019-08-13T09:22:38.000Z" itemprop="datePublished">Aug 13 2019</time>
+        </span>
+        
+        <span class="column is-narrow article-category">
+            <i class="far fa-folder"></i>
+            <a class="article-category-link" href="/categories/oracle/">oracle</a>
+        </span>
+        
+        
+    </div>
+    <div class="article-entry is-size-6-mobile" itemprop="articleBody">
+    
+        <p>在12c中，针对PDB，Oracle提供了快捷便利的迁移方式。</p>
+<p>以下分别示例了从传统数据库以及PDB下，迁移/复制数据库到目标CDB数据库。<br>所有的操作都是在standalone模式下完成，文中有关于RAC的仅限于理论。<br>数据库版本：12.1.0.2</p>
+<a id="more"></a>
+<h1 id="1-限制"><a href="#1-限制" class="headerlink" title="1. 限制"></a>1. 限制</h1><p>Oracle PDB的远程克隆有以下限制：</p>
+<ul>
+<li>源库common user对应的表空间必须存在目标端中，否则复制过来的PDB会以受限模式开启(Bug 19174942)</li>
+<li>如果源库是non-cdb，则源跟目标端版本必须在12.1.0.2以上</li>
+<li>源库需处于read only模式; 如果是12.2，使用local undo, 启动归档，则可在正常模式下复制</li>
+<li>目标端需建立到源库的DBLINK，这个dblink可以是到源库CDB或者PDB</li>
+<li>对应的，目标端DBLINK的用户必须有create pluggable database的权限</li>
+<li>两边需要有一致的字节顺序，字符集以及数据库的选件<br>   在测试过程中，连小补丁版本都需一致，否则，目标端需要重新升级/降级到与源库相同的版本</li>
+</ul>
+<h1 id="2-复制远程non-cdb"><a href="#2-复制远程non-cdb" class="headerlink" title="2. 复制远程non-cdb"></a>2. 复制远程non-cdb</h1><p>复制前准备，查询两边数据库文件路径或者ASM磁盘名称，路径及名称不一致，需要添加<code>FILE_NAME_CONVERT</code>参数进行转换。</p>
+<h2 id="2-1-目标库创建DBLINK"><a href="#2-1-目标库创建DBLINK" class="headerlink" title="2.1 目标库创建DBLINK"></a>2.1 目标库创建DBLINK</h2><figure class="highlight sql hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line"><span class="hljs-keyword">CREATE</span> <span class="hljs-keyword">DATABASE</span> <span class="hljs-keyword">LINK</span> orcl_lnk</span><br><span class="line"><span class="hljs-keyword">CONNECT</span> <span class="hljs-keyword">TO</span> <span class="hljs-keyword">system</span> <span class="hljs-keyword">IDENTIFIED</span> <span class="hljs-keyword">BY</span> manager <span class="hljs-keyword">USING</span> <span class="hljs-string">'orcl'</span>;</span><br><span class="line"><span class="hljs-comment">--remote user must be having create pluggable database privelege</span></span><br><span class="line"></span><br><span class="line"><span class="hljs-comment">-- test dblink</span></span><br><span class="line"><span class="hljs-keyword">select</span> <span class="hljs-keyword">name</span>, open_mode <span class="hljs-keyword">from</span> v$<span class="hljs-keyword">database</span>@orcl_lnk;</span><br></pre></td></tr></table></figure>
+<h2 id="2-2-将源库处于read-only模式"><a href="#2-2-将源库处于read-only模式" class="headerlink" title="2.2 将源库处于read only模式"></a>2.2 将源库处于read only模式</h2><ul>
+<li>standalone</li>
+</ul>
+<figure class="highlight sql hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">SHUTDOWN IMMEDIATE;</span><br><span class="line">STARTUP MOUNT;</span><br><span class="line"><span class="hljs-keyword">ALTER</span> <span class="hljs-keyword">DATABASE</span> <span class="hljs-keyword">OPEN</span> <span class="hljs-keyword">READ</span> <span class="hljs-keyword">ONLY</span>;</span><br><span class="line">EXIT;</span><br></pre></td></tr></table></figure>
+<ul>
+<li>RAC</li>
+</ul>
+<figure class="highlight sql hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">srvctl <span class="hljs-keyword">stop</span> <span class="hljs-keyword">database</span> -d $DBNAME</span><br><span class="line">srvctl <span class="hljs-keyword">start</span> <span class="hljs-keyword">database</span> -d $DBNAME -startoption <span class="hljs-string">"read only"</span></span><br></pre></td></tr></table></figure>
+<h2 id="2-3-开始复制"><a href="#2-3-开始复制" class="headerlink" title="2.3 开始复制"></a>2.3 开始复制</h2><figure class="highlight sql hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"><span class="hljs-keyword">CREATE</span> <span class="hljs-keyword">PLUGGABLE</span> <span class="hljs-keyword">DATABASE</span></span><br><span class="line">tellerdb <span class="hljs-keyword">FROM</span> orcl@orcl_lnk</span><br><span class="line"><span class="hljs-comment">--first orcl: name of non-cdb in source; second orcl_lnk: name for dblink in target</span></span><br><span class="line"><span class="hljs-keyword">FILE_NAME_CONVERT</span>= (<span class="hljs-string">'/oracle/oradata/orcl/tablespace'</span>,<span class="hljs-string">'/oradata/orcldb/tellerdb'</span>,<span class="hljs-string">'/oracle/oradata/orcl'</span>,<span class="hljs-string">'/oradata/orcldb/tellerdb'</span>);</span><br></pre></td></tr></table></figure>
+<p>如果数据库文件是OMF命名，使用<code>create_file_dest</code>初始化参数去指定数据文件位置。<br><figure class="highlight sql hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"><span class="hljs-keyword">create</span> <span class="hljs-keyword">pluggable</span> <span class="hljs-keyword">database</span> tellerdb <span class="hljs-keyword">from</span> orcl@orcl_lnk</span><br><span class="line">create_file_dest = <span class="hljs-string">'/oradata/orcldb/tellerdb'</span>;</span><br></pre></td></tr></table></figure></p>
+<h2 id="2-4-开启源库到read-write模式"><a href="#2-4-开启源库到read-write模式" class="headerlink" title="2.4 开启源库到read write模式"></a>2.4 开启源库到read write模式</h2><p>复制完成后, 将源库重新启动到read write模式, 同时，检查日志是否有报错。</p>
+<ul>
+<li>standalone</li>
+</ul>
+<figure class="highlight sql hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">SHUTDOWN IMMEDIATE;</span><br><span class="line">STARTUP MOUNT;</span><br><span class="line"><span class="hljs-keyword">ALTER</span> <span class="hljs-keyword">DATABASE</span> <span class="hljs-keyword">OPEN</span> ;</span><br><span class="line">EXIT;</span><br></pre></td></tr></table></figure>
+<ul>
+<li>RAC</li>
+</ul>
+<figure class="highlight sql hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">srvctl <span class="hljs-keyword">stop</span> <span class="hljs-keyword">database</span> -d $DBNAME</span><br><span class="line">srvctl <span class="hljs-keyword">start</span> <span class="hljs-keyword">database</span> -d $DBNAME</span><br></pre></td></tr></table></figure>
+<h2 id="2-5-将non-cdb转换成pdb"><a href="#2-5-将non-cdb转换成pdb" class="headerlink" title="2.5 将non-cdb转换成pdb"></a>2.5 将non-cdb转换成pdb</h2><p>由于源库是non-cdb,因此，需要执行以下脚本对其进行清理:</p>
+<figure class="highlight sql hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"><span class="hljs-keyword">ALTER</span> <span class="hljs-keyword">SESSION</span> <span class="hljs-keyword">SET</span> <span class="hljs-keyword">CONTAINER</span>=tellerdb;</span><br><span class="line">@$ORACLE_HOME/rdbms/admin/noncdb_to_pdb.sql</span><br></pre></td></tr></table></figure>
+<h2 id="2-6-检查目标数据库PDB状态"><a href="#2-6-检查目标数据库PDB状态" class="headerlink" title="2.6 检查目标数据库PDB状态"></a>2.6 检查目标数据库PDB状态</h2><figure class="highlight sql hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line"><span class="hljs-keyword">alter</span> <span class="hljs-keyword">pluggable</span> <span class="hljs-keyword">database</span> all <span class="hljs-keyword">open</span>;</span><br><span class="line">COLUMN name FORMAT A30</span><br><span class="line"><span class="hljs-keyword">SELECT</span> <span class="hljs-keyword">name</span>, open_mode <span class="hljs-keyword">FROM</span> v$pdbs <span class="hljs-keyword">WHERE</span> <span class="hljs-keyword">name</span> = <span class="hljs-string">'TELLERDB'</span>;</span><br></pre></td></tr></table></figure>
+<p>检查补丁情况:</p>
+<figure class="highlight sql hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line">col time for a20</span><br><span class="line">col name for a10</span><br><span class="line">col message for a40</span><br><span class="line">col action for a40</span><br><span class="line"><span class="hljs-keyword">set</span> line <span class="hljs-number">200</span> pagesize <span class="hljs-number">9999</span></span><br><span class="line"><span class="hljs-keyword">select</span> to_char(<span class="hljs-keyword">time</span>) <span class="hljs-keyword">as</span> <span class="hljs-keyword">time</span>, <span class="hljs-keyword">name</span>,message, <span class="hljs-keyword">status</span>, <span class="hljs-keyword">action</span> <span class="hljs-keyword">from</span> pdb_plug_in_violations</span><br><span class="line"><span class="hljs-keyword">where</span> <span class="hljs-keyword">status</span> &lt;&gt;<span class="hljs-string">'RESOLVED'</span>;</span><br></pre></td></tr></table></figure>
+<h1 id="3-远程复制PDB"><a href="#3-远程复制PDB" class="headerlink" title="3. 远程复制PDB"></a>3. 远程复制PDB</h1><h2 id="3-1-目标库创建到PDB的dblink"><a href="#3-1-目标库创建到PDB的dblink" class="headerlink" title="3.1 目标库创建到PDB的dblink"></a>3.1 目标库创建到PDB的dblink</h2><figure class="highlight sql hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line"><span class="hljs-keyword">CREATE</span> <span class="hljs-keyword">PLUGGABLE</span> <span class="hljs-keyword">DATABASE</span></span><br><span class="line">sldb1 <span class="hljs-keyword">FROM</span> ldb1@ldb1_zdb06</span><br><span class="line"><span class="hljs-comment">--ldb1: name for pdb in source db; ldb1_zdb06: name or dblink in target db</span></span><br><span class="line"><span class="hljs-keyword">FILE_NAME_CONVERT</span>= (<span class="hljs-string">'/oradata/zdb06'</span>,<span class="hljs-string">'/oradata/hdkcdb'</span>);</span><br><span class="line"></span><br><span class="line"><span class="hljs-comment">--检查dblink</span></span><br><span class="line"><span class="hljs-keyword">select</span> <span class="hljs-keyword">name</span>, open_mode <span class="hljs-keyword">from</span> v$<span class="hljs-keyword">database</span>@ldb1_zdb06;</span><br></pre></td></tr></table></figure>
+<h2 id="3-2-源库pdb置于read-only模式"><a href="#3-2-源库pdb置于read-only模式" class="headerlink" title="3.2 源库pdb置于read only模式"></a>3.2 源库pdb置于read only模式</h2><figure class="highlight sql hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"><span class="hljs-keyword">alter</span> <span class="hljs-keyword">pluggable</span> <span class="hljs-keyword">database</span> ldb1 <span class="hljs-keyword">close</span> <span class="hljs-keyword">immediate</span> instances=all;</span><br><span class="line"><span class="hljs-keyword">alter</span> <span class="hljs-keyword">pluggable</span> <span class="hljs-keyword">database</span> ldb1 <span class="hljs-keyword">open</span> <span class="hljs-keyword">read</span> <span class="hljs-keyword">only</span> instances=all;</span><br><span class="line"><span class="hljs-comment">--alter pluggable database all except PDB1 close immediate instances=all;</span></span><br><span class="line"><span class="hljs-comment">--alter pluggable database all except PDB1 open read only instances=all;</span></span><br></pre></td></tr></table></figure>
+<h2 id="3-3-复制pdb"><a href="#3-3-复制pdb" class="headerlink" title="3.3 复制pdb"></a>3.3 复制pdb</h2><figure class="highlight sql hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line"><span class="hljs-keyword">CREATE</span> <span class="hljs-keyword">PLUGGABLE</span> <span class="hljs-keyword">DATABASE</span></span><br><span class="line">ldb1 <span class="hljs-keyword">FROM</span> ldb1@ldb1_zdb06</span><br><span class="line"><span class="hljs-keyword">FILE_NAME_CONVERT</span>= (<span class="hljs-string">'/oradata/zdb06'</span>,<span class="hljs-string">'/oradata/hdkcdb'</span>);</span><br></pre></td></tr></table></figure>
+<h2 id="3-4-重启源库到read-write状态"><a href="#3-4-重启源库到read-write状态" class="headerlink" title="3.4 重启源库到read write状态"></a>3.4 重启源库到read write状态</h2><p>克隆完成，将源数据库处于read write状态<br><figure class="highlight sql hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"><span class="hljs-keyword">alter</span> <span class="hljs-keyword">pluggable</span> <span class="hljs-keyword">database</span> ldb1 <span class="hljs-keyword">close</span> <span class="hljs-keyword">immediate</span> instances=all;</span><br><span class="line"><span class="hljs-keyword">alter</span> <span class="hljs-keyword">pluggable</span> <span class="hljs-keyword">database</span> ldb1 <span class="hljs-keyword">open</span> <span class="hljs-keyword">read</span> write instances=all;</span><br></pre></td></tr></table></figure></p>
+<h2 id="3-5-检查目标PDB状态"><a href="#3-5-检查目标PDB状态" class="headerlink" title="3.5 检查目标PDB状态"></a>3.5 检查目标PDB状态</h2><figure class="highlight sql hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line"><span class="hljs-keyword">ALTER</span> <span class="hljs-keyword">PLUGGABLE</span> <span class="hljs-keyword">DATABASE</span> ldb1 <span class="hljs-keyword">OPEN</span>;</span><br><span class="line"><span class="hljs-keyword">SELECT</span> <span class="hljs-keyword">name</span>, open_mode <span class="hljs-keyword">FROM</span> v$pdbs <span class="hljs-keyword">WHERE</span> <span class="hljs-keyword">name</span> = <span class="hljs-string">'LDB1'</span>;</span><br><span class="line"></span><br><span class="line">col time for a20</span><br><span class="line">col name for a10</span><br><span class="line">col message for a40</span><br><span class="line">col action for a40</span><br><span class="line"><span class="hljs-keyword">set</span> line <span class="hljs-number">200</span> pagesize <span class="hljs-number">9999</span></span><br><span class="line"><span class="hljs-keyword">select</span> to_char(<span class="hljs-keyword">time</span>) <span class="hljs-keyword">as</span> <span class="hljs-keyword">time</span>, <span class="hljs-keyword">name</span>,message, <span class="hljs-keyword">status</span>, <span class="hljs-keyword">action</span> <span class="hljs-keyword">from</span> pdb_plug_in_violations</span><br><span class="line"><span class="hljs-keyword">where</span> <span class="hljs-keyword">status</span> &lt;&gt;<span class="hljs-string">'RESOLVED'</span>;</span><br></pre></td></tr></table></figure>
+<h1 id="4-总结"><a href="#4-总结" class="headerlink" title="4. 总结"></a>4. 总结</h1><ul>
+<li><ol>
+<li>NON-CDB跟PDB步骤都差不多，只不过non-cdb需要执行一个清理转换脚本。</li>
+</ol>
+</li>
+<li><ol start="2">
+<li><p>在复制过过程中，出现有补丁版本不一致导致还原后的PDB一直处于restricted模式<br>从<code>pdb_plug_in_violations</code>，出现</p>
+<figure class="highlight sql hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">PSU bundle patch 170418 (DATABASE PATCHSET <span class="hljs-keyword">UPDATE</span> <span class="hljs-number">12.1</span><span class="hljs-number">.0</span><span class="hljs-number">.2</span><span class="hljs-number">.170418</span>):</span><br><span class="line">Installed <span class="hljs-keyword">in</span> the CDB but <span class="hljs-keyword">not</span> <span class="hljs-keyword">in</span> the PDB</span><br></pre></td></tr></table></figure>
+<ul>
+<li>原因<br> 在我的环境里，non-cdb及pdb的源库均打了相关的补丁，但是呢，打补丁的同事最后并没有应用datapatch，因此，在数据字典中无法识别</li>
+<li>解决<br> 第一次复制non-cdb, 在目标库中，我尝试rollback之前的补丁，然后在打源库对应的补丁，问题能得到解决。<br> 第二次复制pdb, 我尝试在目标库中apply对应的补丁,在源库应用datapatch，之后再复制,复制过后的pdb状态正常。</li>
+<li>建议<br> 利用远程复制来创建PDB，都是基于物理复制，建议数据库小版本都要一致。</li>
+</ul>
+<p>如果需要单独对某个pdb进行datapatch的apply或者回滚，请参照以下命令：</p>
+<figure class="highlight sql hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">datapatch -<span class="hljs-keyword">rollback</span> <span class="hljs-number">28790654</span> -pdbs SLDB2 -<span class="hljs-keyword">force</span> -verbose</span><br><span class="line">$ORACLE_HOME/OPatch/datapatch -<span class="hljs-keyword">apply</span> <span class="hljs-number">29251241</span> -pdbs SLDB2 -<span class="hljs-keyword">force</span> -verbose</span><br></pre></td></tr></table></figure>
+</li>
+</ol>
+</li>
+<li><ol start="3">
+<li>复制过程中出现ora-01031</li>
+</ol>
+</li>
+</ul>
+<figure class="highlight sql hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">ERROR at line 2:</span><br><span class="line">ORA-17628: Oracle error 1031 returned by remote Oracle server</span><br><span class="line">ORA-01031: insufficient privileges</span><br></pre></td></tr></table></figure>
+<p>在源库给dblink用户赋予必须权限:<br><figure class="highlight sql hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="hljs-keyword">GRANT</span> <span class="hljs-keyword">CREATE</span> <span class="hljs-keyword">SESSION</span>, <span class="hljs-keyword">SYSOPER</span>, <span class="hljs-keyword">CREATE</span> <span class="hljs-keyword">PLUGGABLE</span> <span class="hljs-keyword">DATABASE</span> <span class="hljs-keyword">TO</span> <span class="hljs-keyword">system</span>;</span><br></pre></td></tr></table></figure></p>
+<h2 id="4-1-远程复制前的checklist"><a href="#4-1-远程复制前的checklist" class="headerlink" title="4.1 远程复制前的checklist"></a>4.1 远程复制前的checklist</h2><ul>
+<li>对比源跟目标库cdb/pdb下<code>dba_registry_sqlpatch</code>记录</li>
+<li>对比源跟目标库DBBP/PSU版本</li>
+<li>当存在OJVM补丁时候，考虑回滚目标端OJVM补丁，再进行复制</li>
+<li>DBLINK用户需有sysoper或则create pluggable database的权限</li>
+</ul>
+<p>Reference:<br><a href="https://support.oracle.com/epmos/faces/SearchDocDisplay?_adf.ctrl-state=15i0wfigbx_9&amp;_afrLoop=518696371637532#GOAL" target="_blank" rel="noopener">How to clone PDB ( Remote Clone ) across CDB using Database Link (Doc ID 2297470.1)</a><br><a href="https://support.oracle.com/epmos/faces/DocumentDisplay?_afrLoop=520432551190083&amp;parent=DOCUMENT&amp;sourceId=2297470.1&amp;id=1958865.1&amp;_afrWindowMode=0&amp;_adf.ctrl-state=15i0wfigbx_153" target="_blank" rel="noopener">How to Clone a Pluggable Database (PDB) Without Closing the PDB (Doc ID 1958865.1)</a><br><a href="https://support.oracle.com/epmos/faces/DocumentDisplay?_afrLoop=520495376336185&amp;parent=WIDGET_REFERENCES&amp;sourceId=2297470.1&amp;id=1928653.1&amp;_afrWindowMode=0&amp;_adf.ctrl-state=15i0wfigbx_202" target="_blank" rel="noopener">Example for Cloning PDB from NON-CDB via Dblink (Doc ID 1928653.1)</a></p>
+<p><strong>EOF</strong></p>
+
+    
+    </div>
+    
+    <div class="columns is-variable is-1 is-multiline is-mobile">
+    
+        <span class="column is-narrow"><a class="tag is-light article-tag" href="/tags/multitenant/">#multitenant</a></span>
+    
+        <span class="column is-narrow"><a class="tag is-light article-tag" href="/tags/how-to/">#how to</a></span>
+    
+    </div>
+    
+    
+    <div class="columns is-mobile is-multiline article-nav">
+        <span class="column is-12-mobile is-half-desktop  article-nav-prev">
+            
+            <a href="/Prerequisite-Check-CheckActiveFilesAndExecutables-Failed.html">Prerequisite Check &#34;CheckActiveFilesAndExecutables&#34; Failed</a>
+            
+        </span>
+        <span class="column is-12-mobile is-half-desktop  article-nav-next">
+            
+            <a href="/stabilization-of-execution-plan-via-spm.html">使用SPM固定执行计划</a>
+            
+        </span>
+    </div>
+    
+</article>
+
+
+
+
+    </div>
+</section>
+    <footer class="footer footer-padding">
+    <div class="container content">
+            <div class="column is-narrow has-text-centered is-size-7-mobile">
+                &copy;  <a href="/">Kyun Kong&nbsp;</a>
+                2013 - 2019
+            </div>
+    </div>
+</footer>
+
+    <script src="//cdnjs.cloudflare.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
+<script src="//cdnjs.cloudflare.com/ajax/libs/moment.js/2.22.2/moment-with-locales.min.js"></script>
+
+<!-- test if the browser is outdated
+<div id="outdated">
+    <h6>Your browser is out-of-date!</h6>
+    <p>Update your browser to view this website correctly. <a id="btnUpdateBrowser" href="http://outdatedbrowser.com/">Update my browser now </a></p>
+    <p class="last"><a href="#" id="btnCloseUpdateBrowser" title="Close">&times;</a></p>
+</div>
+<script src="//cdnjs.cloudflare.com/ajax/libs/outdated-browser/1.1.5/outdatedbrowser.min.js"></script>
+<script>
+    $(document).ready(function () {
+        // plugin function, place inside DOM ready function
+        outdatedBrowser({
+            bgColor: '#f25648',
+            color: '#ffffff',
+            lowerThan: 'flex'
+        })
+    });
+</script>
+-->
+
+<script>
+    window.FontAwesomeConfig = {
+        searchPseudoElements: true
+    }
+    moment.locale("en-AU");
+</script>
+
+
+    
+    
+    
+    
+    
+    
+
+    
+
+
+<script src="/js/script.js"></script>
+
+
+    
+    <div class="searchbox ins-search">
+    <div class="searchbox-mask"></div>
+    <div class="searchbox-container ins-search-container">
+        <div class="searchbox-input-wrapper">
+            <input type="text" class="searchbox-input ins-search-input" placeholder="Type something..." />
+            <span class="searchbox-close ins-close ins-selectable"><i class="fa fa-times-circle"></i></span>
+        </div>
+        <div class="searchbox-result-wrapper ins-section-wrapper">
+            <div class="ins-section-container"></div>
+        </div>
+    </div>
+</div>
+<script>
+    (function (window) {
+        var INSIGHT_CONFIG = {
+            TRANSLATION: {
+                POSTS: 'Posts',
+                PAGES: 'Pages',
+                CATEGORIES: 'Categories',
+                TAGS: 'Tags',
+                UNTITLED: '(Untitled)',
+            },
+            CONTENT_URL: '/content.json',
+        };
+        window.INSIGHT_CONFIG = INSIGHT_CONFIG;
+    })(window);
+</script>
+<script src="/js/insight.js"></script>
+    
+</body>
+</html>

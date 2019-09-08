@@ -1,0 +1,245 @@
+<!DOCTYPE html>
+<html class="has-navbar-fixed-top">
+<head>
+    <meta charset="utf-8">
+<title>Fixed Table统计信息 - My Notebook</title>
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+
+<link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/outdated-browser/1.1.5/outdatedbrowser.min.css">
+
+
+<meta name="description" content="Oracle memoranda">
+
+
+
+<meta name="keywords" content="oracle, database">
+
+
+
+
+
+
+
+<link rel="icon" href="/images/favicon.ico">
+
+
+<link rel="stylesheet" href="//fonts.googleapis.com/css?family=Ovo|Source+Code+Pro|Calibri|Ubuntu">
+<link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/bulma/0.6.2/css/bulma.min.css">
+
+
+
+<link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/highlight.js/9.12.0/styles/atom-one-light.min.css">
+
+<link rel="stylesheet" href="/css/style.css">
+
+<script defer src="//use.fontawesome.com/releases/v5.0.8/js/all.js"></script>
+
+
+    
+    
+    
+    
+    
+    
+
+    
+
+
+</head>
+<body>
+    
+<nav class="navbar is-transparent is-fixed-top navbar-main" role="navigation" aria-label="main navigation">
+    <div class="container">
+        <div class="navbar-brand">
+            <a class="navbar-item navbar-logo" href="/">
+                
+                    
+                    My Notebook
+                    
+                
+            </a>
+            <div class="navbar-burger">
+                <span></span>
+                <span></span>
+                <span></span>
+            </div>
+        </div>
+        
+        <div class="navbar-menu navbar-start">
+            
+            <a class="navbar-item "
+               href="/">Home</a>
+            
+            <a class="navbar-item "
+               href="/about">About</a>
+            
+        </div>
+        
+        <div class="navbar-menu navbar-end">
+            
+            <a class="navbar-item search" title="Search" href="javascript:;">
+                <i class="fas fa-search"></i>
+            </a>
+            
+            
+            
+        </div>
+    </div>
+</nav>
+
+    <section class="section">
+    <div class="container">
+    <article class="article content gallery" itemscope itemprop="blogPost">
+    <h1 class="article-title is-size-3 is-size-4-mobile" itemprop="name">
+        
+            Fixed Table统计信息
+        
+    </h1>
+    <div class="article-meta columns is-variable is-1 is-multiline is-mobile is-size-7-mobile">
+        <span class="column is-narrow">
+            <time datetime="2019-08-07T16:11:00.000Z" itemprop="datePublished">Aug 8 2019</time>
+        </span>
+        
+        <span class="column is-narrow article-category">
+            <i class="far fa-folder"></i>
+            <a class="article-category-link" href="/categories/oracle/">oracle</a>
+        </span>
+        
+        
+    </div>
+    <div class="article-entry is-size-6-mobile" itemprop="articleBody">
+    
+        <p>Oracle有大量的内部视图供DBA使用，这些视图底层表以X$开头，Fixed Objects指的是这些以x$开头的表(下文中称为基表)及它们的索引。<br>很多v$开头的视图基表都是x$表，包括动态性能视图，管理视图，如dba_free_space等，因此，这些fixed objects的统计信息就显得极其重要。</p>
+<h2 id="1-Fixed-objects统计信息重要性"><a href="#1-Fixed-objects统计信息重要性" class="headerlink" title="1. Fixed objects统计信息重要性"></a>1. Fixed objects统计信息重要性</h2><p>优化器在生成执行计划的时候依赖于这些基表的统计信息，如果这些基表的统计信息缺失，不像用户对象的统计信息缺失，Oracle会使用dynamic sampling，优化器在这些缺失统计信息的基表上，会使用预设的默认值进行执行计划的评估。在这种情况下，执行计划可能是极其糟糕的。因此，可能存在查询某些动态性能视图或者数据字典时，出现很慢的情况。</p>
+<p>例如, <code>X$KTFBUE</code>记录了数据文件、extent的位图等信息，在查询dba_free_space的时候，会使用到这个基表，如果这个表的统计信息为0，则有可能导致查询dba_free_space很慢. 当这个基表缺失统计信息时，该表的行数默认为10万行。</p>
+<figure class="highlight sql hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line">column database_creation format a18</span><br><span class="line">column last_analyzed format a18</span><br><span class="line"><span class="hljs-keyword">select</span> dbid</span><br><span class="line">      ,to_char(created,<span class="hljs-string">'dd.mm.yyyy hh24:mi'</span>) database_creation</span><br><span class="line">      ,<span class="hljs-keyword">version</span></span><br><span class="line">      ,(<span class="hljs-keyword">select</span> to_char(<span class="hljs-keyword">max</span>(last_analyzed),<span class="hljs-string">'dd.mm.yyyy hh24:mi'</span>) last_analyzed</span><br><span class="line">         <span class="hljs-keyword">from</span> dba_tab_statistics</span><br><span class="line">         <span class="hljs-keyword">where</span> object_type=<span class="hljs-string">'FIXED TABLE'</span>) last_analyzed</span><br><span class="line"><span class="hljs-keyword">from</span> v$<span class="hljs-keyword">database</span>,v$<span class="hljs-keyword">instance</span>;</span><br></pre></td></tr></table></figure>
+<ul>
+<li><p>如何收集<br> 在12c以前，基表的统计信息是不会通过Oracle自动任务去收集的，需要手动执行下面这个procedure, 用户需要有sysdba或者<code>ANALYZE ANY DICTIONARY</code>的权限。</p>
+<figure class="highlight sql hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">exec DBMS_STATS.GATHER_FIXED_OBJECTS_STATS;</span><br></pre></td></tr></table></figure>
+<ul>
+<li>上面这个procedure与<code>DBMS_STATS.GATHER_TABLE_STATS</code>的区别是，它不会收集表/索引的blocks信息，因为基表是存放在内存中随时动态变化的，它们的blocks永远设置为0.</li>
+<li><strong>统计信息的收集都是会消耗资源，不建议在业务高峰期对任何批量对象进行统计信息的收集</strong>。</li>
+<li><p>12c以后，虽然自动任务窗口会收集基表统计信息，但是，其限制是在窗口时间内，其优先级是最低的，要先等到用户对象的统计信息收集完，等数据字典的统计信息收集完，同时这些基表的统计信息不存在，即是说，自动窗口不会去更新基表统计信息的；因此，建议定期手工对基表进行收集。</p>
+<p>尽管基表生存周期是在内存中，但其统计信息是会保存在磁盘中，因此，实例重启后，除非负载有很大的变化，并没有必要重新收集统计信息。</p>
+</li>
+</ul>
+</li>
+</ul>
+<h2 id="2-Fixed-tables统计信息对数据库的影响"><a href="#2-Fixed-tables统计信息对数据库的影响" class="headerlink" title="2. Fixed tables统计信息对数据库的影响"></a>2. Fixed tables统计信息对数据库的影响</h2><p>对dba_extents, v$access, V$RMAN_BACKUP_JOB_DETAILS, V$RMAN_STATUS,DBA_FREE_SPACE等视图有很大影响，很多时候查询这些视图很慢，极大可能就是因为基表统计信息缺失或者存在错误的统计信息。</p>
+<p><br><br>Reference:<br><a href="https://support.oracle.com/epmos/faces/DocumentDisplay?_adf.ctrl-state=hy44rkzga_65&amp;id=2331567.1&amp;_afrLoop=463004944185813" target="_blank" rel="noopener">How to Gather Statistics on Objects Owned by the &#39;SYS&#39; User and &#39;Fixed&#39; Objects (Doc ID 457926.1)</a><br><a href="https://support.oracle.com/epmos/faces/DocumentDisplay?_afrLoop=463163420960672&amp;parent=DOCUMENT&amp;sourceId=2331567.1&amp;id=798257.1&amp;_afrWindowMode=0&amp;_adf.ctrl-state=hy44rkzga_122" target="_blank" rel="noopener">Fixed Objects Statistics (GATHER_FIXED_OBJECTS_STATS) Considerations (Doc ID 798257.1)</a><br><a href="https://www.oracle.com/technetwork/database/bi-datawarehousing/twp-bp-for-stats-gather-12c-1967354.pdf" target="_blank" rel="noopener">Best Practices for Gathering Optimizer Statistics with Oracle Database 12c Release 2</a><br><a href="https://support.oracle.com/epmos/faces/DocumentDisplay?_afrLoop=465970265177832&amp;id=2523018.1&amp;_afrWindowMode=0&amp;_adf.ctrl-state=hy44rkzga_293" target="_blank" rel="noopener">ORA-01555 Caused By Auto Execute Of Job &quot;SYS&quot;.&quot;PMO_DEFERRED_GIDX_MAINT_JOB&quot; (Doc ID 2523018.1)</a><br><a href="https://docs.oracle.com/database/121/TGSQL/tgsql_stats.htm#TGSQL95110" target="_blank" rel="noopener">Database SQL Tuning Guide - Gathering Statistics for Fixed Objects</a></p>
+<p><strong>EOF</strong></p>
+
+    
+    </div>
+    
+    <div class="columns is-variable is-1 is-multiline is-mobile">
+    
+        <span class="column is-narrow"><a class="tag is-light article-tag" href="/tags/maintenance/">#maintenance</a></span>
+    
+    </div>
+    
+    
+    <div class="columns is-mobile is-multiline article-nav">
+        <span class="column is-12-mobile is-half-desktop  article-nav-prev">
+            
+            <a href="/stabilization-of-execution-plan-via-spm.html">使用SPM固定执行计划</a>
+            
+        </span>
+        <span class="column is-12-mobile is-half-desktop  article-nav-next">
+            
+            <a href="/rman-compression-and-unused-block-compression.html">RMAN Compression And Unused Block Compression</a>
+            
+        </span>
+    </div>
+    
+</article>
+
+
+
+
+    </div>
+</section>
+    <footer class="footer footer-padding">
+    <div class="container content">
+            <div class="column is-narrow has-text-centered is-size-7-mobile">
+                &copy;  <a href="/">Kyun Kong&nbsp;</a>
+                2013 - 2019
+            </div>
+    </div>
+</footer>
+
+    <script src="//cdnjs.cloudflare.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
+<script src="//cdnjs.cloudflare.com/ajax/libs/moment.js/2.22.2/moment-with-locales.min.js"></script>
+
+<!-- test if the browser is outdated
+<div id="outdated">
+    <h6>Your browser is out-of-date!</h6>
+    <p>Update your browser to view this website correctly. <a id="btnUpdateBrowser" href="http://outdatedbrowser.com/">Update my browser now </a></p>
+    <p class="last"><a href="#" id="btnCloseUpdateBrowser" title="Close">&times;</a></p>
+</div>
+<script src="//cdnjs.cloudflare.com/ajax/libs/outdated-browser/1.1.5/outdatedbrowser.min.js"></script>
+<script>
+    $(document).ready(function () {
+        // plugin function, place inside DOM ready function
+        outdatedBrowser({
+            bgColor: '#f25648',
+            color: '#ffffff',
+            lowerThan: 'flex'
+        })
+    });
+</script>
+-->
+
+<script>
+    window.FontAwesomeConfig = {
+        searchPseudoElements: true
+    }
+    moment.locale("en-AU");
+</script>
+
+
+    
+    
+    
+    
+    
+    
+
+    
+
+
+<script src="/js/script.js"></script>
+
+
+    
+    <div class="searchbox ins-search">
+    <div class="searchbox-mask"></div>
+    <div class="searchbox-container ins-search-container">
+        <div class="searchbox-input-wrapper">
+            <input type="text" class="searchbox-input ins-search-input" placeholder="Type something..." />
+            <span class="searchbox-close ins-close ins-selectable"><i class="fa fa-times-circle"></i></span>
+        </div>
+        <div class="searchbox-result-wrapper ins-section-wrapper">
+            <div class="ins-section-container"></div>
+        </div>
+    </div>
+</div>
+<script>
+    (function (window) {
+        var INSIGHT_CONFIG = {
+            TRANSLATION: {
+                POSTS: 'Posts',
+                PAGES: 'Pages',
+                CATEGORIES: 'Categories',
+                TAGS: 'Tags',
+                UNTITLED: '(Untitled)',
+            },
+            CONTENT_URL: '/content.json',
+        };
+        window.INSIGHT_CONFIG = INSIGHT_CONFIG;
+    })(window);
+</script>
+<script src="/js/insight.js"></script>
+    
+</body>
+</html>

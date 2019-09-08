@@ -1,0 +1,285 @@
+<!DOCTYPE html>
+<html class="has-navbar-fixed-top">
+<head>
+    <meta charset="utf-8">
+<title>RMAN Compression And Unused Block Compression - My Notebook</title>
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+
+<link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/outdated-browser/1.1.5/outdatedbrowser.min.css">
+
+
+<meta name="description" content="Oracle memoranda">
+
+
+
+<meta name="keywords" content="oracle, database">
+
+
+
+
+
+
+
+<link rel="icon" href="/images/favicon.ico">
+
+
+<link rel="stylesheet" href="//fonts.googleapis.com/css?family=Ovo|Source+Code+Pro|Calibri|Ubuntu">
+<link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/bulma/0.6.2/css/bulma.min.css">
+
+
+
+<link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/highlight.js/9.12.0/styles/atom-one-light.min.css">
+
+<link rel="stylesheet" href="/css/style.css">
+
+<script defer src="//use.fontawesome.com/releases/v5.0.8/js/all.js"></script>
+
+
+    
+    
+    
+    
+    
+    
+
+    
+
+
+</head>
+<body>
+    
+<nav class="navbar is-transparent is-fixed-top navbar-main" role="navigation" aria-label="main navigation">
+    <div class="container">
+        <div class="navbar-brand">
+            <a class="navbar-item navbar-logo" href="/">
+                
+                    
+                    My Notebook
+                    
+                
+            </a>
+            <div class="navbar-burger">
+                <span></span>
+                <span></span>
+                <span></span>
+            </div>
+        </div>
+        
+        <div class="navbar-menu navbar-start">
+            
+            <a class="navbar-item "
+               href="/">Home</a>
+            
+            <a class="navbar-item "
+               href="/about">About</a>
+            
+        </div>
+        
+        <div class="navbar-menu navbar-end">
+            
+            <a class="navbar-item search" title="Search" href="javascript:;">
+                <i class="fas fa-search"></i>
+            </a>
+            
+            
+            
+        </div>
+    </div>
+</nav>
+
+    <section class="section">
+    <div class="container">
+    <article class="article content gallery" itemscope itemprop="blogPost">
+    <h1 class="article-title is-size-3 is-size-4-mobile" itemprop="name">
+        
+            RMAN Compression And Unused Block Compression
+        
+    </h1>
+    <div class="article-meta columns is-variable is-1 is-multiline is-mobile is-size-7-mobile">
+        <span class="column is-narrow">
+            <time datetime="2019-08-07T16:05:23.000Z" itemprop="datePublished">Aug 8 2019</time>
+        </span>
+        
+        <span class="column is-narrow article-category">
+            <i class="far fa-folder"></i>
+            <a class="article-category-link" href="/categories/oracle/">oracle</a>
+        </span>
+        
+        
+    </div>
+    <div class="article-entry is-size-6-mobile" itemprop="articleBody">
+    
+        <p>最近在检查备份的时候发现一个新库，在磁带上备份占用了将近1个T，而备份到本地磁盘才使用了200G。<br>从v$segments看，空间占用大概200G左右，但是分配了仅1个T的空间。为此，专门查看了MOS文档，里面有几篇文档提及这个问题。</p>
+<a id="more"></a>
+<h1 id="1-RMAN压缩的类型"><a href="#1-RMAN压缩的类型" class="headerlink" title="1. RMAN压缩的类型"></a>1. RMAN压缩的类型</h1><p>RMAN默认提供以下三种类型的备份压缩。<br>其中，从10.2开始，null compression和Unused block compression默认自动会进行，不需要其他指定。但是，在一些情况下，unused block compression会失效。</p>
+<h2 id="1-1-Null-compression"><a href="#1-1-Null-compression" class="headerlink" title="1.1 Null compression"></a>1.1 Null compression</h2><p>当以备份集方式备份数据文件的时候，RMAN不会去备份没有被分配的数据块，例如，在一个数据文件中，分配了100M空间，但仅仅使用了50M，rman只会备份这个50M的块。</p>
+<h2 id="1-2-Unused-block-compression"><a href="#1-2-Unused-block-compression" class="headerlink" title="1.2 Unused block compression"></a>1.2 Unused block compression</h2><p>从10.2开始，rman会跳过当前没有包含数据的块，这个称之为unused block compression, 例如，当前数据文件100M，包含了50M数据，当用户drop包含25M的表时候，rman只会备份剩下的25M的空间。<br>即是说，null compression只会备份使用了的包括使用过的块；而unused block compression只备份了当前含有数据的数据块。因此unused block compress比null compression要节省空间跟时间。</p>
+<p>Unused block compression适用条件：</p>
+<ul>
+<li><code>COMPATIBLE</code>必须是10.2及以上</li>
+<li>没有定义还原点</li>
+<li>数据文件为本地管理</li>
+<li>数据文件必须是全备或者0级增量备份，且备份以备份集形式存在</li>
+<li>备份集是存放到磁盘或者以Oracle Secure Backup备份到磁带，<strong>即其他第三方备份软件备份到磁带是不会具有这个功能</strong></li>
+<li>仅支持企业版</li>
+</ul>
+<p>这也是为什么第三方备份软件备份到磁带上空间占用量要远高于磁盘了。</p>
+<h2 id="1-3-Binary-compression"><a href="#1-3-Binary-compression" class="headerlink" title="1.3 Binary compression"></a>1.3 Binary compression</h2><p>二进制压缩需要在rman备份命令中指定<code>AS COMPRESSED</code>。以这种形式的压缩备份成为二进制压缩。<br>在进行二进制压缩备份的时候，CPU会有开销，意味着备份时间更长，同时restore的时候，时间也比没有压缩的还原时间要长。<br>从11.2开始，rman二进制压缩有以下三个级别：</p>
+<ul>
+<li>LOW - 最小的压缩比例和占用最少的CPU</li>
+<li>MEDIUM - 同时兼顾CPU跟压缩比，推荐使用</li>
+<li>HIGH - 最佳的压缩比，同时CPU开销会更大，使用于磁盘空间不足，但CPU比较空闲，或者需要通过网络传输，但网络资源比较紧张的情况</li>
+</ul>
+<p>通过查询<code>V$RMAN_COMPRESSION_ALGORITHM</code>可以看到Oracle支持的压缩算法：</p>
+<figure class="highlight sql hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line">SQL&gt; select ALGORITHM_NAME, ALGORITHM_DESCRIPTION, ALGORITHM_COMPATIBILITY from V$RMAN_COMPRESSION_ALGORITHM ;</span><br><span class="line"></span><br><span class="line">ALGORITHM_NAME  ALGORITHM_DESCRIPTION                                        ALGORITHM_COMPATIB</span><br><span class="line"><span class="hljs-comment">--------------- ------------------------------------------------------------ ------------------</span></span><br><span class="line">BZIP2           good compression ratio                                       9.2.0.0.0</span><br><span class="line">BASIC           good compression ratio                                       9.2.0.0.0</span><br><span class="line">LOW             maximum possible compression speed                           11.2.0.0.0</span><br><span class="line">ZLIB            balance between speed and compression ratio                  11.0.0.0.0</span><br><span class="line">MEDIUM          balance between speed and compression ratio                  11.0.0.0.0</span><br><span class="line">HIGH            maximum possible compression ratio                           11.2.0.0.0</span><br></pre></td></tr></table></figure>
+<p>通过rman以下命令可以改变默认的压缩类型：</p>
+<figure class="highlight hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">RMAN&gt; CONFIGURE COMPRESSION ALGORITHM '&lt;alg_name&gt;';</span><br></pre></td></tr></table></figure>
+<h1 id="2-Undo块的优化"><a href="#2-Undo块的优化" class="headerlink" title="2. Undo块的优化"></a>2. Undo块的优化</h1><p>从11g开始，rman开始对undo块进行优化，在不需要进行recovery的undo block上，即已经提交的事务的undo block，这些undo block将会被rman排除掉。<br>同时undo的备份优化需满足以下几个条件：</p>
+<ul>
+<li>是备份集的备份</li>
+<li>全备或者是0级增量备份</li>
+<li>不是validate的rman备份有效性验证</li>
+<li>备份片的版本是11.1及以上</li>
+<li>用户没有禁用undo optimization： <code>_undo_block_compression = FALSE</code></li>
+<li>备份集是写入磁盘或者OSB的磁带</li>
+<li>没有还原点</li>
+</ul>
+<h1 id="3-Example"><a href="#3-Example" class="headerlink" title="3. Example"></a>3. Example</h1><ul>
+<li>数据量大小：</li>
+</ul>
+<figure class="highlight sql hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">SQL&gt; select sum(bytes/1024/1024/1024) from dba_segments;</span><br><span class="line"></span><br><span class="line">SUM(BYTES/1024/1024/1024)</span><br><span class="line"><span class="hljs-comment">-------------------------</span></span><br><span class="line">3.20123291</span><br></pre></td></tr></table></figure>
+<ul>
+<li>RMAN基于磁盘的备份：</li>
+</ul>
+<figure class="highlight hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">RMAN&gt; backup full database format '/home/oracle/backup/full_%U.bak';</span><br></pre></td></tr></table></figure>
+<ul>
+<li>磁盘备份的大小：</li>
+</ul>
+<figure class="highlight sql hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">[oracle@db2srv:/home/oracle/<span class="hljs-keyword">backup</span>]$ du -sh full_0*</span><br><span class="line"><span class="hljs-number">1.9</span>G	full_01u9pved_1_1.bak</span><br><span class="line"><span class="hljs-number">9.7</span>M	full_02u9pvfi_1_1.bak</span><br></pre></td></tr></table></figure>
+<ul>
+<li>模拟磁带备份</li>
+</ul>
+<figure class="highlight sql hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line">RMAN&gt; run &#123;</span><br><span class="line">allocate channel x1 type 'sbt_tape'</span><br><span class="line">parms="SBT_LIBRARY=oracle.disksbt,</span><br><span class="line">ENV=(BACKUP_DIR=/home/oracle/<span class="hljs-keyword">backup</span>)<span class="hljs-string">";</span></span><br><span class="line"><span class="hljs-string">BACKUP full database format 'type_%U.bak';</span></span><br><span class="line"><span class="hljs-string">&#125;</span></span><br></pre></td></tr></table></figure>
+<ul>
+<li>磁带备份大小</li>
+</ul>
+<figure class="highlight sql hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">[oracle@db2srv:/home/oracle/<span class="hljs-keyword">backup</span>]$ du -sh type_0*</span><br><span class="line"><span class="hljs-number">9.3</span>G	type_08u9q0ma_1_1.bak</span><br><span class="line"><span class="hljs-number">17</span>M	type_09u9q0o2_1_1.bak</span><br></pre></td></tr></table></figure>
+<p>可以看到，磁带的备份是并没有排除空块的。<br>从<code>v$backup_datafile</code>视图中，可以看出数据文件是否是full scan(%READ is 100):</p>
+<figure class="highlight sql hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line"><span class="hljs-keyword">select</span> <span class="hljs-keyword">file</span># fno, used_change_tracking BCT,</span><br><span class="line">datafile_blocks BLKS,</span><br><span class="line">block_size blksz, blocks_read <span class="hljs-keyword">READ</span>,</span><br><span class="line">UNDO_OPTIMIZED,</span><br><span class="line"><span class="hljs-keyword">round</span>((blocks_read/datafile_blocks) * <span class="hljs-number">100</span>,<span class="hljs-number">2</span>) <span class="hljs-string">"%READ"</span>,</span><br><span class="line">blocks WRTN, <span class="hljs-keyword">round</span>((blocks/datafile_blocks)*<span class="hljs-number">100</span>,<span class="hljs-number">2</span>) <span class="hljs-string">"%WRTN"</span></span><br><span class="line"><span class="hljs-keyword">from</span> v$backup_datafile</span><br><span class="line"><span class="hljs-comment">--where completion_time between</span></span><br><span class="line"><span class="hljs-comment">--      to_date('25-jan-09 01:30:00', 'dd-mon-rr hh24:mi:ss') and</span></span><br><span class="line"><span class="hljs-comment">--      to_date('26-jan-09 12:35:26', 'dd-mon-rr hh24:mi:ss')</span></span><br><span class="line"><span class="hljs-keyword">order</span> <span class="hljs-keyword">by</span> <span class="hljs-keyword">file</span>#;</span><br></pre></td></tr></table></figure>
+<p><br><br><strong>Reference</strong>:<br><a href="https://support.oracle.com/epmos/faces/DocumentDisplay?_afrLoop=322241885364989&amp;id=798844.1&amp;displayIndex=16&amp;_afrWindowMode=0&amp;_adf.ctrl-state=12zs90rvy4_171" target="_blank" rel="noopener"><strong>Why is RMAN not using Unused Block Compression during backup? (Doc ID 798844.1)</strong></a><br><a href="https://support.oracle.com/epmos/faces/DocumentDisplay?_afrLoop=322717803996859&amp;id=563427.1&amp;displayIndex=18&amp;_afrWindowMode=0&amp;_adf.ctrl-state=12zs90rvy4_283#GOAL" target="_blank" rel="noopener">A Complete Understanding of RMAN Compression (Doc ID 563427.1)</a><br><a href="https://support.oracle.com/epmos/faces/DocumentDisplay?_afrLoop=366882990480648&amp;parent=WIDGET_RECENT_DB&amp;id=1349492.1&amp;_afrWindowMode=0&amp;_adf.ctrl-state=wculeptf1_65" target="_blank" rel="noopener">Why an SBT backup MAY take longer and create larger backuppieces than a DISK backup. (Doc ID 1349492.1)</a></p>
+<p><strong>EOF</strong></p>
+
+    
+    </div>
+    
+    <div class="columns is-variable is-1 is-multiline is-mobile">
+    
+        <span class="column is-narrow"><a class="tag is-light article-tag" href="/tags/rman/">#rman</a></span>
+    
+    </div>
+    
+    
+    <div class="columns is-mobile is-multiline article-nav">
+        <span class="column is-12-mobile is-half-desktop  article-nav-prev">
+            
+            <a href="/fixed-table-statistics.html">Fixed Table统计信息</a>
+            
+        </span>
+        <span class="column is-12-mobile is-half-desktop  article-nav-next">
+            
+            <a href="/A-Brief-Introduction-of-Oracle-Role-and-Privilege.html">A Brief Introduction of Oracle Role and Privilege</a>
+            
+        </span>
+    </div>
+    
+</article>
+
+
+
+
+    </div>
+</section>
+    <footer class="footer footer-padding">
+    <div class="container content">
+            <div class="column is-narrow has-text-centered is-size-7-mobile">
+                &copy;  <a href="/">Kyun Kong&nbsp;</a>
+                2013 - 2019
+            </div>
+    </div>
+</footer>
+
+    <script src="//cdnjs.cloudflare.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
+<script src="//cdnjs.cloudflare.com/ajax/libs/moment.js/2.22.2/moment-with-locales.min.js"></script>
+
+<!-- test if the browser is outdated
+<div id="outdated">
+    <h6>Your browser is out-of-date!</h6>
+    <p>Update your browser to view this website correctly. <a id="btnUpdateBrowser" href="http://outdatedbrowser.com/">Update my browser now </a></p>
+    <p class="last"><a href="#" id="btnCloseUpdateBrowser" title="Close">&times;</a></p>
+</div>
+<script src="//cdnjs.cloudflare.com/ajax/libs/outdated-browser/1.1.5/outdatedbrowser.min.js"></script>
+<script>
+    $(document).ready(function () {
+        // plugin function, place inside DOM ready function
+        outdatedBrowser({
+            bgColor: '#f25648',
+            color: '#ffffff',
+            lowerThan: 'flex'
+        })
+    });
+</script>
+-->
+
+<script>
+    window.FontAwesomeConfig = {
+        searchPseudoElements: true
+    }
+    moment.locale("en-AU");
+</script>
+
+
+    
+    
+    
+    
+    
+    
+
+    
+
+
+<script src="/js/script.js"></script>
+
+
+    
+    <div class="searchbox ins-search">
+    <div class="searchbox-mask"></div>
+    <div class="searchbox-container ins-search-container">
+        <div class="searchbox-input-wrapper">
+            <input type="text" class="searchbox-input ins-search-input" placeholder="Type something..." />
+            <span class="searchbox-close ins-close ins-selectable"><i class="fa fa-times-circle"></i></span>
+        </div>
+        <div class="searchbox-result-wrapper ins-section-wrapper">
+            <div class="ins-section-container"></div>
+        </div>
+    </div>
+</div>
+<script>
+    (function (window) {
+        var INSIGHT_CONFIG = {
+            TRANSLATION: {
+                POSTS: 'Posts',
+                PAGES: 'Pages',
+                CATEGORIES: 'Categories',
+                TAGS: 'Tags',
+                UNTITLED: '(Untitled)',
+            },
+            CONTENT_URL: '/content.json',
+        };
+        window.INSIGHT_CONFIG = INSIGHT_CONFIG;
+    })(window);
+</script>
+<script src="/js/insight.js"></script>
+    
+</body>
+</html>

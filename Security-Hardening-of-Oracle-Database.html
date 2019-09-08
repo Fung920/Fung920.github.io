@@ -1,0 +1,279 @@
+<!DOCTYPE html>
+<html class="has-navbar-fixed-top">
+<head>
+    <meta charset="utf-8">
+<title>Security Hardening of Oracle Database - My Notebook</title>
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+
+<link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/outdated-browser/1.1.5/outdatedbrowser.min.css">
+
+
+<meta name="description" content="Oracle memoranda">
+
+
+
+<meta name="keywords" content="oracle, database">
+
+
+
+
+
+
+
+<link rel="icon" href="/images/favicon.ico">
+
+
+<link rel="stylesheet" href="//fonts.googleapis.com/css?family=Ovo|Source+Code+Pro|Calibri|Ubuntu">
+<link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/bulma/0.6.2/css/bulma.min.css">
+
+
+
+<link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/highlight.js/9.12.0/styles/atom-one-light.min.css">
+
+<link rel="stylesheet" href="/css/style.css">
+
+<script defer src="//use.fontawesome.com/releases/v5.0.8/js/all.js"></script>
+
+
+    
+    
+    
+    
+    
+    
+
+    
+
+
+</head>
+<body>
+    
+<nav class="navbar is-transparent is-fixed-top navbar-main" role="navigation" aria-label="main navigation">
+    <div class="container">
+        <div class="navbar-brand">
+            <a class="navbar-item navbar-logo" href="/">
+                
+                    
+                    My Notebook
+                    
+                
+            </a>
+            <div class="navbar-burger">
+                <span></span>
+                <span></span>
+                <span></span>
+            </div>
+        </div>
+        
+        <div class="navbar-menu navbar-start">
+            
+            <a class="navbar-item "
+               href="/">Home</a>
+            
+            <a class="navbar-item "
+               href="/about">About</a>
+            
+        </div>
+        
+        <div class="navbar-menu navbar-end">
+            
+            <a class="navbar-item search" title="Search" href="javascript:;">
+                <i class="fas fa-search"></i>
+            </a>
+            
+            
+            
+        </div>
+    </div>
+</nav>
+
+    <section class="section">
+    <div class="container">
+    <article class="article content gallery" itemscope itemprop="blogPost">
+    <h1 class="article-title is-size-3 is-size-4-mobile" itemprop="name">
+        
+            Security Hardening of Oracle Database
+        
+    </h1>
+    <div class="article-meta columns is-variable is-1 is-multiline is-mobile is-size-7-mobile">
+        <span class="column is-narrow">
+            <time datetime="2019-08-06T03:03:23.000Z" itemprop="datePublished">Aug 6 2019</time>
+        </span>
+        
+        <span class="column is-narrow article-category">
+            <i class="far fa-folder"></i>
+            <a class="article-category-link" href="/categories/oracle/">oracle</a>
+        </span>
+        
+        
+    </div>
+    <div class="article-entry is-size-6-mobile" itemprop="articleBody">
+    
+        <p>This post introduces how to implement security hardening of Oracle database.<br><a id="more"></a></p>
+<h2 id="1-Verification-function-of-password-limits"><a href="#1-Verification-function-of-password-limits" class="headerlink" title="1. Verification function of password limits"></a>1. Verification function of password limits</h2><p>Below script contains a verification function name <code>ora12c_verify_function</code>:<br><figure class="highlight sql hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">[oracle@cdb01 ~]$ ls -l $ORACLE_HOME/rdbms/admin/utlpw*</span><br><span class="line">-rw-r<span class="hljs-comment">--r--. 1 oracle oinstall 12543 11月  7 2013 /oracle/app/oracle/product/12c/db_1/rdbms/admin/utlpwdmg.sql</span></span><br></pre></td></tr></table></figure></p>
+<h2 id="2-Resource-limit-of-default-profile-after-executing-utlpwdmg-sql"><a href="#2-Resource-limit-of-default-profile-after-executing-utlpwdmg-sql" class="headerlink" title="2. Resource limit of default profile after executing utlpwdmg.sql"></a>2. Resource limit of default profile after executing utlpwdmg.sql</h2><p>utlpwdmg.sql script will modify default profile as below rules:</p>
+<figure class="highlight sql hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line"><span class="hljs-keyword">ALTER</span> PROFILE <span class="hljs-keyword">DEFAULT</span> <span class="hljs-keyword">LIMIT</span></span><br><span class="line">PASSWORD_LIFE_TIME <span class="hljs-number">180</span></span><br><span class="line"><span class="hljs-keyword">PASSWORD_GRACE_TIME</span> <span class="hljs-number">7</span></span><br><span class="line"><span class="hljs-keyword">PASSWORD_REUSE_TIME</span> <span class="hljs-keyword">UNLIMITED</span></span><br><span class="line"><span class="hljs-keyword">PASSWORD_REUSE_MAX</span>  <span class="hljs-keyword">UNLIMITED</span></span><br><span class="line"><span class="hljs-keyword">FAILED_LOGIN_ATTEMPTS</span> <span class="hljs-number">10</span></span><br><span class="line"><span class="hljs-keyword">PASSWORD_LOCK_TIME</span> <span class="hljs-number">1</span></span><br><span class="line"><span class="hljs-keyword">PASSWORD_VERIFY_FUNCTION</span> ora12c_verify_function;</span><br></pre></td></tr></table></figure>
+<p>Also create <code>ORA_STIG_PROFILE</code> as below rules:</p>
+<figure class="highlight plain hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br></pre></td><td class="code"><pre><span class="line">SQL&gt; col profile for a30</span><br><span class="line">col resource for a30</span><br><span class="line">col limit for a50</span><br><span class="line">set line 200 pagesize 200</span><br><span class="line">select * from dba_profiles;</span><br><span class="line">SQL&gt; </span><br><span class="line">PROFILE 		       RESOURCE_NAME			RESOURCE LIMIT						    COM</span><br><span class="line">------------------------------ -------------------------------- -------- -------------------------------------------------- ---</span><br><span class="line">DEFAULT 		       COMPOSITE_LIMIT			KERNEL	 UNLIMITED					    NO</span><br><span class="line">DEFAULT 		       SESSIONS_PER_USER		KERNEL	 UNLIMITED					    NO</span><br><span class="line">DEFAULT 		       CPU_PER_SESSION			KERNEL	 UNLIMITED					    NO</span><br><span class="line">DEFAULT 		       CPU_PER_CALL			KERNEL	 UNLIMITED					    NO</span><br><span class="line">DEFAULT 		       LOGICAL_READS_PER_SESSION	KERNEL	 UNLIMITED					    NO</span><br><span class="line">DEFAULT 		       LOGICAL_READS_PER_CALL		KERNEL	 UNLIMITED					    NO</span><br><span class="line">DEFAULT 		       IDLE_TIME			KERNEL	 UNLIMITED					    NO</span><br><span class="line">DEFAULT 		       CONNECT_TIME			KERNEL	 UNLIMITED					    NO</span><br><span class="line">DEFAULT 		       PRIVATE_SGA			KERNEL	 UNLIMITED					    NO</span><br><span class="line">DEFAULT 		       FAILED_LOGIN_ATTEMPTS		PASSWORD 10						    NO</span><br><span class="line">DEFAULT 		       PASSWORD_LIFE_TIME		PASSWORD 180						    NO</span><br><span class="line">DEFAULT 		       PASSWORD_REUSE_TIME		PASSWORD UNLIMITED					    NO</span><br><span class="line">DEFAULT 		       PASSWORD_REUSE_MAX		PASSWORD UNLIMITED					    NO</span><br><span class="line">DEFAULT 		       PASSWORD_VERIFY_FUNCTION 	PASSWORD NULL						    NO</span><br><span class="line">DEFAULT 		       PASSWORD_LOCK_TIME		PASSWORD 1						    NO</span><br><span class="line">DEFAULT 		       PASSWORD_GRACE_TIME		PASSWORD 7						    NO</span><br><span class="line">ORA_STIG_PROFILE	       COMPOSITE_LIMIT			KERNEL	 DEFAULT					    NO</span><br><span class="line">ORA_STIG_PROFILE	       SESSIONS_PER_USER		KERNEL	 DEFAULT					    NO</span><br><span class="line">ORA_STIG_PROFILE	       CPU_PER_SESSION			KERNEL	 DEFAULT					    NO</span><br><span class="line">ORA_STIG_PROFILE	       CPU_PER_CALL			KERNEL	 DEFAULT					    NO</span><br><span class="line">ORA_STIG_PROFILE	       LOGICAL_READS_PER_SESSION	KERNEL	 DEFAULT					    NO</span><br><span class="line">ORA_STIG_PROFILE	       LOGICAL_READS_PER_CALL		KERNEL	 DEFAULT					    NO</span><br><span class="line">ORA_STIG_PROFILE	       IDLE_TIME			KERNEL	 15						    NO</span><br><span class="line">ORA_STIG_PROFILE	       CONNECT_TIME			KERNEL	 DEFAULT					    NO</span><br><span class="line">ORA_STIG_PROFILE	       PRIVATE_SGA			KERNEL	 DEFAULT					    NO</span><br><span class="line">ORA_STIG_PROFILE	       FAILED_LOGIN_ATTEMPTS		PASSWORD 3						    NO</span><br><span class="line">ORA_STIG_PROFILE	       PASSWORD_LIFE_TIME		PASSWORD 60						    NO</span><br><span class="line">ORA_STIG_PROFILE	       PASSWORD_REUSE_TIME		PASSWORD 365						    NO</span><br><span class="line">ORA_STIG_PROFILE	       PASSWORD_REUSE_MAX		PASSWORD 10						    NO</span><br><span class="line">ORA_STIG_PROFILE	       PASSWORD_VERIFY_FUNCTION 	PASSWORD ORA12C_STRONG_VERIFY_FUNCTION			    NO</span><br><span class="line">ORA_STIG_PROFILE	       PASSWORD_LOCK_TIME		PASSWORD UNLIMITED					    NO</span><br><span class="line">ORA_STIG_PROFILE	       PASSWORD_GRACE_TIME		PASSWORD 5						    NO</span><br></pre></td></tr></table></figure>
+<h2 id="3-Difference-between-11g-and-12c"><a href="#3-Difference-between-11g-and-12c" class="headerlink" title="3. Difference between 11g and 12c"></a>3. Difference between 11g and 12c</h2><h3 id="3-1-verify-function-11G-Function-Password-Requirements"><a href="#3-1-verify-function-11G-Function-Password-Requirements" class="headerlink" title="3.1 verify_function_11G Function Password Requirements"></a>3.1 verify_function_11G Function Password Requirements</h3><p>This function checks for the following requirements when users create or modify passwords:</p>
+<ul>
+<li>The password is not the same as the user name, nor is it the user name spelled backward or with the numbers 1–100 appended.</li>
+<li>The password is not the same as the server name or the server name with the numbers 1–100 appended.</li>
+<li>The password is not too simple (for example, oracle, oracle with the numbers 1–100 appended, welcome1, database1, account1, user1234, password1, oracle123, computer1, abcdefg1, or change_on_install).</li>
+<li>The password includes at least 1 numeric and 1 alphabetic character.</li>
+<li>The password differs from the previous password by at least 3 characters.</li>
+</ul>
+<p>The following internal checks are also applied:</p>
+<ul>
+<li>The password contains no fewer than 8 characters and does not exceed 30 characters.</li>
+<li>The password does not contain the double-quotation character (&quot;). It can be surrounded by double-quotation marks, however.</li>
+</ul>
+<h3 id="3-2-ora12c-verify-function-Password-Requirements"><a href="#3-2-ora12c-verify-function-Password-Requirements" class="headerlink" title="3.2 ora12c_verify_function Password Requirements"></a>3.2 ora12c_verify_function Password Requirements</h3><p>The ora12c_verify_function function provides requirements that the Department of Defense Database Security Technical Implementation Guide recommends.</p>
+<p>This function checks for the following requirements when users create or modify passwords:</p>
+<ul>
+<li>The password contains no fewer than 8 characters and includes at least 1 numeric and 1 alphabetic character.</li>
+<li>The password is not the same as the user name or the user name reversed.</li>
+<li>The password is not the same as the database name.</li>
+<li>The password does not contain the word oracle (such as oracle123).</li>
+<li>The password is not too simple (for example, welcome1, database1, account1, user1234, password1, oracle123, computer1, abcdefg1, or change_on_install).</li>
+<li>The password differs from the previous password by at least 3 characters.</li>
+<li>The password contains at least one special character.</li>
+</ul>
+<p>The following internal checks are also applied:</p>
+<ul>
+<li>The password does not exceed 30 characters.</li>
+<li>The password does not contain the double-quotation character (&quot;). It can be surrounded by double-quotation marks, however.</li>
+</ul>
+<h3 id="3-3-ora12c-strong-verify-function-Function-Password-Requirements"><a href="#3-3-ora12c-strong-verify-function-Function-Password-Requirements" class="headerlink" title="3.3 ora12c_strong_verify_function Function Password Requirements"></a>3.3 ora12c_strong_verify_function Function Password Requirements</h3><p>The ora12c_strong_verify_function function fulfills the Department of Defense Database Security Technical Implementation Guide requirements.</p>
+<p>This function checks for the following requirements when users create or modify passwords:</p>
+<ul>
+<li><p>The password must contain at least 2 upper case characters, 2 lower case characters, 2 numeric characters, and 2 special characters. These special characters are as follows:</p>
+  <figure class="highlight plain hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">‘ ~ ! @ # $ % ^ &amp; * ( ) _ - + = &#123; &#125; [ ] \ / &lt; &gt; , . ; ? &apos; : | (space)</span><br></pre></td></tr></table></figure>
+</li>
+<li><p>The password must differ from the previous password by at least 4 characters.</p>
+</li>
+</ul>
+<p>The following internal checks are also applied:</p>
+<ul>
+<li>The password contains no fewer than nine characters and does not exceed 30 characters.</li>
+<li>The password does not contain the double-quotation character (&quot;). It can be surrounded by double-quotation marks, however.</li>
+</ul>
+<h2 id="4-Example-of-modifying-user-profile"><a href="#4-Example-of-modifying-user-profile" class="headerlink" title="4. Example of modifying user profile"></a>4. Example of modifying user profile</h2><figure class="highlight sql hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"><span class="hljs-keyword">alter</span> profile <span class="hljs-keyword">default</span> <span class="hljs-keyword">limit</span> PASSWORD_LIFE_TIME <span class="hljs-keyword">UNLIMITED</span>;</span><br><span class="line"><span class="hljs-keyword">alter</span> profile <span class="hljs-keyword">default</span> <span class="hljs-keyword">limit</span> <span class="hljs-keyword">PASSWORD_VERIFY_FUNCTION</span> <span class="hljs-literal">null</span>;</span><br></pre></td></tr></table></figure>
+<h2 id="5-Summary"><a href="#5-Summary" class="headerlink" title="5. Summary"></a>5. Summary</h2><p>Even with Oracle 12c, security hardening is not enabled by force, DBA need to execute <code>utlpwdmg.sql</code> manually to enable.<br>By default, this script will update default profile, which is the default profile for all users. <strong><em>It&#39;s recommended to modify this script, not using default profile for all users</em></strong>.</p>
+<p>Reference:<br><a href="https://docs.oracle.com/database/121/DBSEG/authentication.htm#DBSEG3225" target="_blank" rel="noopener">Database Security Guide-Configuring Authentication</a></p>
+<p><strong>EOF</strong></p>
+
+    
+    </div>
+    
+    <div class="columns is-variable is-1 is-multiline is-mobile">
+    
+        <span class="column is-narrow"><a class="tag is-light article-tag" href="/tags/how-to/">#how to</a></span>
+    
+    </div>
+    
+    
+    <div class="columns is-mobile is-multiline article-nav">
+        <span class="column is-12-mobile is-half-desktop  article-nav-prev">
+            
+            <a href="/A-Brief-Introduction-of-Oracle-Role-and-Privilege.html">A Brief Introduction of Oracle Role and Privilege</a>
+            
+        </span>
+        <span class="column is-12-mobile is-half-desktop  article-nav-next">
+            
+            <a href="/easy-connect-with-ORA-12504.html">Easy Connect with ORA-12504</a>
+            
+        </span>
+    </div>
+    
+</article>
+
+
+
+
+    </div>
+</section>
+    <footer class="footer footer-padding">
+    <div class="container content">
+            <div class="column is-narrow has-text-centered is-size-7-mobile">
+                &copy;  <a href="/">Kyun Kong&nbsp;</a>
+                2013 - 2019
+            </div>
+    </div>
+</footer>
+
+    <script src="//cdnjs.cloudflare.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
+<script src="//cdnjs.cloudflare.com/ajax/libs/moment.js/2.22.2/moment-with-locales.min.js"></script>
+
+<!-- test if the browser is outdated
+<div id="outdated">
+    <h6>Your browser is out-of-date!</h6>
+    <p>Update your browser to view this website correctly. <a id="btnUpdateBrowser" href="http://outdatedbrowser.com/">Update my browser now </a></p>
+    <p class="last"><a href="#" id="btnCloseUpdateBrowser" title="Close">&times;</a></p>
+</div>
+<script src="//cdnjs.cloudflare.com/ajax/libs/outdated-browser/1.1.5/outdatedbrowser.min.js"></script>
+<script>
+    $(document).ready(function () {
+        // plugin function, place inside DOM ready function
+        outdatedBrowser({
+            bgColor: '#f25648',
+            color: '#ffffff',
+            lowerThan: 'flex'
+        })
+    });
+</script>
+-->
+
+<script>
+    window.FontAwesomeConfig = {
+        searchPseudoElements: true
+    }
+    moment.locale("en-AU");
+</script>
+
+
+    
+    
+    
+    
+    
+    
+
+    
+
+
+<script src="/js/script.js"></script>
+
+
+    
+    <div class="searchbox ins-search">
+    <div class="searchbox-mask"></div>
+    <div class="searchbox-container ins-search-container">
+        <div class="searchbox-input-wrapper">
+            <input type="text" class="searchbox-input ins-search-input" placeholder="Type something..." />
+            <span class="searchbox-close ins-close ins-selectable"><i class="fa fa-times-circle"></i></span>
+        </div>
+        <div class="searchbox-result-wrapper ins-section-wrapper">
+            <div class="ins-section-container"></div>
+        </div>
+    </div>
+</div>
+<script>
+    (function (window) {
+        var INSIGHT_CONFIG = {
+            TRANSLATION: {
+                POSTS: 'Posts',
+                PAGES: 'Pages',
+                CATEGORIES: 'Categories',
+                TAGS: 'Tags',
+                UNTITLED: '(Untitled)',
+            },
+            CONTENT_URL: '/content.json',
+        };
+        window.INSIGHT_CONFIG = INSIGHT_CONFIG;
+    })(window);
+</script>
+<script src="/js/insight.js"></script>
+    
+</body>
+</html>
