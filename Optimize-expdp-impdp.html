@@ -2,7 +2,7 @@
 <html class="has-navbar-fixed-top">
 <head>
     <meta charset="utf-8">
-<title>Tag: installation - My Notebook</title>
+<title>优化expdp/impdp思路 - My Notebook</title>
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
 
 <link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/outdated-browser/1.1.5/outdatedbrowser.min.css">
@@ -87,31 +87,70 @@
     </div>
 </nav>
 
-    <section class="section section-heading">
+    <section class="section">
     <div class="container">
-        <div class="content">
-            <h5>#installation</h5>
-        </div>
+    <article class="article content gallery" itemscope itemprop="blogPost">
+    <h1 class="article-title is-size-3 is-size-4-mobile" itemprop="name">
+        
+            优化expdp/impdp思路
+        
+    </h1>
+    <div class="article-meta columns is-variable is-1 is-multiline is-mobile is-size-7-mobile">
+        <span class="column is-narrow">
+            <time datetime="2019-09-16T03:16:33.000Z" itemprop="datePublished">Sep 16 2019</time>
+        </span>
+        
+        <span class="column is-narrow article-category">
+            <i class="far fa-folder"></i>
+            <a class="article-category-link" href="/categories/oracle/">oracle</a>
+        </span>
+        
+        
     </div>
-</section>
-<section class="section">
-    <div class="container">
+    <div class="article-entry is-size-6-mobile" itemprop="articleBody">
     
-    
-            
-            <div id="myarchive" class="is-size-6-mobile">
-            <li>
-                    <time class="is-text-small" datetime="2013-09-11T16:00:00.000Z" itemprop="datePublished">
-                        2013-09-12</time>
-                    <a href="/install-11gr2-rac-in-silent-mode.html">Step by step install 11gr2 RAC in silent mode</a>
-                    </li>
-                    </div>
-            
-    
-    
-    </div>
-</section>
+        <h2 id="expdp"><a href="#expdp" class="headerlink" title="expdp"></a>expdp</h2><ol>
+<li>RAC环境中，设置cluster=n参数</li>
+<li>排除统计信息导出: exclude=statistics</li>
+<li>并行导出: parallel=Number Of CPUs</li>
+<li>RAC环境中，设置PARALLEL_FORCE_LOCAL=TRUE</li>
+<li>12c中，添加version=12.1以增强兼容性</li>
+</ol>
+<p>示例：<br><figure class="highlight sql hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">expdp system/manager@xxxx schemas=xxx \</span><br><span class="line">cluster=n exclude=statistics parallel=4 \</span><br><span class="line">PARALLEL_FORCE_LOCAL=true version=12.1 \</span><br><span class="line">directory=xxx dumpfile=xxx.dmp</span><br></pre></td></tr></table></figure></p>
+<h2 id="impdp"><a href="#impdp" class="headerlink" title="impdp"></a>impdp</h2><ol>
+<li>导入数据后再建立索引、约束等, 以避免产生大量的undo和temp</li>
+</ol>
+<figure class="highlight sql hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line"><span class="hljs-comment">--生成DDl语句</span></span><br><span class="line">impdp system/manager@xxxx directory=xxx dumpfile=xxx.dmp \</span><br><span class="line">sqlfile=xxx.sql include=constraints, indexes</span><br></pre></td></tr></table></figure>
+<p>根据sql语句保留约束、索引的创建语句再进行导入：<br><figure class="highlight sql hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">impdp system/xxxxxxxx directory=datapump dumpfile=xxx.dump \</span><br><span class="line">EXCLUDE=STATISTICS,constraints,indexes \</span><br><span class="line">remap_tablespace=aaaa:bbbb parallel=4 \</span><br><span class="line">remap_schema=xxx:xxx transform=disable_archive_logging:Y</span><br></pre></td></tr></table></figure></p>
+<ol start="2">
+<li>尽量不要使用TABLE_EXISTS_ACTION=APPEND or TABLE_EXISTS_ACTION=TRUNCATE</li>
+<li>导入时添加transform=disable_archive_logging:Y参数，12c新特性，可以在导入的时候减少redo的产生</li>
+</ol>
+<p>Reference:<br><a href="https://support.oracle.com/epmos/faces/DocumentDisplay?_afrLoop=171869790919870&amp;parent=DOCUMENT&amp;sourceId=735366.1&amp;id=727894.1&amp;_afrWindowMode=0&amp;_adf.ctrl-state=1ns466yfl_109" target="_blank" rel="noopener">Error ORA-30036 DataPump Import (IMPDP) Exhausts Undo Tablespace (Doc ID 727894.1)</a><br><a href="https://support.oracle.com/epmos/faces/DocumentDisplay?_afrLoop=171930816415232&amp;parent=DOCUMENT&amp;sourceId=727894.1&amp;id=1670349.1&amp;_afrWindowMode=0&amp;_adf.ctrl-state=1ns466yfl_158" target="_blank" rel="noopener">Import DataPump - How To Limit The Amount Of UNDO Generation of an IMPDP job ? (Doc ID 1670349.1)</a></p>
+<p><strong>EOF</strong></p>
 
+    
+    </div>
+    
+    
+    <div class="columns is-mobile is-multiline article-nav">
+        <span class="column is-12-mobile is-half-desktop is-hidden-mobile article-nav-prev">
+            
+        </span>
+        <span class="column is-12-mobile is-half-desktop  article-nav-next">
+            
+            <a href="/Wait-Event-enq-TM-contention.html">等待事件enq:TM contention</a>
+            
+        </span>
+    </div>
+    
+</article>
+
+
+
+
+    </div>
+</section>
     <footer class="footer footer-padding">
     <div class="container content">
             <div class="column is-narrow has-text-centered is-size-7-mobile">
