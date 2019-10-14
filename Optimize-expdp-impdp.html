@@ -103,6 +103,10 @@
         <span class="column is-narrow article-category">
             <i class="far fa-folder"></i>
             <a class="article-category-link" href="/categories/oracle/">oracle</a>
+                    <span id="busuanzi_container_page_pv">
+Viewd <span id="busuanzi_value_page_pv"></span> times.
+</span>
+
         </span>
         
         
@@ -120,8 +124,8 @@
 <h2 id="impdp"><a href="#impdp" class="headerlink" title="impdp"></a>impdp</h2><ol>
 <li>导入数据后再建立索引、约束等, 以避免产生大量的undo和temp</li>
 </ol>
-<figure class="highlight sql hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line"><span class="hljs-comment">--生成DDl语句</span></span><br><span class="line">impdp system/manager@xxxx directory=xxx dumpfile=xxx.dmp \</span><br><span class="line">sqlfile=xxx.sql include=constraints, indexes</span><br></pre></td></tr></table></figure>
-<p>根据sql语句保留约束、索引的创建语句再进行导入：<br><figure class="highlight sql hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">impdp system/xxxxxxxx directory=datapump dumpfile=xxx.dump \</span><br><span class="line">EXCLUDE=STATISTICS,constraints,indexes \</span><br><span class="line">remap_tablespace=aaaa:bbbb parallel=4 \</span><br><span class="line">remap_schema=xxx:xxx transform=disable_archive_logging:Y</span><br></pre></td></tr></table></figure></p>
+<figure class="highlight sql hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line"><span class="hljs-comment">--生成DDl语句</span></span><br><span class="line">impdp system/manager@xxxx directory=xxx dumpfile=xxx.dmp \</span><br><span class="line">sqlfile=xxx.sql include=constraint,index</span><br></pre></td></tr></table></figure>
+<p>根据sql语句保留约束、索引的创建语句再进行导入：<br><figure class="highlight sql hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">impdp system/xxxxxxxx directory=datapump dumpfile=xxx.dump \</span><br><span class="line">EXCLUDE=STATISTICS,constraint,index \</span><br><span class="line">remap_tablespace=aaaa:bbbb parallel=4 \</span><br><span class="line">remap_schema=xxx:xxx transform=disable_archive_logging:Y</span><br></pre></td></tr></table></figure></p>
 <ol start="2">
 <li>尽量不要使用TABLE_EXISTS_ACTION=APPEND or TABLE_EXISTS_ACTION=TRUNCATE</li>
 <li>导入时添加transform=disable_archive_logging:Y参数，12c新特性，可以在导入的时候减少redo的产生</li>
@@ -149,8 +153,10 @@
 
 
 
+
     </div>
 </section>
+
     <footer class="footer footer-padding">
     <div class="container content">
             <div class="column is-narrow has-text-centered is-size-7-mobile">
@@ -158,6 +164,7 @@
                 2013 - 2019
             </div>
     </div>
+    <script async src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script>
 </footer>
 
     <script src="//cdnjs.cloudflare.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
