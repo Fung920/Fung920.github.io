@@ -1,0 +1,264 @@
+<!DOCTYPE html>
+<html class="has-navbar-fixed-top">
+<head>
+    <meta charset="utf-8">
+<title>Oracle 12c开启结果集缓存导致大量latch free等待 - My Notebook</title>
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+
+<link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/outdated-browser/1.1.5/outdatedbrowser.min.css">
+
+
+<meta name="description" content="Oracle memoranda">
+
+
+
+<meta name="keywords" content="oracle, database">
+
+
+
+
+
+
+
+<link rel="icon" href="/images/favicon.ico">
+
+
+<link rel="stylesheet" href="//fonts.googleapis.com/css?family=Ovo|Source+Code+Pro|Calibri|Ubuntu">
+<link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/bulma/0.6.2/css/bulma.min.css">
+
+
+
+<link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/highlight.js/9.12.0/styles/atom-one-light.min.css">
+
+<link rel="stylesheet" href="/css/style.css">
+
+<script defer src="//use.fontawesome.com/releases/v5.0.8/js/all.js"></script>
+
+
+    
+    
+    
+    
+    
+    
+
+    
+
+
+</head>
+<body>
+    
+<nav class="navbar is-transparent is-fixed-top navbar-main" role="navigation" aria-label="main navigation">
+    <div class="container">
+        <div class="navbar-brand">
+            <a class="navbar-item navbar-logo" href="/">
+                
+                    
+                    My Notebook
+                    
+                
+            </a>
+            <div class="navbar-burger">
+                <span></span>
+                <span></span>
+                <span></span>
+            </div>
+        </div>
+        
+        <div class="navbar-menu navbar-start">
+            
+            <a class="navbar-item "
+               href="/">Home</a>
+            
+            <a class="navbar-item "
+               href="/about">About</a>
+            
+        </div>
+        
+        <div class="navbar-menu navbar-end">
+            
+            <a class="navbar-item search" title="Search" href="javascript:;">
+                <i class="fas fa-search"></i>
+            </a>
+            
+            
+            
+        </div>
+    </div>
+</nav>
+
+    <section class="section">
+    <div class="container">
+    <article class="article content gallery" itemscope itemprop="blogPost">
+    <h1 class="article-title is-size-3 is-size-4-mobile" itemprop="name">
+        
+            Oracle 12c开启结果集缓存导致大量latch free等待
+        
+    </h1>
+    <div class="article-meta columns is-variable is-1 is-multiline is-mobile is-size-7-mobile">
+        <span class="column is-narrow">
+            <time datetime="2020-04-20T07:47:38.000Z" itemprop="datePublished">Apr 20 2020</time>
+        </span>
+        
+        <span class="column is-narrow article-category">
+            <i class="far fa-folder"></i>
+            <a class="article-category-link" href="/categories/oracle/">oracle</a>
+                    <span id="busuanzi_container_page_pv" style='display:none'>
+Viewed <span id="busuanzi_value_page_pv"></span> times.
+</span>
+        </span>
+        
+        
+    </div>
+    <div class="article-entry is-size-6-mobile" itemprop="articleBody">
+    
+        <p>最近在业务监控上，发现某个更新模块自4月9日起延时较高，从AWR看，<code>latch free</code>等待特别高，且平均等待时间也比较长。<br><img src="/images/latch_free.jpg" alt="latch free"><br>从ADDM查看，该latch ID为559，<code>Result Cache: RC Latch</code>，</p>
+<p><img src="/images/latch_free_addm.jpg" alt="addm report"></p>
+<p>该库是开启了结果集缓存：<br><figure class="highlight sql hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line">SQL&gt; show parameter result</span><br><span class="line"></span><br><span class="line">NAME                                 TYPE        VALUE</span><br><span class="line"><span class="hljs-comment">------------------------------------ ----------- ------------------------------</span></span><br><span class="line">client_result_cache_lag              big integer 3000</span><br><span class="line">client_result_cache_size             big integer 0</span><br><span class="line">result_cache_max_result              integer     5</span><br><span class="line">result_cache_max_size                big integer 198592K</span><br><span class="line">result_cache_mode                    string      MANUAL</span><br><span class="line">result_cache_remote_expiration       integer     0</span><br></pre></td></tr></table></figure></p>
+<p>在AWR Top sql中，频繁出现：<br><figure class="highlight sql hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="hljs-keyword">SELECT</span> <span class="hljs-comment">/* DS_SVC */</span> <span class="hljs-comment">/*+ dynamic_sampling(0) no_sql_tune no_monitoring optimizer_features_enable(default) no_parallel result_cache(snapshot=3600) OPT_ESTIMATE(@"innerQuery", TABLE, "XX", ROWS=30319104.08) */</span> C1, C2, C3 <span class="hljs-keyword">FROM</span> (<span class="hljs-keyword">SELECT</span> <span class="hljs-comment">/*+</span></span><br></pre></td></tr></table></figure></p>
+<p><strong>原因</strong>:<br>在12.1.0.2版本中，默认启用了Adaptive Dynamic Statistics，自动决定动态统计信息是否是有用的和在所有的 SQL 语句上使用哪个统计级别。当优化器认为有必要的时候，它就会收集动态统计信息。<br>当SQL语句使用了Adaptive Dynamic Statistics (Sampling)，那么基于它的统计信息，系统认为对这些语句使用result cache可以提升性能。这可能会导致result cache的大量使用并引发&quot;Result Cache: RC Latch&quot;争用。</p>
+<p>Workaround:</p>
+<ul>
+<li><ol>
+<li>关闭自动动态统计信息使用结果缓存的机制</li>
+</ol>
+</li>
+</ul>
+<figure class="highlight sql hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="hljs-keyword">alter</span> <span class="hljs-keyword">system</span> <span class="hljs-keyword">set</span> <span class="hljs-string">"_optimizer_ads_use_result_cache"</span> = <span class="hljs-literal">FALSE</span> <span class="hljs-keyword">sid</span>=<span class="hljs-string">'*'</span> <span class="hljs-keyword">scope</span>=<span class="hljs-keyword">both</span>;</span><br></pre></td></tr></table></figure>
+<ul>
+<li><ol start="2">
+<li>关闭结果集缓存</li>
+</ol>
+</li>
+</ul>
+<figure class="highlight sql hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="hljs-keyword">alter</span> <span class="hljs-keyword">system</span> <span class="hljs-keyword">set</span> result_cache_max_size=<span class="hljs-number">0</span> <span class="hljs-keyword">scope</span>=<span class="hljs-keyword">both</span>;</span><br></pre></td></tr></table></figure>
+<p>由于业务无法停机，为了避免在线业务正在使用结果集而导致业务失败，当前采取关闭ADS，待停机时间再关闭结果集缓存.</p>
+<p><em>相关初始化参数</em>:</p>
+<ul>
+<li><p>RESULT_CACHE_MODE : 该参数有两个值</p>
+<ul>
+<li>Manual: 手动模式下，需要使用&quot;result_cache&quot; hint才能启用结果集缓存</li>
+<li>Force: 所有查询结果都会使用到结果集缓存</li>
+</ul>
+</li>
+<li><p><code>_optimizer_ads_use_result_cache</code> , 如果是true(默认), 数据库自动收集动态采样信息，并使用结果集缓存这些采样结果</p>
+</li>
+</ul>
+<p>Reference:<br><a href="https://support.oracle.com/epmos/faces/DocumentDisplay?_afrLoop=98181864050001&amp;id=2102499.1&amp;_afrWindowMode=0&amp;_adf.ctrl-state=ix3ibxic_110" target="_blank" rel="noopener">当在 Oracle 12c 上设置 RESULT_CACHE_MODE = MANUAL 时发生&#39;Result Cache: RC Latch&#39;类型的”Latch Free”等待 (Doc ID 2102499.1)</a><br><a href="">High Waits on ‘enq: RC – Result Cache: Contention’ when Results are Updated Frequently (Doc ID 1623225.1)</a></p>
+<p><strong>EOF</strong></p>
+
+    
+    </div>
+    
+    <div class="columns is-variable is-1 is-multiline is-mobile">
+    
+        <span class="column is-narrow"><a class="tag is-light article-tag" href="/tags/latch-free-result-cache/">#latch free result cache</a></span>
+    
+    </div>
+    
+    
+    <div class="columns is-mobile is-multiline article-nav">
+        <span class="column is-12-mobile is-half-desktop is-hidden-mobile article-nav-prev">
+            
+        </span>
+        <span class="column is-12-mobile is-half-desktop  article-nav-next">
+            
+            <a href="/Optimize-expdp-impdp.html">优化expdp/impdp思路</a>
+            
+        </span>
+    </div>
+    
+</article>
+
+
+
+
+
+    </div>
+</section>
+
+    <footer class="footer footer-padding">
+    <div class="container content">
+            <div class="column is-narrow has-text-centered is-size-7-mobile">
+                &copy;  <a href="/">Kyun Kong&nbsp;</a>
+                2013 - 2020
+            </div>
+    </div>
+    <script async src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script>
+</footer>
+
+    <script src="//cdnjs.cloudflare.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
+<script src="//cdnjs.cloudflare.com/ajax/libs/moment.js/2.22.2/moment-with-locales.min.js"></script>
+
+<!-- test if the browser is outdated
+<div id="outdated">
+    <h6>Your browser is out-of-date!</h6>
+    <p>Update your browser to view this website correctly. <a id="btnUpdateBrowser" href="http://outdatedbrowser.com/">Update my browser now </a></p>
+    <p class="last"><a href="#" id="btnCloseUpdateBrowser" title="Close">&times;</a></p>
+</div>
+<script src="//cdnjs.cloudflare.com/ajax/libs/outdated-browser/1.1.5/outdatedbrowser.min.js"></script>
+<script>
+    $(document).ready(function () {
+        // plugin function, place inside DOM ready function
+        outdatedBrowser({
+            bgColor: '#f25648',
+            color: '#ffffff',
+            lowerThan: 'flex'
+        })
+    });
+</script>
+-->
+
+<script>
+    window.FontAwesomeConfig = {
+        searchPseudoElements: true
+    }
+    moment.locale("en-AU");
+</script>
+
+
+    
+    
+    
+    
+    
+    
+
+    
+
+
+<script src="/js/script.js"></script>
+
+
+    
+    <div class="searchbox ins-search">
+    <div class="searchbox-mask"></div>
+    <div class="searchbox-container ins-search-container">
+        <div class="searchbox-input-wrapper">
+            <input type="text" class="searchbox-input ins-search-input" placeholder="Type something..." />
+            <span class="searchbox-close ins-close ins-selectable"><i class="fa fa-times-circle"></i></span>
+        </div>
+        <div class="searchbox-result-wrapper ins-section-wrapper">
+            <div class="ins-section-container"></div>
+        </div>
+    </div>
+</div>
+<script>
+    (function (window) {
+        var INSIGHT_CONFIG = {
+            TRANSLATION: {
+                POSTS: 'Posts',
+                PAGES: 'Pages',
+                CATEGORIES: 'Categories',
+                TAGS: 'Tags',
+                UNTITLED: '(Untitled)',
+            },
+            CONTENT_URL: '/content.json',
+        };
+        window.INSIGHT_CONFIG = INSIGHT_CONFIG;
+    })(window);
+</script>
+<script src="/js/insight.js"></script>
+    
+</body>
+</html>
