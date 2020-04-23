@@ -1,0 +1,240 @@
+<!DOCTYPE html>
+<html class="has-navbar-fixed-top">
+<head>
+    <meta charset="utf-8">
+<title>等待事件: reliable message - My Notebook</title>
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+
+<link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/outdated-browser/1.1.5/outdatedbrowser.min.css">
+
+
+<meta name="description" content="Oracle memoranda">
+
+
+
+<meta name="keywords" content="oracle, database">
+
+
+
+
+
+
+
+<link rel="icon" href="/images/favicon.ico">
+
+
+<link rel="stylesheet" href="//fonts.googleapis.com/css?family=Ovo|Source+Code+Pro|Calibri|Ubuntu">
+<link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/bulma/0.6.2/css/bulma.min.css">
+
+
+
+<link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/highlight.js/9.12.0/styles/atom-one-light.min.css">
+
+<link rel="stylesheet" href="/css/style.css">
+
+<script defer src="//use.fontawesome.com/releases/v5.0.8/js/all.js"></script>
+
+
+    
+    
+    
+    
+    
+    
+
+    
+
+
+</head>
+<body>
+    
+<nav class="navbar is-transparent is-fixed-top navbar-main" role="navigation" aria-label="main navigation">
+    <div class="container">
+        <div class="navbar-brand">
+            <a class="navbar-item navbar-logo" href="/">
+                
+                    
+                    My Notebook
+                    
+                
+            </a>
+            <div class="navbar-burger">
+                <span></span>
+                <span></span>
+                <span></span>
+            </div>
+        </div>
+        
+        <div class="navbar-menu navbar-start">
+            
+            <a class="navbar-item "
+               href="/">Home</a>
+            
+            <a class="navbar-item "
+               href="/about">About</a>
+            
+        </div>
+        
+        <div class="navbar-menu navbar-end">
+            
+            <a class="navbar-item search" title="Search" href="javascript:;">
+                <i class="fas fa-search"></i>
+            </a>
+            
+            
+            
+        </div>
+    </div>
+</nav>
+
+    <section class="section">
+    <div class="container">
+    <article class="article content gallery" itemscope itemprop="blogPost">
+    <h1 class="article-title is-size-3 is-size-4-mobile" itemprop="name">
+        
+            等待事件: reliable message
+        
+    </h1>
+    <div class="article-meta columns is-variable is-1 is-multiline is-mobile is-size-7-mobile">
+        <span class="column is-narrow">
+            <time datetime="2020-04-23T02:42:40.000Z" itemprop="datePublished">Apr 23 2020</time>
+        </span>
+        
+        <span class="column is-narrow article-category">
+            <i class="far fa-folder"></i>
+            <a class="article-category-link" href="/categories/oracle/">oracle</a>
+                    <span id="busuanzi_container_page_pv" style='display:none'>
+Viewed <span id="busuanzi_value_page_pv"></span> times.
+</span>
+        </span>
+        
+        
+    </div>
+    <div class="article-entry is-size-6-mobile" itemprop="articleBody">
+    
+        <p>开发人员反馈，最近批量作业相当慢，原来只需要10-20分钟，现在已经快到2小时。<br>从AWR看，DB time不算高，但是有几个等待事件比较明显：<br><img src="/images/reliable_message1.jpg" alt="top event"></p>
+<p>以下为相同时间段的<code>gv$channel_waits</code>:<br><figure class="highlight sql hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br></pre></td><td class="code"><pre><span class="line">SQL&gt; select channel, sum(wait_count) sum_wait_count from gv$channel_waits group by channel order by 2 desc;</span><br><span class="line"></span><br><span class="line">CHANNEL                                                          SUM_WAIT_COUNT</span><br><span class="line"><span class="hljs-comment">---------------------------------------------------------------- --------------</span></span><br><span class="line">kxfp control signal channel                                            17159048</span><br><span class="line">Result <span class="hljs-keyword">Cache</span>: Channel                                                  <span class="hljs-number">13350997</span></span><br><span class="line">MMON remote <span class="hljs-keyword">action</span> broadcast channel                                     <span class="hljs-number">552948</span></span><br><span class="line">obj broadcast channel                                                    <span class="hljs-number">398453</span></span><br><span class="line">RBR channel                                                              <span class="hljs-number">126023</span></span><br><span class="line">kxfp remote <span class="hljs-keyword">slave</span> spawn channel                                           <span class="hljs-number">11439</span></span><br><span class="line"><span class="hljs-keyword">parameters</span> <span class="hljs-keyword">to</span> cluster db instances - broadcast channel                     <span class="hljs-number">2603</span></span><br><span class="line"><span class="hljs-keyword">kill</span> job broadcast - broadcast channel                                     <span class="hljs-number">2602</span></span><br><span class="line">service <span class="hljs-keyword">operations</span> - broadcast channel                                     <span class="hljs-number">2586</span></span><br><span class="line">GEN0 ksbxic channel                                                        <span class="hljs-number">1699</span></span><br><span class="line">CKPT ksbxic channel                                                        <span class="hljs-number">1333</span></span><br><span class="line">LCK0 ksbxic channel                                                         <span class="hljs-number">960</span></span><br><span class="line"><span class="hljs-keyword">quiesce</span> channel                                                               <span class="hljs-number">2</span></span><br></pre></td></tr></table></figure></p>
+<p>从以上视图看到，&quot;kxfp control signal channel&quot;跟&quot;Result Cache: Channel&quot;是等待比较严重的channel。</p>
+<h2 id="1-quot-kxfp-control-signal-channel-quot"><a href="#1-quot-kxfp-control-signal-channel-quot" class="headerlink" title="1. &quot;kxfp control signal channel&quot;"></a>1. &quot;kxfp control signal channel&quot;</h2><p>该channel跟<em>BUG 20470877:LONG WAITS FOR &quot;RELIABLE MESSAGE&quot; AFTER A FEW DAYS OF UPTIME</em>有关,同时在后台等待时间中，&quot;CSS group membership query&quot;等待较高，可以判定跟这个bug有很大关系。<br><img src="/images/reliable_message3.jpg" alt="CSS group membership query"></p>
+<p>在停机时间安装完补丁后，开发同事反馈批量处理时间恢复正常,同时,AWR报告中，相关等待事件大大减少或者消失。<br><img src="/images/reliable_message2.jpg" alt="after patching"></p>
+<h2 id="2-Result-Cache-Channel"><a href="#2-Result-Cache-Channel" class="headerlink" title="2. Result Cache: Channel"></a>2. Result Cache: Channel</h2><p>该等待事件跟结果集缓存相关，建议关闭结果集缓存:<br><figure class="highlight sql hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="hljs-keyword">alter</span> <span class="hljs-keyword">system</span> <span class="hljs-keyword">set</span> result_cache_max_size=<span class="hljs-number">0</span> <span class="hljs-keyword">scope</span>=<span class="hljs-keyword">both</span> <span class="hljs-keyword">sid</span>=<span class="hljs-string">'*'</span>;</span><br></pre></td></tr></table></figure></p>
+<p>最近在处理性能问题时，&quot;latch free&quot;出现频率很高，且均与&quot;Result Cache&quot;相关，在新建系统中，12cR1建议关闭此功能。</p>
+<p><strong>EOF</strong></p>
+
+    
+    </div>
+    
+    <div class="columns is-variable is-1 is-multiline is-mobile">
+    
+        <span class="column is-narrow"><a class="tag is-light article-tag" href="/tags/tuning/">#tuning</a></span>
+    
+        <span class="column is-narrow"><a class="tag is-light article-tag" href="/tags/wait-interface/">#wait interface</a></span>
+    
+    </div>
+    
+    
+    <div class="columns is-mobile is-multiline article-nav">
+        <span class="column is-12-mobile is-half-desktop is-hidden-mobile article-nav-prev">
+            
+        </span>
+        <span class="column is-12-mobile is-half-desktop  article-nav-next">
+            
+            <a href="/latch-free-wait-on-12c-due-to-result-cache.html">Oracle 12c开启结果集缓存导致大量latch free等待</a>
+            
+        </span>
+    </div>
+    
+</article>
+
+
+
+
+
+    </div>
+</section>
+
+    <footer class="footer footer-padding">
+    <div class="container content">
+            <div class="column is-narrow has-text-centered is-size-7-mobile">
+                &copy;  <a href="/">Kyun Kong&nbsp;</a>
+                2013 - 2020
+            </div>
+    </div>
+    <script async src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script>
+</footer>
+
+    <script src="//cdnjs.cloudflare.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
+<script src="//cdnjs.cloudflare.com/ajax/libs/moment.js/2.22.2/moment-with-locales.min.js"></script>
+
+<!-- test if the browser is outdated
+<div id="outdated">
+    <h6>Your browser is out-of-date!</h6>
+    <p>Update your browser to view this website correctly. <a id="btnUpdateBrowser" href="http://outdatedbrowser.com/">Update my browser now </a></p>
+    <p class="last"><a href="#" id="btnCloseUpdateBrowser" title="Close">&times;</a></p>
+</div>
+<script src="//cdnjs.cloudflare.com/ajax/libs/outdated-browser/1.1.5/outdatedbrowser.min.js"></script>
+<script>
+    $(document).ready(function () {
+        // plugin function, place inside DOM ready function
+        outdatedBrowser({
+            bgColor: '#f25648',
+            color: '#ffffff',
+            lowerThan: 'flex'
+        })
+    });
+</script>
+-->
+
+<script>
+    window.FontAwesomeConfig = {
+        searchPseudoElements: true
+    }
+    moment.locale("en-AU");
+</script>
+
+
+    
+    
+    
+    
+    
+    
+
+    
+
+
+<script src="/js/script.js"></script>
+
+
+    
+    <div class="searchbox ins-search">
+    <div class="searchbox-mask"></div>
+    <div class="searchbox-container ins-search-container">
+        <div class="searchbox-input-wrapper">
+            <input type="text" class="searchbox-input ins-search-input" placeholder="Type something..." />
+            <span class="searchbox-close ins-close ins-selectable"><i class="fa fa-times-circle"></i></span>
+        </div>
+        <div class="searchbox-result-wrapper ins-section-wrapper">
+            <div class="ins-section-container"></div>
+        </div>
+    </div>
+</div>
+<script>
+    (function (window) {
+        var INSIGHT_CONFIG = {
+            TRANSLATION: {
+                POSTS: 'Posts',
+                PAGES: 'Pages',
+                CATEGORIES: 'Categories',
+                TAGS: 'Tags',
+                UNTITLED: '(Untitled)',
+            },
+            CONTENT_URL: '/content.json',
+        };
+        window.INSIGHT_CONFIG = INSIGHT_CONFIG;
+    })(window);
+</script>
+<script src="/js/insight.js"></script>
+    
+</body>
+</html>
